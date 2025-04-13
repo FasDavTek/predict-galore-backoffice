@@ -2,10 +2,12 @@ import { configureStore, combineReducers } from '@reduxjs/toolkit';
 import { HYDRATE } from 'next-redux-wrapper';
 import authReducer from './slices/authSlice';
 import quoteReducer from './slices/quoteSlice';
+import dashboardReducer from './slices/dashboardSlice'
 
 const combinedReducer = combineReducers({
   auth: authReducer,
   quote: quoteReducer,
+  dashboard: dashboardReducer,
 });
 
 const reducer = (state, action) => {

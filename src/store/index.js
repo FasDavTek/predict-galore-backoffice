@@ -1,6 +1,6 @@
 import { configureStore, combineReducers } from '@reduxjs/toolkit';
 import { HYDRATE } from 'next-redux-wrapper';
-import authReducer from './slices/auth/authSlice';
+import authReducer from './slices/authSlice';
 import quoteReducer from './slices/quoteSlice';
 
 const combinedReducer = combineReducers({

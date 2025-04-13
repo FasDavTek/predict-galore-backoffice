@@ -1,7 +1,4 @@
-import React, { useState } from "react";
-import { useDispatch, useSelector } from 'react-redux';
-import { useRouter } from 'next/router';
-import { loginUser } from '../store/slices/auth/authSlice';
+import React from "react";
 import {
   TextField,
   Button,
@@ -11,52 +8,95 @@ import {
   InputAdornment,
   IconButton,
   CircularProgress,
+  Typography,
+  Link,
+  Alert,
 } from "@mui/material";
-
 import {
   Mail as MailIcon,
   Lock as LockIcon,
   Visibility as VisibilityIcon,
   VisibilityOff as VisibilityOffIcon,
 } from "@mui/icons-material";
- import { AuthLayout } from "@/layouts/AuthLayout";
+import { AuthLayout } from "@/layouts/AuthLayout";
+import { useDispatch, useSelector } from "react-redux";
+import { loginUser, clearAuthError } from "@/store/slices/authSlice";
+import { useRouter } from "next/router";
+import { useFormik } from "formik";
+import * as yup from "yup";
+import toast from "react-hot-toast";
+
+const validationSchema = yup.object({
+  email: yup.string().email("Invalid email").required("Email is required"),
+  password: yup.string().required("Password is required"),
+});
 
 const LoginPage = () => {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
-    const dispatch = useDispatch();
-    const { loading } = useSelector((state) => state.auth);
-    const router = useRouter();
+  const dispatch = useDispatch();
+  const router = useRouter();
+  const { loading, error } = useSelector((state) => state.auth);
+  const [showPassword, setShowPassword] = React.useState(false);
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const formik = useFormik({
+    initialValues: {
+      email: "",
+      password: "",
+      rememberMe: false,
+    },
+    validationSchema,
+    onSubmit: async (values) => {
+      try {
+        const result = await dispatch(
+          loginUser({ 
+            email: values.email, 
+            password: values.password 
+          })
+        ).unwrap();
+        
+        if (values.rememberMe) {
+          localStorage.setItem("rememberMe", "true");
+        }
+        
+        toast.success("Login successful!");
+        router.push("/dashboard");
+      } catch (err) {
+        toast.error(err.message || "Login failed. Please try again.");
+      }
+    },
+  });
 
-    try {
-      const result = await dispatch(loginUser({ email, password })).unwrap();
-      toast.success('Login successful!');
-      router.push('/dashboard');
-    } catch (err) {
-      toast.error(err.message || 'Login failed. Please try again.');
-    }
-  };
+  React.useEffect(() => {
+    return () => {
+      dispatch(clearAuthError());
+    };
+  }, [dispatch]);
 
   return (
     <AuthLayout
       title="Log In"
       subtitle="Enter your credentials to access your account"
     >
-      <Box component="form" onSubmit={handleSubmit} sx={{ width: '100%' }}>
+      {error && (
+        <Alert severity="error" sx={{ mb: 3 }}>
+          {error.message}
+        </Alert>
+      )}
+
+      <Box component="form" onSubmit={formik.handleSubmit} sx={{ width: "100%" }}>
         <TextField
           fullWidth
           label="Email address"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
+          name="email"
+          value={formik.values.email}
+          onChange={formik.handleChange}
+          onBlur={formik.handleBlur}
+          error={formik.touched.email && Boolean(formik.errors.email)}
+          helperText={formik.touched.email && formik.errors.email}
           sx={{ mb: 3 }}
           InputProps={{
             startAdornment: (
               <InputAdornment position="start">
-                <MailIcon sx={{ color: 'text.disabled' }} />
+                <MailIcon sx={{ color: "text.disabled" }} />
               </InputAdornment>
             ),
           }}
@@ -65,14 +105,18 @@ const LoginPage = () => {
         <TextField
           fullWidth
           label="Password"
+          name="password"
           type={showPassword ? "text" : "password"}
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
+          value={formik.values.password}
+          onChange={formik.handleChange}
+          onBlur={formik.handleBlur}
+          error={formik.touched.password && Boolean(formik.errors.password)}
+          helperText={formik.touched.password && formik.errors.password}
           sx={{ mb: 3 }}
           InputProps={{
             startAdornment: (
               <InputAdornment position="start">
-                <LockIcon sx={{ color: 'text.disabled' }} />
+                <LockIcon sx={{ color: "text.disabled" }} />
               </InputAdornment>
             ),
             endAdornment: (
@@ -89,47 +133,80 @@ const LoginPage = () => {
         />
 
         <Box sx={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
           mb: 3
         }}>
           <FormControlLabel
-            control={<Checkbox />}
+            control={
+              <Checkbox
+                name="rememberMe"
+                checked={formik.values.rememberMe}
+                onChange={formik.handleChange}
+              />
+            }
             label="Remember me"
-            sx={{ '& .MuiTypography-root': { fontFamily: 'Inter' } }}
+            sx={{ "& .MuiTypography-root": { fontFamily: "Inter" } }}
           />
-          <Button
-            color="error"
+          <Link
+            href="/auth/forgot-password"
             sx={{
-              textTransform: 'none',
-              fontFamily: 'Inter',
-              fontWeight: 500
+              textTransform: "none",
+              fontFamily: "Inter",
+              fontWeight: 500,
+              color: "#42A605",
+              textDecoration: "none",
+              "&:hover": {
+                textDecoration: "underline",
+              },
             }}
           >
             Forgot Password?
-          </Button>
+          </Link>
         </Box>
 
         <Button
           type="submit"
           fullWidth
           variant="contained"
-            disabled={loading}
-                    startIcon={loading ? <CircularProgress size={20} color="inherit" /> : null}
+          disabled={loading}
           sx={{
-            bgcolor: '#42A605',
+            bgcolor: "#42A605",
             height: 56,
-            '&:hover': {
-              bgcolor: '#3a9504'
+            "&:hover": {
+              bgcolor: "#3a9504",
             },
-            fontFamily: 'Inter',
-            fontWeight: 600
+            fontFamily: "Inter",
+            fontWeight: 600,
+            mb: 3,
           }}
         >
-             {loading ? 'Signing in...' : ' Log into Account'}
-         
+          {loading ? (
+            <CircularProgress size={24} color="inherit" />
+          ) : (
+            "Log into Account"
+          )}
         </Button>
+
+        <Box sx={{ textAlign: "center" }}>
+          <Typography variant="body2" sx={{ fontFamily: "Inter", color: "text.secondary" }}>
+            Don&apos;t have an account?{" "}
+            <Link
+              href="/auth/register"
+              sx={{
+                color: "#42A605",
+                textDecoration: "none",
+                fontWeight: 500,
+                "&:hover": {
+                  textDecoration: "underline",
+                },
+              }}
+            >
+              Sign up
+            </Link>
+          </Typography>
+        </Box>
       </Box>
     </AuthLayout>
   );

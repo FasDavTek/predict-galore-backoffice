@@ -1,192 +1,168 @@
-import React, { useState } from 'react';
-import { useRouter } from 'next/router';
-import { useDispatch, useSelector } from 'react-redux';
-import { loginUser } from '../../store/slices/auth/authSlice';
-import AuthLayout from '../../components/AuthLayout';
+import React from "react";
 import {
   TextField,
   Button,
+  Box,
   Checkbox,
   FormControlLabel,
-  Typography,
   InputAdornment,
   IconButton,
-  Box,
   CircularProgress,
-  Link as MuiLink,
-} from '@mui/material';
-import { FiMail, FiLock, FiEye, FiEyeOff } from 'react-icons/fi';
-import toast from 'react-hot-toast';
-import { AUTH_FEATURES } from '../../utils/constants';
-import Link from 'next/link';
+  Typography,
+  Link,
+  Alert,
+} from "@mui/material";
+import {
+  Mail as MailIcon,
+  Lock as LockIcon,
+  Visibility as VisibilityIcon,
+  VisibilityOff as VisibilityOffIcon,
+} from "@mui/icons-material";
+import { AuthLayout } from "@/layouts/AuthLayout";
+import { useDispatch, useSelector } from "react-redux";
+import { loginUser, clearAuthError } from "@/store/slices/authSlice";
+import { useRouter } from "next/router";
+import { useFormik } from "formik";
+import * as yup from "yup";
+import toast from "react-hot-toast";
+
+const validationSchema = yup.object({
+  email: yup.string().email("Invalid email").required("Email is required"),
+  password: yup.string().required("Password is required"),
+});
 
 const LoginPage = () => {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [rememberMe, setRememberMe] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
   const dispatch = useDispatch();
-  const { loading } = useSelector((state) => state.auth);
   const router = useRouter();
+  const { loading, error } = useSelector((state) => state.auth);
+  const [showPassword, setShowPassword] = React.useState(false);
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const formik = useFormik({
+    initialValues: {
+      email: "",
+      password: "",
+      rememberMe: false,
+    },
+    validationSchema,
+    onSubmit: async (values) => {
+      try {
+        const result = await dispatch(
+          loginUser({ 
+            email: values.email, 
+            password: values.password 
+          })
+        ).unwrap();
+        
+        if (values.rememberMe) {
+          localStorage.setItem("rememberMe", "true");
+        }
+        
+        toast.success("Login successful!");
+        router.push("/dashboard");
+      } catch (err) {
+        toast.error(err.message || "Login failed. Please try again.");
+      }
+    },
+  });
 
-    try {
-      const result = await dispatch(loginUser({ email, password })).unwrap();
-      toast.success('Login successful!');
-      router.push('/dashboard');
-    } catch (err) {
-      toast.error(err.message || 'Login failed. Please try again.');
-    }
-  };
+  React.useEffect(() => {
+    return () => {
+      dispatch(clearAuthError());
+    };
+  }, [dispatch]);
 
   return (
-    <AuthLayout title="Login" features={AUTH_FEATURES.login}>
-      <Typography 
-        variant="h4" 
-        component="h1" 
-        gutterBottom 
-        sx={{ 
-          fontWeight: 700,
-          fontSize: '28px',
-          color: 'gray.950',
-          fontFamily: 'Inter, sans-serif',
-          mb: 2
-        }}
-      >
-        Welcome back
-      </Typography>
-      <Typography 
-        variant="body1" 
-        sx={{
-          color: 'gray.600',
-          fontFamily: 'Inter, sans-serif',
-          fontSize: '16px',
-          mb: 4
-        }}
-      >
-        Sign in to your admin account
-      </Typography>
+    <AuthLayout
+      title="Log In"
+      subtitle="Enter your credentials to access your account"
+    >
+      {error && (
+        <Alert severity="error" sx={{ mb: 3 }}>
+          {error.message}
+        </Alert>
+      )}
 
-      <Box component="form" onSubmit={handleSubmit} sx={{ mt: 1 }}>
+      <Box component="form" onSubmit={formik.handleSubmit} sx={{ width: "100%" }}>
         <TextField
-          margin="normal"
-          required
           fullWidth
-          id="email"
-          label="Email Address"
+          label="Email address"
           name="email"
-          autoComplete="email"
-          autoFocus
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
+          value={formik.values.email}
+          onChange={formik.handleChange}
+          onBlur={formik.handleBlur}
+          error={formik.touched.email && Boolean(formik.errors.email)}
+          helperText={formik.touched.email && formik.errors.email}
+          sx={{ mb: 3 }}
           InputProps={{
             startAdornment: (
               <InputAdornment position="start">
-                <FiMail color="gray.300" />
+                <MailIcon sx={{ color: "text.disabled" }} />
               </InputAdornment>
             ),
-          }}
-          sx={{
-            mb: 2,
-            '& .MuiInputLabel-root': {
-              fontSize: '14px',
-              color: 'gray.600'
-            },
-            '& .MuiOutlinedInput-root': {
-              fontSize: '16px'
-            }
           }}
         />
 
         <TextField
-          margin="normal"
-          required
           fullWidth
-          name="password"
           label="Password"
-          type={showPassword ? 'text' : 'password'}
-          id="password"
-          autoComplete="current-password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
+          name="password"
+          type={showPassword ? "text" : "password"}
+          value={formik.values.password}
+          onChange={formik.handleChange}
+          onBlur={formik.handleBlur}
+          error={formik.touched.password && Boolean(formik.errors.password)}
+          helperText={formik.touched.password && formik.errors.password}
+          sx={{ mb: 3 }}
           InputProps={{
             startAdornment: (
               <InputAdornment position="start">
-                <FiLock color="gray.300" />
+                <LockIcon sx={{ color: "text.disabled" }} />
               </InputAdornment>
             ),
             endAdornment: (
               <InputAdornment position="end">
                 <IconButton
-                  aria-label="toggle password visibility"
                   onClick={() => setShowPassword(!showPassword)}
                   edge="end"
-                  sx={{ color: 'gray.400' }}
                 >
-                  {showPassword ? <FiEyeOff /> : <FiEye />}
+                  {showPassword ? <VisibilityOffIcon /> : <VisibilityIcon />}
                 </IconButton>
               </InputAdornment>
             ),
           }}
-          sx={{
-            mb: 1,
-            '& .MuiInputLabel-root': {
-              fontSize: '14px',
-              color: 'gray.600'
-            },
-            '& .MuiOutlinedInput-root': {
-              fontSize: '16px'
-            }
-          }}
         />
 
         <Box sx={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          my: 2
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          mb: 3
         }}>
           <FormControlLabel
             control={
               <Checkbox
-                checked={rememberMe}
-                onChange={() => setRememberMe(!rememberMe)}
-                color="primary"
-                sx={{
-                  color: 'gray.400',
-                  '&.Mui-checked': {
-                    color: 'green.500'
-                  }
-                }}
+                name="rememberMe"
+                checked={formik.values.rememberMe}
+                onChange={formik.handleChange}
               />
             }
-            label={
-              <Typography sx={{ 
-                fontSize: '14px',
-                color: 'gray.600',
-                fontFamily: 'Inter, sans-serif'
-              }}>
-                Remember me
-              </Typography>
-            }
+            label="Remember me"
+            sx={{ "& .MuiTypography-root": { fontFamily: "Inter" } }}
           />
-          <Link href="/auth/forgot-password" passHref legacyBehavior>
-            <MuiLink 
-              component="a" 
-              sx={{ 
-                fontSize: '14px',
-                color: 'error.600',
-                fontFamily: 'Inter, sans-serif',
-                textDecoration: 'none',
-                '&:hover': {
-                  textDecoration: 'underline'
-                }
-              }}
-            >
-              Forgot password?
-            </MuiLink>
+          <Link
+            href="/auth/forgot-password"
+            sx={{
+              textTransform: "none",
+              fontFamily: "Inter",
+              fontWeight: 500,
+              color: "#42A605",
+              textDecoration: "none",
+              "&:hover": {
+                textDecoration: "underline",
+              },
+            }}
+          >
+            Forgot Password?
           </Link>
         </Box>
 
@@ -195,51 +171,42 @@ const LoginPage = () => {
           fullWidth
           variant="contained"
           disabled={loading}
-          startIcon={loading ? <CircularProgress size={20} color="inherit" /> : null}
-          sx={{ 
-            mt: 2, 
-            mb: 3, 
-            py: 1.5,
-            backgroundColor: 'green.500',
-            '&:hover': {
-              backgroundColor: 'green.600'
+          sx={{
+            bgcolor: "#42A605",
+            height: 56,
+            "&:hover": {
+              bgcolor: "#3a9504",
             },
-            fontSize: '16px',
+            fontFamily: "Inter",
             fontWeight: 600,
-            fontFamily: 'Inter, sans-serif',
-            textTransform: 'none',
-            borderRadius: '8px'
+            mb: 3,
           }}
         >
-          {loading ? 'Signing in...' : 'Sign In'}
+          {loading ? (
+            <CircularProgress size={24} color="inherit" />
+          ) : (
+            "Log into Account"
+          )}
         </Button>
 
-        <Typography 
-          variant="body2" 
-          sx={{ 
-            color: 'gray.600',
-            fontFamily: 'Inter, sans-serif',
-            fontSize: '14px',
-            textAlign: 'center'
-          }}
-        >
-          Don&apos;t have an account?{' '}
-          <Link href="/auth/register" passHref legacyBehavior>
-            <MuiLink 
-              component="a" 
-              sx={{ 
-                color: 'green.500',
-                fontWeight: 600,
-                textDecoration: 'none',
-                '&:hover': {
-                  textDecoration: 'underline'
-                }
+        <Box sx={{ textAlign: "center" }}>
+          <Typography variant="body2" sx={{ fontFamily: "Inter", color: "text.secondary" }}>
+            Don&apos;t have an account?{" "}
+            <Link
+              href="/auth/register"
+              sx={{
+                color: "#42A605",
+                textDecoration: "none",
+                fontWeight: 500,
+                "&:hover": {
+                  textDecoration: "underline",
+                },
               }}
             >
               Sign up
-            </MuiLink>
-          </Link>
-        </Typography>
+            </Link>
+          </Typography>
+        </Box>
       </Box>
     </AuthLayout>
   );

@@ -12,7 +12,7 @@ import {
 import { Mail as MailIcon } from "@mui/icons-material";
 import { AuthLayout } from "@/layouts/AuthLayout";
 import { useDispatch, useSelector } from "react-redux";
-import { verifyEmail, clearAuthError,  } from "@/store/slices/auth/authSlice";
+import { verifyEmail, clearAuthError,  } from "@/store/slices/authSlice";
 import { useRouter } from "next/router";
 import { useFormik } from "formik";
 import * as yup from "yup";
@@ -21,7 +21,7 @@ const validationSchema = yup.object({
   email: yup.string().email("Invalid email").required("Email is required"),
 });
 
-const EmailVerfication = () => {
+const EmailVerficationPage = () => {
   const dispatch = useDispatch();
   const router = useRouter();
   const { loading, error } = useSelector((state) => state.auth);
@@ -157,4 +157,4 @@ const EmailVerfication = () => {
   );
 };
 
-export default EmailVerfication;
+export default EmailVerficationPage;

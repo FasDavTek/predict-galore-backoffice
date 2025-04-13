@@ -16,7 +16,7 @@ import {
   resendOTP, 
   clearOtpError,
   resetResendSuccess
-} from "@/store/slices/auth/authSlice";
+} from "@/store/slices/authSlice";
 import { useRouter } from "next/router";
 import { useFormik } from "formik";
 import * as yup from "yup";
@@ -52,7 +52,7 @@ const validationSchema = yup.object({
     .matches(/^[0-9]+$/, 'OTP must contain only numbers')
 });
 
-const OTPVerification = () => {
+const OTPVerificationPage = () => {
   const dispatch = useDispatch();
   const router = useRouter();
   const {
@@ -220,4 +220,4 @@ const OTPVerification = () => {
   );
 };
 
-export default OTPVerification;
+export default OTPVerificationPage;

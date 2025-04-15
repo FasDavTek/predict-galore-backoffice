@@ -11,6 +11,11 @@ import {
   Typography,
   Link,
   Alert,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogContentText,
+  DialogActions,
 } from "@mui/material";
 import {
   Mail as MailIcon,
@@ -36,6 +41,8 @@ const LoginPage = () => {
   const router = useRouter();
   const { loading, error } = useSelector((state) => state.auth);
   const [showPassword, setShowPassword] = React.useState(false);
+  const [verificationDialogOpen, setVerificationDialogOpen] = React.useState(false);
+  const [unverifiedUser, setUnverifiedUser] = React.useState(null);
 
   const formik = useFormik({
     initialValues: {
@@ -60,10 +67,33 @@ const LoginPage = () => {
         toast.success("Login successful!");
         router.push("/dashboard");
       } catch (err) {
-        toast.error(err.message || "Login failed. Please try again.");
+         // Handle email not verified case
+         if (err.payload?.isEmailVerified === false) {
+          setUnverifiedUser(err.payload.user);
+          setVerificationDialogOpen(true);
+        } else {
+          toast.error(err.message || "Login failed. Please try again.");
+        }
+      
       }
     },
   });
+
+  const handleResendVerification = async () => {
+    try {
+      await dispatch(resendVerificationEmail(unverifiedUser.email));
+      toast.success("Verification email sent successfully!");
+      setVerificationDialogOpen(false);
+    } catch (error) {
+      toast.error("Failed to resend verification email. Please try again.");
+    }
+  };
+
+  const handleNavigateToVerify = () => {
+    router.push(`/auth/verify-email?email=${encodeURIComponent(unverifiedUser.email)}`);
+    setVerificationDialogOpen(false);
+  };
+
 
   React.useEffect(() => {
     return () => {
@@ -76,7 +106,7 @@ const LoginPage = () => {
       title="Log In"
       subtitle="Enter your credentials to access your account"
     >
-      {error && (
+   {error && error.isEmailVerified !== false && (
         <Alert severity="error" sx={{ mb: 3 }}>
           {error.message}
         </Alert>
@@ -206,6 +236,31 @@ const LoginPage = () => {
               Sign up
             </Link>
           </Typography>
+
+
+            {/* Email Verification Dialog */}
+        <Dialog
+          open={verificationDialogOpen}
+          onClose={() => setVerificationDialogOpen(false)}
+        >
+          <DialogTitle>Email Verification Required</DialogTitle>
+          <DialogContent>
+            <DialogContentText>
+              Your email address has not been verified yet. Please verify your email to continue.
+            </DialogContentText>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setVerificationDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleResendVerification} color="primary">
+              Resend Verification Email
+            </Button>
+            <Button onClick={handleNavigateToVerify} color="primary" variant="contained">
+              Verify Email Now
+            </Button>
+          </DialogActions>
+        </Dialog>
         </Box>
       </Box>
     </AuthLayout>

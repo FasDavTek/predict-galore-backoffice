@@ -1,5 +1,5 @@
 // store/slices/dashboard/dashboardSlice.js
-import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
+import { createSlice, createAsyncThunk, createSelector } from '@reduxjs/toolkit';
 import { HYDRATE } from 'next-redux-wrapper';
 import axios from 'axios';
 
@@ -283,16 +283,62 @@ export const {
   clearActivityLogError,
 } = dashboardSlice.actions;
 
-// Selectors
-export const selectDashboardStats = (state) => state.dashboard.stats;
-export const selectUserEngagement = (state) => state.dashboard.engagement;
-export const selectTrafficData = (state) => state.dashboard.traffic;
-export const selectActivityLog = (state) => {
-  const limit = state.dashboard.filters.activityLogLimit;
-  return state.dashboard.activityLog.slice(0, limit);
-};
-export const selectDashboardLoading = (state) => state.dashboard.loading;
-export const selectDashboardErrors = (state) => state.dashboard.error;
-export const selectDashboardFilters = (state) => state.dashboard.filters;
+
+// Memoized Selectors - Prevents unnecessary re-renders
+export const selectDashboardState = (state) => state.dashboard;
+
+export const selectDashboardStats = createSelector(
+  [selectDashboardState],
+  (dashboard) => dashboard.stats
+);
+
+export const selectUserEngagement = createSelector(
+  [selectDashboardState],
+  (dashboard) => dashboard.engagement
+);
+
+export const selectTrafficData = createSelector(
+  [selectDashboardState],
+  (dashboard) => dashboard.traffic
+);
+
+export const selectActivityLog = createSelector(
+  [selectDashboardState],
+  (dashboard) => {
+    const limit = dashboard.filters.activityLogLimit;
+    return dashboard.activityLog.slice(0, limit);
+  }
+);
+
+export const selectDashboardLoading = createSelector(
+  [selectDashboardState],
+  (dashboard) => dashboard.loading
+);
+
+export const selectDashboardErrors = createSelector(
+  [selectDashboardState],
+  (dashboard) => dashboard.error
+);
+
+export const selectDashboardFilters = createSelector(
+  [selectDashboardState],
+  (dashboard) => dashboard.filters
+);
+
+// Additional optimized selectors for specific filter values
+export const selectTimeRange = createSelector(
+  [selectDashboardFilters],
+  (filters) => filters.timeRange
+);
+
+export const selectTrafficFilter = createSelector(
+  [selectDashboardFilters],
+  (filters) => filters.trafficFilter
+);
+
+export const selectActivityLogLimit = createSelector(
+  [selectDashboardFilters],
+  (filters) => filters.activityLogLimit
+);
 
 export default dashboardSlice.reducer;

@@ -24,6 +24,15 @@ export const loginUser = createAsyncThunk(
   async (credentials, { rejectWithValue }) => {
     try {
       const response = await axios.post('/api/auth/login', credentials);
+      // Check if email is verified before proceeding
+      if (!response.data.user.isVerified) {
+        return rejectWithValue({
+          message: 'Email not verified',
+          statusCode: 403,
+          isEmailVerified: false,
+          user: response.data.user
+        });
+      }
       // Store token in localStorage
       localStorage.setItem('authToken', response.data.token);
       return response.data;
@@ -31,10 +40,12 @@ export const loginUser = createAsyncThunk(
       return rejectWithValue({
         message: error.response?.data?.message || 'Login failed',
         statusCode: error.response?.status || 500,
+        isEmailVerified: true // Assume verified unless explicitly set
       });
     }
   }
 );
+
 
 export const verifyEmail = createAsyncThunk(
   'auth/verifyEmail',
@@ -45,6 +56,21 @@ export const verifyEmail = createAsyncThunk(
     } catch (error) {
       return rejectWithValue({
         message: error.response?.data?.message || 'Email verification failed',
+        statusCode: error.response?.status || 500,
+      });
+    }
+  }
+);
+
+export const resendVerificationEmail = createAsyncThunk(
+  'auth/resendVerificationEmail',
+  async (email, { rejectWithValue }) => {
+    try {
+      const response = await axios.post('/api/auth/resend-verification', { email });
+      return response.data;
+    } catch (error) {
+      return rejectWithValue({
+        message: error.response?.data?.message || 'Failed to resend verification email',
         statusCode: error.response?.status || 500,
       });
     }

@@ -14,14 +14,19 @@ import {
   TableBody,
   Checkbox,
   Skeleton,
-  Typography
+  Typography,
+  Breadcrumbs,
+  Link
 } from '@mui/material';
 import {
   Search as SearchIcon,
   FilterList as FilterIcon,
-  Download as DownloadIcon
+  Download as DownloadIcon,
+  Home as HomeIcon
 } from '@mui/icons-material';
 import Image from 'next/image';
+import UserActionsMenu from './UserActionsMenu';
+import UserDetailView from './UserDetailView';
 
 const UsersTable = ({
   users = [],
@@ -30,8 +35,33 @@ const UsersTable = ({
   onSearchChange,
   onExportCSV,
   onFilterClick,
-  exportLoading = false
+  exportLoading = false,
+  selectedUser,
+  onUserSelect,
+  onViewDetails,
+  onBackToList
 }) => {
+  // If we have a selected user, show the breadcrumb navigation
+  if (selectedUser) {
+    return (
+      <Box>
+        <Breadcrumbs aria-label="breadcrumb" sx={{ mb: 2 }}>
+          <Link 
+            color="inherit" 
+            onClick={onBackToList}
+            sx={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}
+          >
+            <HomeIcon sx={{ mr: 0.5 }} fontSize="inherit" />
+            Users
+          </Link>
+          <Typography color="text.primary">{selectedUser.fullName}</Typography>
+        </Breadcrumbs>
+
+        <UserDetailView user={selectedUser} onBack={onBackToList} />
+      </Box>
+    );
+  }
+
   // Table columns configuration
   const columns = [
     { id: 'checkbox', label: '', width: 60, align: 'center' },
@@ -181,7 +211,11 @@ const UsersTable = ({
               users.map((user) => (
                 <TableRow key={user.id}>
                   <TableCell padding="checkbox" sx={{ borderRight: '1px solid #EEEEF0' }}>
-                    <Checkbox size="small" />
+                    <Checkbox 
+                      size="small" 
+                      checked={selectedUser?.id === user.id}
+                      onChange={() => onUserSelect(user)}
+                    />
                   </TableCell>
                   <TableCell sx={{ borderRight: '1px solid #EEEEF0' }}>{user.id}</TableCell>
                   <TableCell sx={{ borderRight: '1px solid #EEEEF0' }}>{user.fullName}</TableCell>
@@ -189,7 +223,12 @@ const UsersTable = ({
                   <TableCell sx={{ borderRight: '1px solid #EEEEF0' }}>{user.email}</TableCell>
                   <TableCell sx={{ borderRight: '1px solid #EEEEF0' }}>{user.phone}</TableCell>
                   <TableCell sx={{ borderRight: '1px solid #EEEEF0' }}>{user.location}</TableCell>
-                  <TableCell>Actions</TableCell>
+                  <TableCell>
+                    <UserActionsMenu 
+                      user={user} 
+                      onViewDetails={() => onViewDetails(user)}
+                    />
+                  </TableCell>
                 </TableRow>
               ))
             ) : (

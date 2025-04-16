@@ -1,8 +1,8 @@
 // pages/dashboard/users.js
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { ErrorBoundary } from 'react-error-boundary';
-import { Box } from '@mui/material';
+import { Box, Snackbar, Alert } from '@mui/material';
 import { People as UsersIcon } from '@mui/icons-material';
 
 import DashboardLayout from '@/layouts/DashboardLayout';
@@ -16,6 +16,8 @@ import {
   exportUsersCSV,
   setTimeRange,
   setSearchQuery,
+  deleteUser,
+  upgradeUser,
   selectUserStats,
   selectUsersList,
   selectUsersLoading,
@@ -39,6 +41,14 @@ const UsersPage = () => {
   const loading = useSelector(selectUsersLoading);
   const timeRange = useSelector(selectTimeRange);
   const searchQuery = useSelector(selectSearchQuery);
+  
+  // State for selected user and notifications
+  const [selectedUser, setSelectedUser] = useState(null);
+  const [notification, setNotification] = useState({
+    open: false,
+    message: '',
+    severity: 'success'
+  });
 
   // Fetch data on component mount and when filters change
   useEffect(() => {
@@ -61,10 +71,30 @@ const UsersPage = () => {
     dispatch(exportUsersCSV());
   };
 
-  // Placeholder for filter click 
+  // Handler for viewing user details
+  const handleViewDetails = (user) => {
+    setSelectedUser(user);
+  };
+
+  // Handler for selecting a user
+  const handleUserSelect = (user) => {
+    setSelectedUser(user);
+  };
+
+  // Handler for going back to the list view
+  const handleBackToList = () => {
+    setSelectedUser(null);
+  };
+
+  // Handler for filter button click
   const handleFilterClick = () => {
+    // Implement filter functionality here
     console.log('Filter button clicked');
-    // Implement filter dialog or other functionality
+  };
+
+  // Handler for closing notification
+  const handleNotificationClose = () => {
+    setNotification({ ...notification, open: false });
   };
 
   return (
@@ -79,20 +109,22 @@ const UsersPage = () => {
         />
 
         {/* Users Stat Cards Section */}
-        <Box className="w-full mb-8">
-          <Box className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-            {stats.map((card, index) => (
-              <UsersStat
-                key={index}
-                title={card.title}
-                value={card.value}
-                icon={<UsersIcon />}
-                change={card.change}
-                bgColor={card.bgColor}
-              />
-            ))}
+        {!selectedUser && (
+          <Box className="w-full mb-8">
+            <Box className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+              {stats.map((card, index) => (
+                <UsersStat
+                  key={index}
+                  title={card.title}
+                  value={card.value}
+                  icon={<UsersIcon />}
+                  change={card.change}
+                  bgColor={card.bgColor}
+                />
+              ))}
+            </Box>
           </Box>
-        </Box>
+        )}
 
         {/* Main Content with Users Table */}
         <Box className="w-full">
@@ -104,8 +136,27 @@ const UsersPage = () => {
             onExportCSV={handleExportCSV}
             onFilterClick={handleFilterClick}
             exportLoading={loading.export}
+            selectedUser={selectedUser}
+            onUserSelect={handleUserSelect}
+            onViewDetails={handleViewDetails}
+            onBackToList={handleBackToList}
           />
         </Box>
+
+        {/* Notification Snackbar */}
+        <Snackbar
+          open={notification.open}
+          autoHideDuration={6000}
+          onClose={handleNotificationClose}
+        >
+          <Alert 
+            onClose={handleNotificationClose} 
+            severity={notification.severity}
+            sx={{ width: '100%' }}
+          >
+            {notification.message}
+          </Alert>
+        </Snackbar>
       </ErrorBoundary>
     </DashboardLayout>
   );

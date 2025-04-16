@@ -28,9 +28,11 @@ import {
 import Image from 'next/image';
 import { useRouter } from 'next/router';
 
-const drawerWidth = 260;
-const collapsedWidth = 72;
+// Sidebar width constants
+const drawerWidth = 260; // Expanded width
+const collapsedWidth = 72; // Collapsed width
 
+// Navigation items configuration
 const navigationItems = [
   { icon: <DashboardIcon />, label: 'Dashboard', path: '/dashboard' },
   { icon: <DescriptionIcon />, label: 'Predictions', path: '/predictions' },
@@ -42,25 +44,29 @@ const navigationItems = [
 const Sidebar = ({ collapsed, setCollapsed }) => {
   const router = useRouter();
   const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+  const isMobile = useMediaQuery(theme.breakpoints.down('md')); // Check if mobile view
 
-  // const [collapsed, setCollapsed] = useState(false);
+  // State for mobile drawer
   const [mobileOpen, setMobileOpen] = useState(false);
 
+  // Toggle sidebar between expanded/collapsed states
   const toggleSidebar = () => {
     if (isMobile) {
-      setMobileOpen(!mobileOpen);
+      setMobileOpen(!mobileOpen); // Toggle mobile drawer
     } else {
-      setCollapsed(!collapsed);
+      setCollapsed(!collapsed); // Toggle desktop collapsed state
     }
   };
 
+  // Check if current route matches item path
   const isActive = (path) => router.pathname === path;
 
+  // Close mobile drawer when switching to desktop view
   useEffect(() => {
     if (!isMobile) setMobileOpen(false);
   }, [isMobile]);
 
+  // Main drawer content
   const drawerContent = (
     <Box
       sx={{
@@ -69,7 +75,7 @@ const Sidebar = ({ collapsed, setCollapsed }) => {
         flexDirection: 'column',
       }}
     >
-      {/* Logo + Toggle */}
+      {/* Header section with logo and collapse button */}
       <Box
         sx={{
           display: 'flex',
@@ -81,6 +87,7 @@ const Sidebar = ({ collapsed, setCollapsed }) => {
           borderColor: 'divider',
         }}
       >
+        {/* Show logo only when expanded */}
         {!collapsed && !isMobile && (
           <Image
             src="/predict-galore-logo.png"
@@ -90,38 +97,47 @@ const Sidebar = ({ collapsed, setCollapsed }) => {
             priority
           />
         )}
+        {/* Collapse/expand button */}
         <IconButton onClick={toggleSidebar}>
           {collapsed || isMobile ? <ChevronRight /> : <ChevronLeft />}
         </IconButton>
       </Box>
 
-      {/* Menu */}
+      {/* Navigation menu items */}
       <Box sx={{ flex: 1, overflowY: 'auto', px: collapsed || isMobile ? 0 : 1.5 }}>
         <List>
           {navigationItems.map((item, index) => {
             const active = isActive(item.path);
+            
+            // Reusable button component for each menu item
             const menuButton = (
               <ListItemButton
                 selected={active}
                 onClick={() => {
                   router.push(item.path);
-                  if (isMobile) setMobileOpen(false); // auto-close on mobile
+                  if (isMobile) setMobileOpen(false); // Auto-close on mobile
                 }}
                 sx={{
                   borderRadius: 1,
-                  mx: collapsed || isMobile ? 0.5 : 0,
+                  mx: collapsed || isMobile ? 0.5 : 0, // Adjust margin based on state
                   my: 0.5,
                   justifyContent: collapsed || isMobile ? 'center' : 'flex-start',
+                  // Active state styling
                   '&.Mui-selected': {
-                    backgroundColor: 'primary.light',
-                    '& .MuiListItemIcon-root': { color: 'primary.main' },
+                    backgroundColor: 'rgba(66, 166, 5, 0.12)', // Light green background
+                    '& .MuiListItemIcon-root': { color: 'primary.main' }, // Green icon
                     '& .MuiListItemText-primary': {
-                      color: 'primary.main',
-                      fontWeight: 600,
+                      color: 'primary.main', // Green text
+                      fontWeight: 600, // Bold text
                     },
                   },
+                  // Hover state styling
                   '&:hover': {
-                    backgroundColor: 'action.hover',
+                    backgroundColor: 'rgba(66, 166, 5, 0.08)', // Lighter green background
+                    '& .MuiListItemIcon-root': { color: 'primary.main' }, // Green icon
+                    '& .MuiListItemText-primary': {
+                      color: 'primary.main', // Green text
+                    },
                   },
                 }}
               >
@@ -129,14 +145,20 @@ const Sidebar = ({ collapsed, setCollapsed }) => {
                   sx={{
                     minWidth: collapsed || isMobile ? 'auto' : 36,
                     justifyContent: 'center',
+                    color: active ? 'primary.main' : 'text.secondary', // Green when active
                   }}
                 >
                   {React.cloneElement(item.icon, { fontSize: 'small' })}
                 </ListItemIcon>
+                {/* Hide text when collapsed */}
                 {!(collapsed || isMobile) && (
                   <ListItemText
                     primary={item.label}
-                    primaryTypographyProps={{ fontSize: 14 }}
+                    primaryTypographyProps={{ 
+                      fontSize: 14,
+                      color: active ? 'primary.main' : 'text.secondary',
+                      fontWeight: active ? 600 : 'normal',
+                    }}
                     sx={{ ml: 1 }}
                   />
                 )}
@@ -145,6 +167,7 @@ const Sidebar = ({ collapsed, setCollapsed }) => {
 
             return (
               <ListItem key={index} disablePadding sx={{ display: 'block' }}>
+                {/* Show tooltip only when collapsed */}
                 {collapsed || isMobile ? (
                   <Tooltip title={item.label} placement="right">
                     {menuButton}
@@ -158,7 +181,7 @@ const Sidebar = ({ collapsed, setCollapsed }) => {
         </List>
       </Box>
 
-      {/* Logout */}
+      {/* Footer section with logout button */}
       <Box
         sx={{
           px: collapsed || isMobile ? 0 : 2,
@@ -195,7 +218,7 @@ const Sidebar = ({ collapsed, setCollapsed }) => {
 
   return (
     <>
-      {/* Mobile menu trigger */}
+      {/* Mobile menu trigger button (only visible on mobile) */}
       {isMobile && (
         <IconButton
           color="inherit"
@@ -207,12 +230,13 @@ const Sidebar = ({ collapsed, setCollapsed }) => {
         </IconButton>
       )}
 
+      {/* Main drawer component */}
       <Drawer
-        variant={isMobile ? 'temporary' : 'permanent'}
+        variant={isMobile ? 'temporary' : 'permanent'} // Temporary for mobile, permanent for desktop
         open={isMobile ? mobileOpen : true}
         onClose={() => setMobileOpen(false)}
         ModalProps={{
-          keepMounted: true,
+          keepMounted: true, // Better performance on mobile
         }}
         sx={{
           width: collapsed || isMobile ? collapsedWidth : drawerWidth,
@@ -220,7 +244,7 @@ const Sidebar = ({ collapsed, setCollapsed }) => {
           '& .MuiDrawer-paper': {
             width: collapsed || isMobile ? collapsedWidth : drawerWidth,
             boxSizing: 'border-box',
-            transition: 'width 0.3s',
+            transition: 'width 0.3s', // Smooth transition
           },
         }}
       >

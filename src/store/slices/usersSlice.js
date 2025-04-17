@@ -12,10 +12,30 @@ const mockUserStats = [
     title: "Total Users",
     value: "1,234",
     change: "+12.5",
-    bgColor: "#F0FDF4", // Light green background
+    bgColor: "#F0FDF4",
     icon: "users"
   },
-  // ... other stat items
+  {
+    title: "Active Users",
+    value: "876",
+    change: "-2.3",
+    bgColor: "#FEF2F2",
+    icon: "users"
+  },
+  {
+    title: "New Users",
+    value: "142",
+    change: "+5.8",
+    bgColor: "#EFF8FF",
+    icon: "users"
+  },
+  {
+    title: "Premium Users",
+    value: "234",
+    change: "+15.8",
+    bgColor: "#F5F3FF",
+    icon: "users"
+  }
 ];
 
 /**
@@ -33,7 +53,16 @@ const mockUsersList = [
     status: "active",
     createdAt: "2023-05-15T10:30:00Z", // ISO format date
   },
-  // ... other user objects
+  {
+    id: "USR-002",
+    fullName: "Jane Smith",
+    subscription: "Free",
+    email: "jane@example.com",
+    phone: "+1 (555) 987-6543",
+    location: "London, UK",
+    status: "active",
+    createdAt: "2023-06-20T14:45:00Z",
+  }
 ];
 
 // ==================== ASYNC THUNKS ==================== //
@@ -59,13 +88,19 @@ export const fetchUserStats = createAsyncThunk(
  * Fetches user list with optional filtering
  * @param {Object} params - Contains searchQuery and timeRange
  */
+// In your fetchUsersList thunk
 export const fetchUsersList = createAsyncThunk(
   'users/fetchList',
   async (params, { rejectWithValue }) => {
     try {
-      const { searchQuery, timeRange } = params;
+      const { searchQuery, timeRange, status, plan } = params;
       const response = await axios.get('/api/users', {
-        params: { search: searchQuery, range: timeRange }
+        params: { 
+          search: searchQuery, 
+          range: timeRange,
+          status: status !== 'all' ? status : undefined,
+          plan: plan !== 'all' ? plan : undefined
+        }
       });
       return response.data;
     } catch (error) {
@@ -152,12 +187,10 @@ const initialState = {
     export: null
   },
   filters: {
-    timeRange: 'This Month', // Default time range
-    searchQuery: '', // Current search term
-    pagination: {
-      page: 1, // Current page
-      pageSize: 10 // Items per page
-    }
+    timeRange: 'This Month',
+    searchQuery: '',
+    statusFilter: 'all', // Add status filter
+    planFilter: 'all'   // Add plan filter
   }
 };
 
@@ -174,6 +207,12 @@ const usersSlice = createSlice({
     // Action to set search query
     setSearchQuery: (state, action) => {
       state.filters.searchQuery = action.payload;
+    },
+    setStatusFilter: (state, action) => {
+      state.filters.statusFilter = action.payload;
+    },
+    setPlanFilter: (state, action) => {
+      state.filters.planFilter = action.payload;
     },
     // Action to set current page
     setPage: (state, action) => {
@@ -279,6 +318,8 @@ const usersSlice = createSlice({
 export const {
   setTimeRange,
   setSearchQuery,
+  setStatusFilter,  
+  setPlanFilter,  
   setPage,
   setPageSize,
   clearUsersError,
@@ -329,6 +370,15 @@ export const selectTimeRange = createSelector(
 export const selectSearchQuery = createSelector(
   [selectUsersFilters],
   (filters) => filters.searchQuery
+);
+export const selectStatusFilter = createSelector(
+  [selectUsersFilters],
+  (filters) => filters.statusFilter
+);
+
+export const selectPlanFilter = createSelector(
+  [selectUsersFilters],
+  (filters) => filters.planFilter
 );
 
 export const selectPagination = createSelector(

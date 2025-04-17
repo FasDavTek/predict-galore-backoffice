@@ -1,100 +1,67 @@
-// components/dashboard/users/UserActionsMenu.js
 import React, { useState } from 'react';
 import {
   IconButton,
   Menu,
   MenuItem,
   Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogContentText,
-  DialogActions,
+  Typography,
+  Divider,
   Button,
-  Box,
-  Typography
+  Box
 } from '@mui/material';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
 import { useDispatch } from 'react-redux';
 import { deleteUser, upgradeUser } from '@/store/slices/usersSlice';
 
 /**
- * UserActionsMenu component - Provides action menu for user operations
- * @param {Object} user - The user object to perform actions on
+ * UserActionsMenu - Provides contextual actions for a user
  */
-const UserActionsMenu = ({ user }) => {
-  // State management for menu and dialogs
+const UserActionsMenu = ({ user, onViewDetails }) => {
   const dispatch = useDispatch();
-  const [anchorEl, setAnchorEl] = useState(null); // Anchor element for menu positioning
-  const [openDeleteDialog, setOpenDeleteDialog] = useState(false); // Delete dialog visibility
-  const [openUpgradeDialog, setOpenUpgradeDialog] = useState(false); // Upgrade dialog visibility
-  const [actionLoading, setActionLoading] = useState(false); // Loading state for actions
+  const [anchorEl, setAnchorEl] = useState(null);
+  const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
+  const [openUpgradeDialog, setOpenUpgradeDialog] = useState(false);
+  const [actionLoading, setActionLoading] = useState(false);
 
-  /**
-   * Handles opening the action menu
-   * @param {Event} event - The click event
-   */
-  const handleMenuOpen = (event) => {
-    setAnchorEl(event.currentTarget); // Set anchor to clicked button
-  };
+  // Menu handlers
+  const handleMenuOpen = (event) => setAnchorEl(event.currentTarget);
+  const handleMenuClose = () => setAnchorEl(null);
 
-  /**
-   * Handles closing the action menu
-   */
-  const handleMenuClose = () => {
-    setAnchorEl(null); // Clear anchor to close menu
-  };
-
-  /**
-   * Handles delete button click
-   * Opens delete confirmation dialog
-   */
+  // Action handlers
   const handleDeleteClick = () => {
-    setOpenDeleteDialog(true); // Show delete dialog
-    handleMenuClose(); // Close the action menu
+    setOpenDeleteDialog(true);
+    handleMenuClose();
   };
 
-  /**
-   * Handles upgrade button click
-   * Opens upgrade confirmation dialog
-   */
   const handleUpgradeClick = () => {
-    setOpenUpgradeDialog(true); // Show upgrade dialog
-    handleMenuClose(); // Close the action menu
+    setOpenUpgradeDialog(true);
+    handleMenuClose();
   };
 
-  /**
-   * Handles delete confirmation
-   * Dispatches delete action to Redux store
-   */
+  // Confirmation handlers
   const handleDeleteConfirm = async () => {
-    setActionLoading(true); // Show loading state
+    setActionLoading(true);
     try {
-      await dispatch(deleteUser(user.id)); // Dispatch delete action
-      // Note: Success notification is handled by the Redux slice
+      await dispatch(deleteUser(user.id));
     } finally {
-      setActionLoading(false); // Hide loading state
-      setOpenDeleteDialog(false); // Close dialog
+      setActionLoading(false);
+      setOpenDeleteDialog(false);
     }
   };
 
-  /**
-   * Handles upgrade confirmation
-   * Dispatches upgrade action to Redux store
-   */
   const handleUpgradeConfirm = async () => {
-    setActionLoading(true); // Show loading state
+    setActionLoading(true);
     try {
-      await dispatch(upgradeUser(user.id)); // Dispatch upgrade action
-      // Note: Success notification is handled by the Redux slice
+      await dispatch(upgradeUser(user.id));
     } finally {
-      setActionLoading(false); // Hide loading state
-      setOpenUpgradeDialog(false); // Close dialog
+      setActionLoading(false);
+      setOpenUpgradeDialog(false);
     }
   };
 
   return (
     <>
-      {/* Three-dot menu button */}
+      {/* Action menu trigger */}
       <IconButton 
         onClick={handleMenuOpen}
         aria-label="user actions"
@@ -104,93 +71,97 @@ const UserActionsMenu = ({ user }) => {
         <MoreVertIcon />
       </IconButton>
 
-      {/* Dropdown action menu */}
+      {/* Dropdown menu */}
       <Menu
         id="user-actions-menu"
         anchorEl={anchorEl}
         open={Boolean(anchorEl)}
         onClose={handleMenuClose}
-        anchorOrigin={{
-          vertical: 'top',
-          horizontal: 'right',
-        }}
-        transformOrigin={{
-          vertical: 'top',
-          horizontal: 'right',
-        }}
+        anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
+        transformOrigin={{ vertical: 'top', horizontal: 'right' }}
       >
-        {/* Upgrade account option */}
+        <MenuItem onClick={() => { onViewDetails(); handleMenuClose(); }}>
+          View Details
+        </MenuItem>
         <MenuItem 
           onClick={handleUpgradeClick}
-          disabled={user.subscription === 'Premium'} // Disable if already premium
+          disabled={user.subscription === 'Premium'}
         >
           Upgrade Account
         </MenuItem>
-        
-        {/* Delete user option */}
         <MenuItem onClick={handleDeleteClick}>
           Delete User
         </MenuItem>
       </Menu>
 
-      {/* Delete Confirmation Dialog */}
+      {/* Delete confirmation dialog */}
       <Dialog 
         open={openDeleteDialog} 
         onClose={() => setOpenDeleteDialog(false)}
-        aria-labelledby="delete-dialog-title"
+        maxWidth="xs"
+        fullWidth
       >
-        <DialogTitle id="delete-dialog-title">Confirm Delete</DialogTitle>
-        <DialogContent>
-          <DialogContentText>
-            Are you sure you want to delete {user.fullName}? This action cannot be undone.
-          </DialogContentText>
-        </DialogContent>
-        <DialogActions>
-          <Button 
-            onClick={() => setOpenDeleteDialog(false)}
-            disabled={actionLoading}
-          >
-            Cancel
-          </Button>
-          <Button 
-            onClick={handleDeleteConfirm} 
-            color="error"
-            disabled={actionLoading}
-            autoFocus
-          >
-            {actionLoading ? 'Deleting...' : 'Delete'}
-          </Button>
-        </DialogActions>
+        <Box sx={{ p: 3 }}>
+          <Typography variant="h6" gutterBottom>Delete User</Typography>
+          <Divider sx={{ mb: 2 }} />
+          <Typography variant="body1" sx={{ mb: 3 }}>
+            Are you sure you want to delete this user? This action cannot be undone.
+          </Typography>
+          <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 2 }}>
+            <Button 
+              variant="outlined" 
+              onClick={() => setOpenDeleteDialog(false)}
+              disabled={actionLoading}
+              sx={{ minWidth: 100 }}
+            >
+              No, Cancel
+            </Button>
+            <Button 
+              variant="contained" 
+              color="error"
+              onClick={handleDeleteConfirm}
+              disabled={actionLoading}
+              sx={{ minWidth: 100 }}
+            >
+              {actionLoading ? 'Deleting...' : 'Yes, Delete'}
+            </Button>
+          </Box>
+        </Box>
       </Dialog>
 
-      {/* Upgrade Confirmation Dialog */}
+      {/* Upgrade confirmation dialog */}
       <Dialog 
         open={openUpgradeDialog} 
         onClose={() => setOpenUpgradeDialog(false)}
-        aria-labelledby="upgrade-dialog-title"
+        maxWidth="xs"
+        fullWidth
       >
-        <DialogTitle id="upgrade-dialog-title">Confirm Upgrade</DialogTitle>
-        <DialogContent>
-          <DialogContentText>
-            Upgrade {user.fullName} to premium account?
-          </DialogContentText>
-        </DialogContent>
-        <DialogActions>
-          <Button 
-            onClick={() => setOpenUpgradeDialog(false)}
-            disabled={actionLoading}
-          >
-            Cancel
-          </Button>
-          <Button 
-            onClick={handleUpgradeConfirm} 
-            color="primary"
-            disabled={actionLoading}
-            autoFocus
-          >
-            {actionLoading ? 'Upgrading...' : 'Upgrade'}
-          </Button>
-        </DialogActions>
+        <Box sx={{ p: 3 }}>
+          <Typography variant="h6" gutterBottom>Upgrade Account</Typography>
+          <Divider sx={{ mb: 2 }} />
+          <Typography variant="body1" sx={{ mb: 3 }}>
+            Upgrade this account to premium subscription?
+          </Typography>
+          <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 2 }}>
+            <Button 
+              variant="outlined" 
+              onClick={() => setOpenUpgradeDialog(false)}
+              disabled={actionLoading}
+              sx={{ minWidth: 100 }}
+            >
+              No, Cancel
+            </Button>
+            <Button 
+              variant="contained" 
+              color="primary"
+              onClick={handleUpgradeConfirm}
+              disabled={actionLoading}
+              sx={{ minWidth: 100 }}
+            >
+              {actionLoading ? 'Upgrading...' : 'Yes, Upgrade'}
+            </Button>
+          </Box>
+        </Box>
       </Dialog>
     </>
   );

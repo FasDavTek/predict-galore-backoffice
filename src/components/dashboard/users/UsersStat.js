@@ -66,7 +66,7 @@ const UsersStat = ({ title, value, icon, change, bgColor }) => {
               </Typography>
               <Typography sx={{ 
                 color: '#475467', 
-                fontSize: '0.875rem', 
+                fontSize: '0.5rem', 
                 fontWeight: 500 
               }}>
                 vs last month

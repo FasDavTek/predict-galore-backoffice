@@ -1,23 +1,26 @@
-// pages/dashboard/users.js
 import React, { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { ErrorBoundary } from 'react-error-boundary';
 import { Box, Snackbar, Alert } from '@mui/material';
 import { People as UsersIcon } from '@mui/icons-material';
 
+// Component imports
 import DashboardLayout from '@/layouts/DashboardLayout';
 import { Header } from '@/components/dashboard/users/Header';
 import UsersStat from '@/components/dashboard/users/UsersStat';
 import UsersTable from '@/components/dashboard/users/UsersTable';
 
+// Redux imports
 import {
   fetchUserStats,
   fetchUsersList,
   exportUsersCSV,
   setTimeRange,
   setSearchQuery,
-  deleteUser,
-  upgradeUser,
+  setStatusFilter,
+  setPlanFilter,
+  selectStatusFilter,
+  selectPlanFilter,
   selectUserStats,
   selectUsersList,
   selectUsersLoading,
@@ -25,6 +28,10 @@ import {
   selectSearchQuery
 } from '@/store/slices/usersSlice';
 
+/**
+ * Error boundary fallback component
+ * Shows error message when components fail to render
+ */
 function ErrorFallback({ error }) {
   return (
     <div className="p-4 bg-red-50 text-red-600">
@@ -34,15 +41,23 @@ function ErrorFallback({ error }) {
   );
 }
 
+/**
+ * UsersPage - Main component for users dashboard
+ * Manages user data fetching, filtering, and display
+ */
 const UsersPage = () => {
   const dispatch = useDispatch();
+  
+  // Select data from Redux store
   const stats = useSelector(selectUserStats);
   const users = useSelector(selectUsersList);
   const loading = useSelector(selectUsersLoading);
   const timeRange = useSelector(selectTimeRange);
   const searchQuery = useSelector(selectSearchQuery);
+  const statusFilter = useSelector(selectStatusFilter);
+  const planFilter = useSelector(selectPlanFilter);
   
-  // State for selected user and notifications
+  // Local state for selected user and notifications
   const [selectedUser, setSelectedUser] = useState(null);
   const [notification, setNotification] = useState({
     open: false,
@@ -50,100 +65,107 @@ const UsersPage = () => {
     severity: 'success'
   });
 
-  // Fetch data on component mount and when filters change
+  // Fetch data on mount and when filters change
   useEffect(() => {
     dispatch(fetchUserStats());
     dispatch(fetchUsersList({ searchQuery, timeRange }));
   }, [dispatch, searchQuery, timeRange]);
 
-  // Handler for time range change
+  // Handler for time range filter change
   const handleTimeRangeChange = (range) => {
     dispatch(setTimeRange(range));
   };
 
-  // Handler for search input change
+  // Handler for search input changes
   const handleSearchChange = (e) => {
     dispatch(setSearchQuery(e.target.value));
   };
 
-  // Handler for CSV export
-  const handleExportCSV = () => {
-    dispatch(exportUsersCSV());
+  const handleStatusFilterChange = (status) => {
+    dispatch(setStatusFilter(status));
   };
 
-  // Handler for viewing user details
-  const handleViewDetails = (user) => {
-    setSelectedUser(user);
+  const handlePlanFilterChange = (plan) => {
+    dispatch(setPlanFilter(plan));
   };
 
-  // Handler for selecting a user
+  // Handler for CSV export with loading state
+  const handleExportCSV = async () => {
+    try {
+      await dispatch(exportUsersCSV());
+      showNotification('Export started successfully', 'success');
+    } catch (error) {
+      showNotification('Export failed', 'error');
+    }
+  };
+
+  // Helper to show notifications
+  const showNotification = (message, severity) => {
+    setNotification({ open: true, message, severity });
+  };
+
+  // Handler for user selection
   const handleUserSelect = (user) => {
     setSelectedUser(user);
   };
 
-  // Handler for going back to the list view
+  // Handler for returning to list view
   const handleBackToList = () => {
     setSelectedUser(null);
   };
 
-  // Handler for filter button click
-  const handleFilterClick = () => {
-    // Implement filter functionality here
-    console.log('Filter button clicked');
-  };
-
-  // Handler for closing notification
+  // Handler for closing notifications
   const handleNotificationClose = () => {
-    setNotification({ ...notification, open: false });
+    setNotification(prev => ({ ...prev, open: false }));
   };
 
   return (
     <DashboardLayout>
       <ErrorBoundary FallbackComponent={ErrorFallback}>
-        {/* Page Header */}
+        {/* Page Header with title and time range selector */}
         <Header
           title="Users"
-          subtitle="Provide expert insights by adding predictions so that users can engage with your analysis."
+          subtitle="Manage and analyze user accounts"
           timeRange={timeRange}
           onTimeRangeChange={handleTimeRangeChange}
         />
 
-        {/* Users Stat Cards Section */}
+        {/* Stats cards section - only shown when no user is selected */}
         {!selectedUser && (
-          <Box className="w-full mb-8">
-            <Box className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-              {stats.map((card, index) => (
-                <UsersStat
-                  key={index}
-                  title={card.title}
-                  value={card.value}
-                  icon={<UsersIcon />}
-                  change={card.change}
-                  bgColor={card.bgColor}
-                />
-              ))}
-            </Box>
+          <Box sx={{ mb: 4, display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: 'repeat(4, 1fr)' }, gap: 3 }}>
+            {stats.map((card, index) => (
+              <UsersStat
+                key={index}
+                title={card.title}
+                value={card.value}
+                icon={<UsersIcon />}
+                change={card.change}
+                bgColor={card.bgColor}
+              />
+            ))}
           </Box>
         )}
 
-        {/* Main Content with Users Table */}
-        <Box className="w-full">
+        {/* Main users table component */}
+        <Box sx={{ width: '100%' }}>
           <UsersTable
             users={users}
             loading={loading.users}
             searchQuery={searchQuery}
             onSearchChange={handleSearchChange}
+            statusFilter={statusFilter}
+            planFilter={planFilter}
+            onStatusFilterChange={handleStatusFilterChange}
+            onPlanFilterChange={handlePlanFilterChange}
             onExportCSV={handleExportCSV}
-            onFilterClick={handleFilterClick}
             exportLoading={loading.export}
             selectedUser={selectedUser}
             onUserSelect={handleUserSelect}
-            onViewDetails={handleViewDetails}
             onBackToList={handleBackToList}
           />
         </Box>
 
-        {/* Notification Snackbar */}
+        {/* Global notification system */}
         <Snackbar
           open={notification.open}
           autoHideDuration={6000}

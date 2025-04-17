@@ -1,11 +1,7 @@
-// components/dashboard/users/UsersTable.js
-import React from 'react';
+import React, {useState} from 'react';
 import {
   Box,
-  Card,
-  TextField,
-  InputAdornment,
-  Button,
+  Paper,
   TableContainer,
   Table,
   TableHead,
@@ -13,35 +9,73 @@ import {
   TableCell,
   TableBody,
   Checkbox,
-  Skeleton,
   Typography,
+  Avatar,
+  Pagination,
+  Stack,
+  Button,
+  TextField,
+  InputAdornment,
   Breadcrumbs,
-  Link
+  Link,
+  Skeleton,
+  Chip,
+  Menu,
+  MenuItem,
+  FormControl,
+  Select,
+  InputLabel
 } from '@mui/material';
 import {
   Search as SearchIcon,
-  FilterList as FilterIcon,
+  FilterList as FilterListIcon,
   Download as DownloadIcon,
-  Home as HomeIcon
+  Home as HomeIcon,
+  NavigateBefore as NavigateBeforeIcon,
+  NavigateNext as NavigateNextIcon
 } from '@mui/icons-material';
+
 import Image from 'next/image';
 import UserActionsMenu from './UserActionsMenu';
 import UserDetailView from './UserDetailView';
 
+/**
+ * UsersTable - Displays a table of users with sorting, pagination and actions
+ */
 const UsersTable = ({
   users = [],
   loading = false,
   searchQuery = '',
   onSearchChange,
-  onExportCSV,
   onFilterClick,
+  statusFilter,
+  planFilter,
+  onStatusFilterChange = () => {},
+  onPlanFilterChange = () => {},   
+  onExportCSV,
   exportLoading = false,
   selectedUser,
   onUserSelect,
-  onViewDetails,
-  onBackToList
+  onBackToList,
+  page = 1,
+  setPage = () => {}
 }) => {
-  // If we have a selected user, show the breadcrumb navigation
+  // Constants for pagination
+  const PAGE_SIZE = 10;
+  const pageCount = Math.ceil(users.length / PAGE_SIZE);
+  const paginatedUsers = users.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
+  const [filterAnchorEl, setFilterAnchorEl] = useState(null);
+
+  const handleFilterMenuOpen = (event) => {
+    setFilterAnchorEl(event.currentTarget);
+  };
+
+  const handleFilterMenuClose = () => {
+    setFilterAnchorEl(null);
+  };
+
+  // If a user is selected, show detailed view instead of table
   if (selectedUser) {
     return (
       <Box>
@@ -56,64 +90,50 @@ const UsersTable = ({
           </Link>
           <Typography color="text.primary">{selectedUser.fullName}</Typography>
         </Breadcrumbs>
-
-        <UserDetailView user={selectedUser} onBack={onBackToList} />
+        <UserDetailView 
+          user={selectedUser} 
+          onBack={onBackToList}
+          users={users}
+          loading={loading}
+          onUserSelect={onUserSelect}
+        />
       </Box>
     );
   }
 
-  // Table columns configuration
-  const columns = [
-    { id: 'checkbox', label: '', width: 60, align: 'center' },
-    { id: 'id', label: 'ID', width: 116 },
-    { id: 'fullName', label: 'Full Name' },
-    { id: 'subscription', label: 'Subscription', width: 116 },
-    { id: 'email', label: 'Email Address', width: 240 },
-    { id: 'phone', label: 'Phone Number', width: 180 },
-    { id: 'location', label: 'Location', width: 198 },
-    { id: 'actions', label: 'Actions', width: 48 }
-  ];
+  // Helper to get color for status chips
+  const getChipColor = (status) => {
+    const statusMap = {
+      premium: 'primary',
+      free: 'default',
+      pro: 'secondary',
+      expired: 'error'
+    };
+    return statusMap[status?.toLowerCase()] || 'info';
+  };
 
-  // Loading skeleton for table rows
+  // Loading skeleton rows
   const renderLoadingSkeletons = () => {
-    return Array(5).fill(0).map((_, index) => (
+    return Array(PAGE_SIZE).fill(0).map((_, index) => (
       <TableRow key={`skeleton-${index}`}>
-        {columns.map((column) => (
-          <TableCell key={column.id} sx={{ width: column.width }}>
-            <Skeleton variant="text" animation="wave" />
-          </TableCell>
-        ))}
+        <TableCell padding="checkbox"><Skeleton variant="rectangular" width={20} height={20} /></TableCell>
+        <TableCell><Skeleton variant="text" /></TableCell>
+        <TableCell><Box display="flex" alignItems="center" gap={2}><Skeleton variant="circular" width={40} height={40} /><Skeleton variant="text" width={100} /></Box></TableCell>
+        <TableCell><Skeleton variant="text" width={80} /></TableCell>
+        <TableCell><Skeleton variant="text" width={150} /></TableCell>
+        <TableCell><Skeleton variant="text" width={120} /></TableCell>
+        <TableCell><Skeleton variant="text" width={100} /></TableCell>
       </TableRow>
     ));
   };
 
-  // Empty state component
+  // Empty state display
   const renderEmptyState = () => (
     <TableRow>
-      <TableCell colSpan={columns.length} sx={{ border: 'none' }}>
-        <Box sx={{ 
-          display: 'flex', 
-          flexDirection: 'column', 
-          alignItems: 'center', 
-          gap: 3,
-          py: 8 
-        }}>
-          <Box sx={{ 
-            width: 140, 
-            height: 140, 
-            bgcolor: '#F7F7F8', 
-            borderRadius: '50%', 
-            display: 'flex', 
-            alignItems: 'center', 
-            justifyContent: 'center' 
-          }}>
-            <Image 
-              src="/images/no-data.svg" 
-              alt="No users" 
-              width={90} 
-              height={72} 
-              priority
-            />
+      <TableCell colSpan={8} sx={{ border: 'none' }}>
+        <Box sx={{ py: 8, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
+          <Box sx={{ width: 140, height: 140, bgcolor: '#F7F7F8', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <Image src="/empty-state.png" alt="No users" width={90} height={72} priority />
           </Box>
           <Box sx={{ textAlign: 'center' }}>
             <Typography variant="h6" sx={{ color: '#101012', mb: 1 }}>
@@ -128,116 +148,188 @@ const UsersTable = ({
     </TableRow>
   );
 
+  // Helper to get user initials for avatars
+  const getInitials = (name) => {
+    return name?.split(' ').map(n => n[0]).join('').toUpperCase() || '';
+  };
+
   return (
-    <Card sx={{ border: '1px solid #EEEEF0' }}>
-      {/* Table Toolbar with search and actions */}
-      <Box sx={{ p: 3, display: 'flex', justifyContent: 'space-between' }}>
-        <Box sx={{ display: 'flex', gap: 2 }}>
+    <Box>
+      {/* Table toolbar with search and actions */}
+      <Box sx={{ mb: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
           <TextField
             placeholder="Search users..."
             variant="outlined"
             size="small"
-            sx={{ width: 304 }}
+            sx={{ width: 300 }}
             value={searchQuery}
             onChange={onSearchChange}
             InputProps={{
               startAdornment: (
                 <InputAdornment position="start">
-                  <SearchIcon sx={{ color: '#919393' }} />
+                  <SearchIcon sx={{ color: 'text.secondary' }} />
                 </InputAdornment>
               ),
             }}
           />
+          
+          {/* Filter Button with Dropdown */}
           <Button
             variant="outlined"
-            startIcon={<FilterIcon />}
-            onClick={onFilterClick}
-            sx={{ 
-              color: '#737584',
-              borderColor: '#737584',
-              '&:hover': {
-                borderColor: '#414147',
-                bgcolor: '#F7F7F8'
-              }
-            }}
+            startIcon={<FilterListIcon />}
+            onClick={handleFilterMenuOpen}
           >
             Filter
           </Button>
+          <Menu
+            anchorEl={filterAnchorEl}
+            open={Boolean(filterAnchorEl)}
+            onClose={handleFilterMenuClose}
+          >
+            <MenuItem>
+              <FormControl fullWidth size="small">
+                <InputLabel>Status</InputLabel>
+                <Select
+                  value={statusFilter}
+                  label="Status"
+                  onChange={(e) => {
+                    onStatusFilterChange(e.target.value);
+                    handleFilterMenuClose();
+                  }}
+                >
+                  <MenuItem value="all">All Statuses</MenuItem>
+                  <MenuItem value="active">Active</MenuItem>
+                  <MenuItem value="inactive">Inactive</MenuItem>
+                </Select>
+              </FormControl>
+            </MenuItem>
+            <MenuItem>
+              <FormControl fullWidth size="small">
+                <InputLabel>Plan</InputLabel>
+                <Select
+                  value={planFilter}
+                  label="Plan"
+                  onChange={(e) => {
+                    onPlanFilterChange(e.target.value);
+                    handleFilterMenuClose();
+                  }}
+                >
+                  <MenuItem value="all">All Plans</MenuItem>
+                  <MenuItem value="free">Free</MenuItem>
+                  <MenuItem value="premium">Premium</MenuItem>
+                  <MenuItem value="pro">Pro</MenuItem>
+                </Select>
+              </FormControl>
+            </MenuItem>
+          </Menu>
         </Box>
+        
+
+        
         <Button
           variant="outlined"
           startIcon={<DownloadIcon />}
           onClick={onExportCSV}
           disabled={exportLoading}
-          sx={{ 
-            color: '#737584',
-            borderColor: '#737584',
-            '&:hover': {
-              borderColor: '#414147',
-              bgcolor: '#F7F7F8'
-            }
-          }}
         >
           {exportLoading ? 'Exporting...' : 'Export CSV'}
         </Button>
       </Box>
 
-      {/* Table Content */}
-      <TableContainer>
-        <Table>
-          {/* Table Header */}
-          <TableHead sx={{ bgcolor: '#F7F7F8' }}>
+      {/* Main table content */}
+      <TableContainer component={Paper} sx={{ boxShadow: 3, borderRadius: 2 }}>
+        <Table sx={{ minWidth: 650 }}>
+          <TableHead sx={{ bgcolor: 'grey.50' }}>
             <TableRow>
-              {columns.map((column) => (
-                <TableCell
-                  key={column.id}
-                  sx={{ 
-                    width: column.width,
-                    borderRight: '1px solid #EEEEF0',
-                    textAlign: column.align || 'left'
-                  }}
-                >
-                  {column.label}
-                </TableCell>
-              ))}
+              <TableCell padding="checkbox"><Checkbox /></TableCell>
+              <TableCell>ID</TableCell>
+              <TableCell>User</TableCell>
+              <TableCell>Plan</TableCell>
+              <TableCell>Email</TableCell>
+              <TableCell>Phone</TableCell>
+              <TableCell>Location</TableCell>
+              <TableCell align="right">Actions</TableCell>
             </TableRow>
           </TableHead>
-
-          {/* Table Body */}
           <TableBody>
-            {loading ? (
-              renderLoadingSkeletons()
-            ) : users.length > 0 ? (
-              users.map((user) => (
-                <TableRow key={user.id}>
-                  <TableCell padding="checkbox" sx={{ borderRight: '1px solid #EEEEF0' }}>
-                    <Checkbox 
-                      size="small" 
+            {loading ? renderLoadingSkeletons() : 
+             users.length > 0 ? paginatedUsers.map((user) => (
+                <TableRow key={user.id} hover sx={{ '&:hover': { bgcolor: 'action.hover' } }}>
+                  <TableCell padding="checkbox">
+                    <Checkbox
                       checked={selectedUser?.id === user.id}
                       onChange={() => onUserSelect(user)}
                     />
                   </TableCell>
-                  <TableCell sx={{ borderRight: '1px solid #EEEEF0' }}>{user.id}</TableCell>
-                  <TableCell sx={{ borderRight: '1px solid #EEEEF0' }}>{user.fullName}</TableCell>
-                  <TableCell sx={{ borderRight: '1px solid #EEEEF0' }}>{user.subscription}</TableCell>
-                  <TableCell sx={{ borderRight: '1px solid #EEEEF0' }}>{user.email}</TableCell>
-                  <TableCell sx={{ borderRight: '1px solid #EEEEF0' }}>{user.phone}</TableCell>
-                  <TableCell sx={{ borderRight: '1px solid #EEEEF0' }}>{user.location}</TableCell>
+                  <TableCell>{user.id}</TableCell>
                   <TableCell>
-                    <UserActionsMenu 
-                      user={user} 
-                      onViewDetails={() => onViewDetails(user)}
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                      <Avatar sx={{ bgcolor: getInitials(user.id).match(/[0-9]/) ? 'error.light' : 'success.light' }}>
+                        {getInitials(user.fullName)}
+                      </Avatar>
+                      <Typography>{user.fullName}</Typography>
+                    </Box>
+                  </TableCell>
+                  <TableCell>
+                    <Chip 
+                      label={user.subscription} 
+                      color={getChipColor(user.subscription)}
+                      size="small"
+                      variant="outlined"
                     />
                   </TableCell>
+                  <TableCell>{user.email}</TableCell>
+                  <TableCell>{user.phone}</TableCell>
+                  <TableCell>{user.location}</TableCell>
+                  <TableCell align="right">
+                    <UserActionsMenu user={user} onViewDetails={() => onUserSelect(user)} />
+                  </TableCell>
                 </TableRow>
-              ))
-            ) : (
-              renderEmptyState()
-            )}
+              )) : renderEmptyState()}
           </TableBody>
         </Table>
       </TableContainer>
-    </Card>
+
+      {/* Pagination controls */}
+      {users.length > 0 && (
+        <Box sx={{ mt: 3, p: 2, bgcolor: 'background.paper', borderRadius: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Typography variant="body2" color="text.secondary">
+            Page {page} of {pageCount}
+          </Typography>
+          <Stack direction="row" spacing={2} alignItems="center">
+            <Pagination
+              count={pageCount}
+              page={page}
+              onChange={(_, newPage) => setPage(newPage)}
+              color="primary"
+              shape="rounded"
+              sx={{ display: { xs: 'none', sm: 'block' } }}
+            />
+            <Stack direction="row" spacing={1}>
+              <Button
+                variant="outlined"
+                startIcon={<NavigateBeforeIcon />}
+                disabled={page === 1}
+                onClick={() => setPage(p => p - 1)}
+                sx={{ whiteSpace: 'nowrap' }}
+              >
+                Previous
+              </Button>
+              <Button
+                variant="outlined"
+                endIcon={<NavigateNextIcon />}
+                disabled={page === pageCount}
+                onClick={() => setPage(p => p + 1)}
+                sx={{ whiteSpace: 'nowrap' }}
+              >
+                Next
+              </Button>
+            </Stack>
+          </Stack>
+        </Box>
+      )}
+    </Box>
   );
 };
 

@@ -20,58 +20,37 @@ import * as yup from "yup";
 import toast from "react-hot-toast";
 
 const validationSchema = yup.object({
-  token: yup.string().required("Verification token is required"),
+  email: yup.string().email("Invalid email").required("Email is required"),
 });
 
 const EmailVerficationPage = () => {
   const dispatch = useDispatch();
   const router = useRouter();
   const { loading, error } = useSelector((state) => state.auth);
-  const [emailSent, setEmailSent] = React.useState(false);
   
-  // Get email from query params if available
-  const email = router.query.email || "";
-
   const formik = useFormik({
     initialValues: {
-      token: "",
+      email: "",
     },
     validationSchema,
     onSubmit: async (values) => {
       try {
-        const result = await dispatch(verifyEmail(values.token));
+        const result = await dispatch(verifyEmail(values.email));
         if (verifyEmail.fulfilled.match(result)) {
-          toast.success("Email verified successfully! You can now login.");
-          router.push("/auth/login");
+          toast.success(`We've sent a 6-digit code to ${values.email}. Please check your inbox.`);
+          // Navigate to OTP verification page after 3 seconds
+          setTimeout(() => {
+            router.push({
+              pathname: "/auth/verify-otp",
+              query: { email: values.email }
+            });
+          }, 3000);
         }
       } catch (error) {
         toast.error(error.message || "Email verification failed");
       }
     },
   });
-
-  const handleResendVerification = async () => {
-    if (!email) {
-      toast.error("No email address provided for verification");
-      return;
-    }
-    try {
-      await dispatch(resendVerificationEmail(email));
-      toast.success("Verification email sent successfully!");
-      setEmailSent(true);
-    } catch (error) {
-      toast.error("Failed to resend verification email. Please try again.");
-    }
-  };
-
-  React.useEffect(() => {
-    // Check for token in URL (from email link)
-    const { token } = router.query;
-    if (token) {
-      formik.setFieldValue("token", token);
-      formik.submitForm();
-    }
-  }, [router.query, formik]);
 
   React.useEffect(() => {
     return () => {
@@ -82,7 +61,7 @@ const EmailVerficationPage = () => {
   return (
     <AuthLayout
       title="Verify Email"
-      subtitle="Enter the verification token sent to your email"
+      subtitle="Enter your email address to receive verification token"
     >
       {error && (
         <Alert severity="error" sx={{ mb: 3 }}>
@@ -97,14 +76,22 @@ const EmailVerficationPage = () => {
       >
         <TextField
           fullWidth
-          label="Verification Token"
-          name="token"
-          value={formik.values.token}
+          label="Email Address"
+          name="email"
+          type="email"
+          value={formik.values.email}
           onChange={formik.handleChange}
           onBlur={formik.handleBlur}
-          error={formik.touched.token && Boolean(formik.errors.token)}
-          helperText={formik.touched.token && formik.errors.token}
+          error={formik.touched.email && Boolean(formik.errors.email)}
+          helperText={formik.touched.email && formik.errors.email}
           sx={{ mb: 3 }}
+          InputProps={{
+            startAdornment: (
+              <InputAdornment position="start">
+                <MailIcon />
+              </InputAdornment>
+            ),
+          }}
         />
 
         <Button
@@ -128,21 +115,6 @@ const EmailVerficationPage = () => {
           ) : (
             "Verify Email"
           )}
-        </Button>
-
-        <Button
-          fullWidth
-          variant="outlined"
-          onClick={handleResendVerification}
-          disabled={!email || loading}
-          sx={{
-            height: 56,
-            fontFamily: "Inter",
-            fontWeight: 600,
-            mb: 3,
-          }}
-        >
-          Resend Verification Email
         </Button>
 
         <Box sx={{ textAlign: "center" }}>

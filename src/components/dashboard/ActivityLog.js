@@ -1,166 +1,141 @@
 // components/dashboard/ActivityLog.js
 import React from 'react';
 import {
-  Card,
-  CardContent,
   Box,
   Typography,
-  Chip,
+  Stack,
+  Divider,
+  Button,
+  Skeleton,
+  Avatar,
   List,
   ListItem,
-  ListItemAvatar,
-  Avatar,
-  ListItemText,
-  Skeleton
+  ListItemText
 } from '@mui/material';
 import {
-  ChevronRight as ChevronRightIcon,
-  HowToReg as SignupIcon,
-  Assessment as PredictionIcon,
-  Payment as PaymentIcon
+  ChevronRight as ViewAllIcon,
+  Payment as PaymentIcon,
+  Star as PremiumIcon,
+  Edit as PredictionIcon
 } from '@mui/icons-material';
 
-const ActivityLog = ({
-  title = 'Recent Activity',
+// Fallback data in case API fails
+const fallbackData = [
+  {
+    id: 1,
+    type: 'payment',
+    title: 'Subscription payment',
+    description: 'User paid for premium subscription'
+  },
+  {
+    id: 2,
+    type: 'upgrade',
+    title: 'Account Upgrade',
+    description: 'User subscribed to premium plan'
+  },
+  {
+    id: 3,
+    type: 'prediction',
+    title: 'New Prediction',
+    description: 'Admin added new prediction'
+  }
+];
+
+const ActivityLog = ({ 
+  title = 'Activity Log',
   activities = [],
   loading = false,
   onViewAll,
-  activityIcons = {
-    signup: <SignupIcon color="primary" />,
-    prediction: <PredictionIcon color="secondary" />,
-    payment: <PaymentIcon color="success" />,
-    default: <SignupIcon />
-  },
-  emptyState = {
-    icon: <SignupIcon sx={{ fontSize: 40, color: 'grey.400' }} />,
-    title: 'No Activities Yet',
-    description: 'All actions will appear here once recorded'
-  },
-  formatTimestamp = (timestamp) => {
-    return new Date(timestamp).toLocaleTimeString([], {
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  },
-  className = ''
+  isFullScreen = false
 }) => {
+  // Use real data if available, otherwise use fallback data
+  const displayData = activities.length > 0 ? activities : fallbackData;
+  
+  // Choose icon based on activity type
+  const getActivityIcon = (type) => {
+    switch(type) {
+      case 'payment': return <PaymentIcon color="success" />;
+      case 'upgrade': return <PremiumIcon color="primary" />;
+      case 'prediction': return <PredictionIcon color="secondary" />;
+      default: return <PaymentIcon />;
+    }
+  };
+
   return (
-    <Card className={className} sx={{
-      flex: 1,
-      display: 'flex',
-      flexDirection: 'column',
-      boxShadow: 'none',
+    <Box sx={{
+      width: '100%',
+      p: 3,
       border: '1px solid',
       borderColor: 'divider',
+      borderRadius: 2,
+      bgcolor: 'background.paper',
+      // Full height in full-screen mode
+      height: isFullScreen ? 'calc(100vh - 200px)' : 'auto'
     }}>
-      <CardContent sx={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-        {/* Header Section */}
-        <Box sx={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          mb: 3,
-        }}>
+      {/* Show header and "View All" button only in compact mode */}
+      {!isFullScreen && (
+        <Stack direction="row" justifyContent="space-between" alignItems="center" mb={3}>
           <Typography variant="h6" fontWeight={600}>
             {title}
           </Typography>
-          {onViewAll && (
-            <Chip
-              label="View All"
-              onClick={onViewAll}
-              size="small"
-              deleteIcon={<ChevronRightIcon fontSize="small" />}
-              onDelete={onViewAll}
-              sx={{ cursor: 'pointer' }}
-            />
-          )}
-        </Box>
+          <Button 
+            endIcon={<ViewAllIcon />}
+            onClick={onViewAll}
+            size="small"
+            sx={{ textTransform: 'none' }}
+            variant='text'
+          >
+            View all
+          </Button>
+        </Stack>
+      )}
 
-        {/* Content Section */}
-        {loading ? (
-          <List>
-            {Array.from(new Array(5)).map((_, index) => (
-              <ListItem key={`skeleton-${index}`}>
-                <ListItemAvatar>
-                  <Skeleton variant="circular" width={40} height={40} />
-                </ListItemAvatar>
-                <ListItemText
-                  primary={<Skeleton variant="text" width="80%" />}
-                  secondary={<Skeleton variant="text" width="40%" />}
-                />
-              </ListItem>
-            ))}
-          </List>
-        ) : activities?.length > 0 ? (
-          <List sx={{ flex: 1 }}>
-            {activities.map((activity, index) => (
-              <ListItem 
-                key={`activity-${index}`}
-                alignItems="flex-start"
-                sx={{
-                  px: 0,
-                  py: 1.5,
-                  borderBottom: '1px solid',
-                  borderColor: 'divider',
-                  '&:last-child': { borderBottom: 0 }
-                }}
-              >
-                <ListItemAvatar>
-                  <Avatar sx={{ 
-                    bgcolor: 'action.hover',
-                    color: 'text.primary',
-                    width: 36,
-                    height: 36
-                  }}>
-                    {activityIcons[activity.type] || activityIcons.default}
-                  </Avatar>
-                </ListItemAvatar>
+      {/* Loading state */}
+      {loading ? (
+        <Stack spacing={2}>
+          {[1, 2, 3].map((item) => (
+            <Box key={item}>
+              <Skeleton variant="text" width="60%" height={24} />
+              <Skeleton variant="text" width="90%" height={20} />
+              <Divider sx={{ my: 2 }} />
+            </Box>
+          ))}
+        </Stack>
+      ) : (
+        /* Actual activity list */
+        <List>
+          {/* Show all items in full-screen, only 3 in compact view */}
+          {displayData.slice(0, isFullScreen ? undefined : 3).map((activity) => (
+            <React.Fragment key={activity.id || activity._id}>
+              <ListItem alignItems="flex-start" sx={{ px: 0 }}>
+                <Avatar sx={{ 
+                  bgcolor: 'action.hover',
+                  color: 'text.primary',
+                  width: 36,
+                  height: 36,
+                  mr: 2
+                }}>
+                  {getActivityIcon(activity.type)}
+                </Avatar>
                 <ListItemText
                   primary={
-                    <Typography variant="body1" fontWeight={500}>
-                      {activity.message}
+                    <Typography variant="subtitle1" fontWeight={600}>
+                      {activity.title}
                     </Typography>
                   }
                   secondary={
                     <Typography variant="body2" color="text.secondary">
-                      {activity.user} • {formatTimestamp(activity.timestamp)}
+                      {activity.description}
                     </Typography>
                   }
                 />
               </ListItem>
-            ))}
-          </List>
-        ) : (
-          <Box sx={{ 
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            height: 300,
-            textAlign: 'center'
-          }}>
-            <Box sx={{ 
-              width: 120,
-              height: 120,
-              bgcolor: 'grey.100',
-              borderRadius: '50%',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              mb: 2
-            }}>
-              {emptyState.icon}
-            </Box>
-            <Typography variant="h6" gutterBottom>
-              {emptyState.title}
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              {emptyState.description}
-            </Typography>
-          </Box>
-        )}
-      </CardContent>
-    </Card>
+              <Divider sx={{ my: 2 }} />
+            </React.Fragment>
+          ))}
+        </List>
+      )}
+    </Box>
   );
 };
 

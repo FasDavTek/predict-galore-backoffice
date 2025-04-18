@@ -49,13 +49,43 @@ export const loginUser = createAsyncThunk(
 
 export const verifyEmail = createAsyncThunk(
   'auth/verifyEmail',
-  async (verificationToken, { rejectWithValue }) => {
+  async (email, { rejectWithValue }) => {
     try {
-      const response = await axios.post('/api/auth/verify-email', { token: verificationToken });
+      const response = await axios.post('/api/auth/verify-email', { email });
       return response.data;
     } catch (error) {
       return rejectWithValue({
         message: error.response?.data?.message || 'Email verification failed',
+        statusCode: error.response?.status || 500,
+      });
+    }
+  }
+);
+
+export const verifyOTP = createAsyncThunk(
+  'auth/verifyOTP',
+  async (otp, { rejectWithValue }) => {
+    try {
+      const response = await axios.post('/api/auth/verify-otp', { otp });
+      return response.data;
+    } catch (error) {
+      return rejectWithValue({
+        message: error.response?.data?.message || 'OTP verification failed',
+        statusCode: error.response?.status || 500,
+      });
+    }
+  }
+);
+
+export const resendOTP = createAsyncThunk(
+  'auth/resendOTP',
+  async (email, { rejectWithValue }) => {
+    try {
+      const response = await axios.post('/api/auth/resend-otp', { email });
+      return response.data;
+    } catch (error) {
+      return rejectWithValue({
+        message: error.response?.data?.message || 'Failed to resend OTP',
         statusCode: error.response?.status || 500,
       });
     }
@@ -108,35 +138,6 @@ export const resetPassword = createAsyncThunk(
 );
 
 
-export const verifyOTP = createAsyncThunk(
-  'auth/verifyOTP',
-  async (otp, { rejectWithValue }) => {
-    try {
-      const response = await axios.post('/api/auth/verify-otp', { otp });
-      return response.data;
-    } catch (error) {
-      return rejectWithValue({
-        message: error.response?.data?.message || 'OTP verification failed',
-        statusCode: error.response?.status || 500,
-      });
-    }
-  }
-);
-
-export const resendOTP = createAsyncThunk(
-  'auth/resendOTP',
-  async (_, { rejectWithValue }) => {
-    try {
-      const response = await axios.post('/api/auth/resend-otp');
-      return response.data;
-    } catch (error) {
-      return rejectWithValue({
-        message: error.response?.data?.message || 'Failed to resend OTP',
-        statusCode: error.response?.status || 500,
-      });
-    }
-  }
-);
 
 
 // Check if user is authenticated (for initial state)

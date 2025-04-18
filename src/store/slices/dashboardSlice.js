@@ -1,206 +1,240 @@
 // store/slices/dashboard/dashboardSlice.js
-import { createSlice, createAsyncThunk, createSelector } from '@reduxjs/toolkit';
-import { HYDRATE } from 'next-redux-wrapper';
-import axios from 'axios';
+import {
+  createSlice,
+  createAsyncThunk,
+  createSelector,
+} from "@reduxjs/toolkit";
+import { HYDRATE } from "next-redux-wrapper";
+import axios from "axios";
 
-// Mock data fallbacks
+// Mock data fallbacks - Used when API calls fail or during development
 const mockStatsData = [
   {
     title: "Total Users",
     value: "1,234",
     change: "+12.5%",
     bgColor: "bg-gray-50",
-    icon: "users"
+    icon: "users",
   },
   {
     title: "Free Users",
     value: "1,000",
-    change: "+10.2%",
+    change: "+5.2%",
     bgColor: "bg-red-50",
-    icon: "users"
+    icon: "users",
   },
   {
     title: "Premium Users",
     value: "234",
     change: "+15.8%",
     bgColor: "bg-green-50",
-    icon: "users"
+    icon: "users",
   },
   {
     title: "Payments",
     value: "$12.4k",
     change: "+18.3%",
     bgColor: "bg-[#e8f9ff]",
-    icon: "wallet"
+    icon: "wallet",
   },
 ];
 
-const mockEngagementData = [
-  {
-    id: "Total Users",
-    data: [
-      { x: "Mar 6", y: 20 },
-      { x: "Mar 7", y: 35 },
-      { x: "Mar 8", y: 45 },
-      { x: "Mar 9", y: 40 },
-      { x: "Mar 10", y: 60 },
-      { x: "Mar 11", y: 55 },
-      { x: "Mar 12", y: 75 },
-    ],
-  },
-];
+
+
+const mockEngagementData = {
+  free: [
+    { name: 'Mar 6', value: 20 },
+    { name: 'Mar 7', value: 35 },
+    { name: 'Mar 8', value: 45 },
+    { name: 'Mar 9', value: 40 },
+    { name: 'Mar 10', value: 60 },
+    { name: 'Mar 11', value: 55 },
+    { name: 'Mar 12', value: 75 }
+  ],
+  premium: [
+    { name: 'Mar 6', value: 10 },
+    { name: 'Mar 7', value: 15 },
+    { name: 'Mar 8', value: 25 },
+    { name: 'Mar 9', value: 30 },
+    { name: 'Mar 10', value: 40 },
+    { name: 'Mar 11', value: 35 },
+    { name: 'Mar 12', value: 45 }
+  ],
+  total: [
+    { name: 'Mar 6', value: 30 },
+    { name: 'Mar 7', value: 50 },
+    { name: 'Mar 8', value: 70 },
+    { name: 'Mar 9', value: 70 },
+    { name: 'Mar 10', value: 100 },
+    { name: 'Mar 11', value: 90 },
+    { name: 'Mar 12', value: 120 }
+  ]
+};
+
 
 const mockTrafficData = [
-  { id: 'Mobile', value: 45, label: 'Mobile' },
-  { id: 'Desktop', value: 35, label: 'Desktop' },
-  { id: 'Tablet', value: 20, label: 'Tablet' },
+  { name: 'Nigeria', percentage: '28%', users: '27,650', countryCode: 'NG' },
+  { name: 'United States', percentage: '22%', users: '18,900', countryCode: 'US' },
+  { name: 'United Kingdom', percentage: '15%', users: '12,600', countryCode: 'GB' },
+  { name: 'South Africa', percentage: '10%', users: '9,400', countryCode: 'ZA' },
+  { name: 'India', percentage: '8%', users: '7,200', countryCode: 'IN' }
 ];
 
 const mockActivityLog = [
   {
     id: 1,
-    action: "User signed up",
-    user: "john@example.com",
-    timestamp: "2023-05-15T10:30:00Z",
-    icon: "signup"
+    type: 'payment',
+    title: 'Subscription payment',
+    description: 'User HighRoller88 successfully paid $20.00 for premium subscription',
+    time: '1 day ago'
   },
   {
     id: 2,
-    action: "Prediction made",
-    user: "sarah@example.com",
-    timestamp: "2023-05-15T11:45:00Z",
-    icon: "prediction"
+    type: 'upgrade',
+    title: 'Account Upgrade',
+    description: 'User HighRoller88 successfully subscribed to premium plan',
+    time: '1 day ago'
   },
   {
     id: 3,
-    action: "Payment processed",
-    user: "mike@example.com",
-    timestamp: "2023-05-15T12:15:00Z",
-    icon: "payment"
+    type: 'prediction',
+    title: 'New Prediction Added',
+    description: 'Admin JohnDoe added a new prediction: Arsenal vs Chelsea',
+    time: '1 day ago'
   }
 ];
 
-// Async thunks for dashboard data fetching
+
+// Action: Fetch dashboard statistics from API
 export const fetchDashboardStats = createAsyncThunk(
-  'dashboard/fetchStats',
+  "dashboard/fetchStats", // Unique action type
   async (_, { rejectWithValue }) => {
     try {
-      console.log('Fetching dashboard stats from API...');
-      const response = await axios.get('/api/dashboard/stats');
-      console.log('Stats data received:', response.data);
-      return response.data;
+      const response = await axios.get("/api/dashboard/stats");
+      return response.data; // Return actual API data
     } catch (error) {
-      console.error('Failed to fetch stats, using mock data. Error:', error.message);
-      return rejectWithValue(mockStatsData);
+      return rejectWithValue(mockStatsData); // Fallback to mock data
     }
   }
 );
 
+// Action: Fetch user engagement data from API
 export const fetchUserEngagement = createAsyncThunk(
-  'dashboard/fetchEngagement',
+  "dashboard/fetchEngagement",
   async (timeRange, { rejectWithValue }) => {
     try {
-      console.log(`Fetching engagement data for range: ${timeRange}`);
-      const response = await axios.get('/api/dashboard/engagement', {
-        params: { range: timeRange }
+      const response = await axios.get("/api/dashboard/engagement", {
+        params: { range: timeRange },
       });
-      console.log('Engagement data received:', response.data);
       return response.data;
     } catch (error) {
-      console.error('Failed to fetch engagement, using mock data. Error:', error.message);
       return rejectWithValue(mockEngagementData);
     }
   }
 );
 
+// Action: Fetch traffic source data from API
 export const fetchTrafficData = createAsyncThunk(
-  'dashboard/fetchTraffic',
+  "dashboard/fetchTraffic",
   async (filterType, { rejectWithValue }) => {
     try {
-      console.log(`Fetching traffic data with filter: ${filterType}`);
-      const response = await axios.get('/api/dashboard/traffic', {
-        params: { filter: filterType }
+      const response = await axios.get("/api/dashboard/traffic", {
+        params: { filter: filterType },
       });
-      console.log('Traffic data received:', response.data);
       return response.data;
     } catch (error) {
-      console.error('Failed to fetch traffic, using mock data. Error:', error.message);
       return rejectWithValue(mockTrafficData);
     }
   }
 );
 
+// Action: Fetch recent activity log from API
 export const fetchActivityLog = createAsyncThunk(
-  'dashboard/fetchActivityLog',
+  "dashboard/fetchActivityLog",
   async (_, { rejectWithValue }) => {
     try {
-      console.log('Fetching activity log...');
-      const response = await axios.get('/api/dashboard/activity');
-      console.log('Activity log received:', response.data);
+      const response = await axios.get("/api/dashboard/activity");
       return response.data;
     } catch (error) {
-      console.error('Failed to fetch activity log, using mock data. Error:', error.message);
-      return rejectWithValue(mockActivityLog);
+      return rejectWithValue(mockActivityLog); 
     }
   }
 );
 
-// Initial state
+// Initial state structure for the dashboard slice
 const initialState = {
-  stats: [],
-  engagement: [],
-  traffic: [],
-  activityLog: [],
+  stats: [], // Will hold statistics cards data
+  engagement: [], // Will hold user engagement chart data
+  traffic: [], // Will hold traffic source data
+  activityLog: [], // Will hold recent activities
+
+  // Loading states for each data type
   loading: {
     stats: false,
     engagement: false,
     traffic: false,
-    activityLog: false
+    activityLog: false,
   },
+
+  // Error states for each data type
   error: {
     stats: null,
     engagement: null,
     traffic: null,
-    activityLog: null
+    activityLog: null,
   },
+
+  // User-selected filters
   filters: {
-    timeRange: 'This Month',
-    trafficFilter: 'By location',
-    activityLogLimit: 3 // Default to show 3 recent activities
+    timeRange: "This Month", // Default time period filter
+    trafficFilter: "By location", // How to group traffic data
+    activityLogLimit: 3, // Number of activities to show
   },
 };
 
+// Create the dashboard slice with reducers and async handling
 const dashboardSlice = createSlice({
-  name: 'dashboard',
+  name: "dashboard",
   initialState,
   reducers: {
-    // Reducers for filter changes
+    // Reducer: Update the time range filter
     setTimeRange: (state, action) => {
       state.filters.timeRange = action.payload;
     },
+
+    // Reducer: Update the traffic filter type
     setTrafficFilter: (state, action) => {
       state.filters.trafficFilter = action.payload;
     },
+
+    // Reducer: Update how many activities to show
     setActivityLogLimit: (state, action) => {
       state.filters.activityLogLimit = action.payload;
     },
-    // Error clearing reducers
+
+    // Reducer: Clear statistics error
     clearStatsError: (state) => {
       state.error.stats = null;
     },
+
+    // Reducer: Clear engagement error
     clearEngagementError: (state) => {
       state.error.engagement = null;
     },
+
+    // Reducer: Clear traffic error
     clearTrafficError: (state) => {
       state.error.traffic = null;
     },
+
+    // Reducer: Clear activity log error
     clearActivityLogError: (state) => {
       state.error.activityLog = null;
     },
   },
   extraReducers: (builder) => {
     builder
-      // Handle Next.js hydration
+      // Special case for Next.js server-side rendering
       .addCase(HYDRATE, (state, action) => {
         if (action.payload.dashboard) {
           return {
@@ -210,7 +244,7 @@ const dashboardSlice = createSlice({
         }
       })
 
-      // Stats data cases
+      // Handle stats data fetching lifecycle
       .addCase(fetchDashboardStats.pending, (state) => {
         state.loading.stats = true;
         state.error.stats = null;
@@ -225,7 +259,7 @@ const dashboardSlice = createSlice({
         state.stats = action.payload || mockStatsData;
       })
 
-      // Engagement data cases
+      // Handle engagement data fetching lifecycle
       .addCase(fetchUserEngagement.pending, (state) => {
         state.loading.engagement = true;
         state.error.engagement = null;
@@ -240,7 +274,7 @@ const dashboardSlice = createSlice({
         state.engagement = action.payload || mockEngagementData;
       })
 
-      // Traffic data cases
+      // Handle traffic data fetching lifecycle
       .addCase(fetchTrafficData.pending, (state) => {
         state.loading.traffic = true;
         state.error.traffic = null;
@@ -255,7 +289,7 @@ const dashboardSlice = createSlice({
         state.traffic = action.payload || mockTrafficData;
       })
 
-      // Activity log cases
+      // Handle activity log fetching lifecycle
       .addCase(fetchActivityLog.pending, (state) => {
         state.loading.activityLog = true;
         state.error.activityLog = null;
@@ -272,7 +306,7 @@ const dashboardSlice = createSlice({
   },
 });
 
-// Export actions
+// Export all actions for components to use
 export const {
   setTimeRange,
   setTrafficFilter,
@@ -283,62 +317,74 @@ export const {
   clearActivityLogError,
 } = dashboardSlice.actions;
 
+// SELECTORS
 
-// Memoized Selectors - Prevents unnecessary re-renders
+// Selector: Get the entire dashboard state
 export const selectDashboardState = (state) => state.dashboard;
 
+// Selector: Get just the statistics data (memoized)
 export const selectDashboardStats = createSelector(
   [selectDashboardState],
-  (dashboard) => dashboard.stats
+  (dashboard) => dashboard.stats || mockStatsData
 );
 
+// Selector: Get user engagement data (memoized)
 export const selectUserEngagement = createSelector(
   [selectDashboardState],
   (dashboard) => dashboard.engagement
 );
 
+// Selector: Get traffic source data (memoized)
 export const selectTrafficData = createSelector(
   [selectDashboardState],
   (dashboard) => dashboard.traffic
 );
 
+// Selector: Get activity log with current limit applied (memoized)
 export const selectActivityLog = createSelector(
   [selectDashboardState],
   (dashboard) => {
     const limit = dashboard.filters.activityLogLimit;
-    return dashboard.activityLog.slice(0, limit);
+    const log = Array.isArray(dashboard.activityLog) ? dashboard.activityLog : mockActivityLog;
+    return log.slice(0, limit);
   }
 );
 
+// Selector: Get all loading states (memoized)
 export const selectDashboardLoading = createSelector(
   [selectDashboardState],
   (dashboard) => dashboard.loading
 );
 
+// Selector: Get all error states (memoized)
 export const selectDashboardErrors = createSelector(
   [selectDashboardState],
   (dashboard) => dashboard.error
 );
 
+// Selector: Get all filter values (memoized)
 export const selectDashboardFilters = createSelector(
   [selectDashboardState],
   (dashboard) => dashboard.filters
 );
 
-// Additional optimized selectors for specific filter values
+// Selector: Get just the time range filter (memoized)
 export const selectTimeRange = createSelector(
   [selectDashboardFilters],
   (filters) => filters.timeRange
 );
 
+// Selector: Get just the traffic filter (memoized)
 export const selectTrafficFilter = createSelector(
   [selectDashboardFilters],
   (filters) => filters.trafficFilter
 );
 
+// Selector: Get just the activity log limit (memoized)
 export const selectActivityLogLimit = createSelector(
   [selectDashboardFilters],
   (filters) => filters.activityLogLimit
 );
 
+// Export the reducer to be included in the Redux store
 export default dashboardSlice.reducer;

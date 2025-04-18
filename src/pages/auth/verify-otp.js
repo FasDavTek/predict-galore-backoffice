@@ -63,6 +63,7 @@ const OTPVerificationPage = () => {
   } = useSelector((state) => state.auth);
   
   const inputRefs = useRef([]);
+  const email = router.query.email || 'your email';
 
   const formik = useFormik({
     initialValues: {
@@ -71,7 +72,10 @@ const OTPVerificationPage = () => {
     validationSchema,
     onSubmit: async (values) => {
       const otpValue = values.otp.join('');
-      await dispatch(verifyOTP(otpValue));
+      const result = await dispatch(verifyOTP(otpValue));
+      if (verifyOTP.fulfilled.match(result)) {
+        router.push('/auth/login');
+      }
     },
   });
 
@@ -109,13 +113,13 @@ const OTPVerificationPage = () => {
 
   const handleResendCode = async (e) => {
     e.preventDefault();
-    dispatch(resendOTP());
+    await dispatch(resendOTP(email));
   };
 
   return (
     <AuthLayout
       title="Verify OTP"
-      subtitle="Enter the 6-digit code sent to your email"
+      subtitle={`We've sent a 6-digit code to ${email}`}
     >
       {otpError && (
         <Alert severity="error" sx={{ mb: 3 }}>
@@ -204,7 +208,7 @@ const OTPVerificationPage = () => {
           <Typography variant="body2" sx={{ fontFamily: 'Inter', color: 'text.secondary' }}>
             Wrong email address?{' '}
             <Link 
-              href="/auth/register" 
+              href="/auth/verify-email" 
               sx={{ 
                 color: '#42A605', 
                 textDecoration: 'none', 

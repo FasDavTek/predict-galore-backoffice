@@ -13,8 +13,8 @@ const theme = createTheme({
       main: '#41414B', // Inactive icon color
     },
     text: {
-      primary: '#737584', // Default text and heading color
-      secondary: '#41414B', // Secondary text color
+      primary: '#101012', // Default text and heading color
+      secondary: '#5D5E6C', // Secondary text color
     },
     // Custom palette extensions for specific use cases
     custom: {
@@ -63,6 +63,7 @@ const theme = createTheme({
     MuiButton: {
       styleOverrides: {
         root: {
+         
           textTransform: 'none',
           borderRadius: '8px',
           padding: '8px 16px',
@@ -78,12 +79,15 @@ const theme = createTheme({
       },
       defaultProps: {
         variant: 'contained',
-        color: 'primary', // Will use #42A605 as main color
+        color: 'primary', 
+        fontFamily: "Inter",
+        fontWeight: 600,
       },
     },
     MuiIconButton: {
       styleOverrides: {
         root: {
+          fontFamily: 'Inter, sans-serif',
           color: '#41414B', // Inactive icon color
           '&:hover': {
             backgroundColor: 'rgba(66, 166, 5, 0.08)', // Light green bg on hover
@@ -110,7 +114,7 @@ const theme = createTheme({
       styleOverrides: {
         root: {
           fontFamily: 'Inter, sans-serif',
-          color: '#737584', // Default text color
+          color: '#101012', 
 
         },
       },

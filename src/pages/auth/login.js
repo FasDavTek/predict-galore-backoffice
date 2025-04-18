@@ -180,12 +180,12 @@ const LoginPage = () => {
             sx={{ "& .MuiTypography-root": { fontFamily: "Inter" } }}
           />
           <Link
-            href="/auth/forgot-password"
+            href="/auth/reset-password"
             sx={{
               textTransform: "none",
               fontFamily: "Inter",
               fontWeight: 500,
-              color: "#42A605",
+              color: "#D72638",
               textDecoration: "none",
               "&:hover": {
                 textDecoration: "underline",
@@ -207,8 +207,7 @@ const LoginPage = () => {
             "&:hover": {
               bgcolor: "#3a9504",
             },
-            fontFamily: "Inter",
-            fontWeight: 600,
+         
             mb: 3,
           }}
         >
@@ -219,49 +218,7 @@ const LoginPage = () => {
           )}
         </Button>
 
-        <Box sx={{ textAlign: "center" }}>
-          <Typography variant="body2" sx={{ fontFamily: "Inter", color: "text.secondary" }}>
-            Don&apos;t have an account?{" "}
-            <Link
-              href="/auth/register"
-              sx={{
-                color: "#42A605",
-                textDecoration: "none",
-                fontWeight: 500,
-                "&:hover": {
-                  textDecoration: "underline",
-                },
-              }}
-            >
-              Sign up
-            </Link>
-          </Typography>
 
-
-            {/* Email Verification Dialog */}
-        <Dialog
-          open={verificationDialogOpen}
-          onClose={() => setVerificationDialogOpen(false)}
-        >
-          <DialogTitle>Email Verification Required</DialogTitle>
-          <DialogContent>
-            <DialogContentText>
-              Your email address has not been verified yet. Please verify your email to continue.
-            </DialogContentText>
-          </DialogContent>
-          <DialogActions>
-            <Button onClick={() => setVerificationDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleResendVerification} color="primary">
-              Resend Verification Email
-            </Button>
-            <Button onClick={handleNavigateToVerify} color="primary" variant="contained">
-              Verify Email Now
-            </Button>
-          </DialogActions>
-        </Dialog>
-        </Box>
       </Box>
     </AuthLayout>
   );

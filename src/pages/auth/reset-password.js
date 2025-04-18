@@ -7,10 +7,7 @@ import {
   IconButton,
   Typography,
   Link,
-  List,
-  ListItem,
-  ListItemIcon,
-  ListItemText,
+  LinearProgress,
   Dialog,
   DialogContent,
   Alert,
@@ -20,8 +17,7 @@ import {
   Lock as LockIcon,
   Visibility as VisibilityIcon,
   VisibilityOff as VisibilityOffIcon,
-  CheckCircle as CheckCircleIcon,
-  Cancel as CancelIcon,
+  CheckCircle as CheckCircleIcon
 } from "@mui/icons-material";
 import { AuthLayout } from "@/layouts/AuthLayout";
 import { useDispatch, useSelector } from "react-redux";
@@ -30,45 +26,74 @@ import { useRouter } from "next/router";
 import { useFormik } from "formik";
 import * as yup from "yup";
 
-const PasswordRequirement = ({ met, text }) => (
-  <ListItem disableGutters sx={{ p: 0, mb: 1 }}>
-    <ListItemIcon sx={{ minWidth: 24 }}>
-      {met ? (
-        <CheckCircleIcon sx={{ color: "#42A605", fontSize: 16 }} />
-      ) : (
-        <CancelIcon sx={{ color: "#D72638", fontSize: 16 }} />
-      )}
-    </ListItemIcon>
-    <ListItemText
-      primary={text}
-      sx={{
-        "& .MuiListItemText-primary": {
-          fontSize: "14px",
-          fontFamily: "Inter",
-          color: met ? "#42A605" : "#D72638",
-        },
-      }}
-    />
-  </ListItem>
-);
-
 const validationSchema = yup.object({
   password: yup
     .string()
     .min(8, "Password must be at least 8 characters")
-    .matches(/[A-Z]/, "Password must contain at least one uppercase letter")
-    .matches(/[a-z]/, "Password must contain at least one lowercase letter")
-    .matches(/[0-9]/, "Password must contain at least one number")
-    .matches(
-      /[!@#$%^&*(),.?":{}|<>]/,
-      "Password must contain at least one special character"
-    )
     .required("Password is required"),
   confirmPassword: yup
     .string()
     .oneOf([yup.ref("password"), null], "Passwords must match")
     .required("Confirm password is required"),
 });
+
+const PasswordStrengthIndicator = ({ password }) => {
+  const calculateStrength = () => {
+    let strength = 0;
+    if (password.length > 0) strength += 20;
+    if (password.length >= 8) strength += 20;
+    if (/[A-Z]/.test(password)) strength += 20;
+    if (/[a-z]/.test(password)) strength += 20;
+    if (/[0-9!@#$%^&*(),.?":{}|<>]/.test(password)) strength += 20;
+    return Math.min(strength, 100);
+  };
+
+  const strength = calculateStrength();
+  const strengthText = () => {
+    if (password.length === 0) return "";
+    if (strength < 40) return "Weak";
+    if (strength < 80) return "Medium";
+    return "Strong";
+  };
+
+  const getColor = () => {
+    if (password.length === 0) return "grey";
+    if (strength < 40) return "error.main";
+    if (strength < 80) return "warning.main";
+    return "success.main";
+  };
+
+  return (
+    <Box sx={{ width: "100%", mt: 1 }}>
+      <Box sx={{ display: "flex", justifyContent: "space-between", mb: 0.5 }}>
+        <Typography variant="caption" sx={{ fontFamily: "Inter" }}>
+          Password strength
+        </Typography>
+        <Typography 
+          variant="caption" 
+          sx={{ 
+            fontFamily: "Inter",
+            color: getColor()
+          }}
+        >
+          {strengthText()}
+        </Typography>
+      </Box>
+      <LinearProgress
+        variant="determinate"
+        value={strength}
+        sx={{
+          height: 6,
+          borderRadius: 3,
+          backgroundColor: "grey.200",
+          "& .MuiLinearProgress-bar": {
+            backgroundColor: getColor(),
+          },
+        }}
+      />
+    </Box>
+  );
+};
 
 const ResetPasswordPage = () => {
   const dispatch = useDispatch();
@@ -98,17 +123,9 @@ const ResetPasswordPage = () => {
     },
   });
 
-  // Password requirements state
-  const requirements = {
-    length: formik.values.password.length >= 8,
-    uppercase: /[A-Z]/.test(formik.values.password),
-    lowercase: /[a-z]/.test(formik.values.password),
-    number: /[0-9]/.test(formik.values.password),
-    special: /[!@#$%^&*(),.?":{}|<>]/.test(formik.values.password),
-    match:
-      formik.values.password &&
-      formik.values.password === formik.values.confirmPassword,
-  };
+  const passwordsMatch = 
+    formik.values.password && 
+    formik.values.password === formik.values.confirmPassword;
 
   React.useEffect(() => {
     return () => {
@@ -119,7 +136,7 @@ const ResetPasswordPage = () => {
   return (
     <AuthLayout
       title="Reset Password"
-      subtitle="Create a new password for your account"
+      subtitle="Create a strong password to secure your account"
     >
       {error && (
         <Alert severity="error" sx={{ mb: 3 }}>
@@ -157,10 +174,12 @@ const ResetPasswordPage = () => {
             ),
           }}
         />
+        
+        <PasswordStrengthIndicator password={formik.values.password} />
 
         <TextField
           fullWidth
-          label="Confirm New Password"
+          label="Confirm Password"
           name="confirmPassword"
           type={showConfirmPassword ? "text" : "password"}
           value={formik.values.confirmPassword}
@@ -168,7 +187,7 @@ const ResetPasswordPage = () => {
           onBlur={formik.handleBlur}
           error={formik.touched.confirmPassword && Boolean(formik.errors.confirmPassword)}
           helperText={formik.touched.confirmPassword && formik.errors.confirmPassword}
-          sx={{ mb: 3 }}
+          sx={{ mt: 3, mb: 1 }}
           InputProps={{
             startAdornment: (
               <InputAdornment position="start">
@@ -188,45 +207,19 @@ const ResetPasswordPage = () => {
           }}
         />
 
-        <Box sx={{ mb: 3 }}>
-          <Typography 
-            variant="subtitle2" 
-            sx={{ 
-              fontFamily: "Inter",
-              fontWeight: 500,
-              color: "text.primary",
-              mb: 1
-            }}
-          >
-            Password Requirements:
-          </Typography>
-          <List dense disablePadding>
-            <PasswordRequirement
-              met={requirements.length}
-              text="Minimum of 8 characters"
-            />
-            <PasswordRequirement
-              met={requirements.uppercase}
-              text="At least one uppercase letter"
-            />
-            <PasswordRequirement
-              met={requirements.lowercase}
-              text="At least one lowercase letter"
-            />
-            <PasswordRequirement
-              met={requirements.number}
-              text="At least one number"
-            />
-            <PasswordRequirement
-              met={requirements.special}
-              text="At least one special character"
-            />
-            <PasswordRequirement
-              met={formik.values.password === formik.values.confirmPassword && formik.values.password !== ""}
-              text="Passwords match"
-            />
-          </List>
-        </Box>
+        <Typography 
+          variant="caption" 
+          sx={{ 
+            fontFamily: "Inter",
+            color: passwordsMatch ? "success.main" : "grey.500",
+            display: "block",
+            mb: 3
+          }}
+        >
+          {formik.values.confirmPassword ? 
+            (passwordsMatch ? "Password matches" : "Passwords do not match") : 
+            ""}
+        </Typography>
 
         <Button
           type="submit"

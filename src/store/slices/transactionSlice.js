@@ -36,13 +36,13 @@ const mockTransactionStats = [
     bgColor: "#F5F3FF",
     icon: "transactions"
   },
-  {
-    title: "Revenue",
-    value: "$24,560",
-    change: "+22.8",
-    bgColor: "#ECFDF5",
-    icon: "dollar"
-  }
+  // {
+  //   title: "Revenue",
+  //   value: "$24,560",
+  //   change: "+22.8",
+  //   bgColor: "#ECFDF5",
+  //   icon: "dollar"
+  // }
 ];
 
 /**
@@ -52,7 +52,7 @@ const mockTransactionStats = [
 const mockTransactionsList = [
   {
     id: "TXN-001",
-    user: "John Doe",
+    customerName: "John Doe",
     amount: "$125.00",
     paymentMethod: "Credit Card",
     status: "completed",
@@ -62,7 +62,27 @@ const mockTransactionsList = [
   },
   {
     id: "TXN-002",
-    user: "Jane Smith",
+    customerName: "Kathy Ben",
+    amount: "$85.00",
+    paymentMethod: "PayPal",
+    status: "pending",
+    date: "2023-06-20T14:45:00Z",
+    invoice: "INV-2023-002",
+    plan: "Basic"
+  },
+  {
+    id: "TXN-003",
+    customerName: "Kylian Hux",
+    amount: "$85.00",
+    paymentMethod: "PayPal",
+    status: "failed",
+    date: "2023-06-20T14:45:00Z",
+    invoice: "INV-2023-002",
+    plan: "Basic"
+  },
+  {
+    id: "TXN-004",
+    customerName: "Alex Smith",
     amount: "$85.00",
     paymentMethod: "PayPal",
     status: "pending",

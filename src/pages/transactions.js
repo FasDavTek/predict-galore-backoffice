@@ -132,7 +132,7 @@ const TransactionsPage = () => {
 
         {/* Stats cards section - only shown when no transaction is selected */}
         {!selectedTransaction && (
-          <Box sx={{ mb: 4, display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: 'repeat(5, 1fr)' }, gap: 3 }}>
+          <Box sx={{ mb: 4, display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: 'repeat(4, 1fr)' }, gap: 3 }}>
             {stats.map((card, index) => (
               <TransactionStats
                 key={index}

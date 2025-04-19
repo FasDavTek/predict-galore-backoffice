@@ -9,6 +9,7 @@ import {
   TableRow,
   TableCell,
   TableBody,
+  Checkbox,
   Typography,
   Pagination,
   Stack,
@@ -32,6 +33,7 @@ import {
 } from '@mui/icons-material';
 
 import TransactionActions from './TransactionActions';
+import TransactionDetail from './TransactionDetail';
 
 /**
  * TransactionsTable - Displays a table of transactions with filtering and actions
@@ -41,13 +43,17 @@ const TransactionsTable = ({
   loading = false,
   searchQuery = '',
   onSearchChange,
-  statusFilter,
-  planFilter,
+  statusFilter = 'all',
+  paymentMethodFilter = 'all',
+  amountRangeFilter = 'all',
   onStatusFilterChange = () => {},
-  onPlanFilterChange = () => {},   
+  onPaymentMethodFilterChange = () => {},   
+  onAmountRangeFilterChange = () => {},
   onExportCSV,
   exportLoading = false,
+  selectedTransaction,
   onTransactionSelect,
+  onBackToList,
   page = 1,
   setPage = () => {}
 }) => {
@@ -65,6 +71,25 @@ const TransactionsTable = ({
     setFilterAnchorEl(null);
   };
 
+  // If a transaction is selected, show detailed view instead of table
+  if (selectedTransaction) {
+    return (
+      <Box>
+        <Button 
+          startIcon={<NavigateBeforeIcon />} 
+          onClick={onBackToList}
+          sx={{ mb: 2 }}
+        >
+          Back to Transactions
+        </Button>
+        <TransactionDetail 
+          transaction={selectedTransaction} 
+          onBack={onBackToList}
+        />
+      </Box>
+    );
+  }
+
   // Helper to get color for status chips
   const getChipColor = (status) => {
     const statusMap = {
@@ -80,7 +105,7 @@ const TransactionsTable = ({
   const renderLoadingSkeletons = () => {
     return Array(PAGE_SIZE).fill(0).map((_, index) => (
       <TableRow key={`skeleton-${index}`}>
-        <TableCell><Skeleton variant="text" /></TableCell>
+        <TableCell padding="checkbox"><Skeleton variant="rectangular" width={20} height={20} /></TableCell>
         <TableCell><Skeleton variant="text" /></TableCell>
         <TableCell><Skeleton variant="text" /></TableCell>
         <TableCell><Skeleton variant="text" /></TableCell>
@@ -140,8 +165,10 @@ const TransactionsTable = ({
             anchorEl={filterAnchorEl}
             open={Boolean(filterAnchorEl)}
             onClose={handleFilterMenuClose}
+            anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
+            transformOrigin={{ vertical: 'top', horizontal: 'left' }}
           >
-            <MenuItem>
+            <MenuItem sx={{ minWidth: 200 }}>
               <FormControl fullWidth size="small">
                 <InputLabel>Status</InputLabel>
                 <Select
@@ -149,30 +176,49 @@ const TransactionsTable = ({
                   label="Status"
                   onChange={(e) => {
                     onStatusFilterChange(e.target.value);
-                    handleFilterMenuClose();
                   }}
                 >
                   <MenuItem value="all">All Statuses</MenuItem>
                   <MenuItem value="completed">Completed</MenuItem>
                   <MenuItem value="failed">Failed</MenuItem>
                   <MenuItem value="pending">Pending</MenuItem>
+                  <MenuItem value="refunded">Refunded</MenuItem>
                 </Select>
               </FormControl>
             </MenuItem>
-            <MenuItem>
+            <MenuItem sx={{ minWidth: 200 }}>
               <FormControl fullWidth size="small">
-                <InputLabel>Plan</InputLabel>
+                <InputLabel>Payment Method</InputLabel>
                 <Select
-                  value={planFilter}
-                  label="Plan"
+                  value={paymentMethodFilter}
+                  label="Payment Method"
                   onChange={(e) => {
-                    onPlanFilterChange(e.target.value);
-                    handleFilterMenuClose();
+                    onPaymentMethodFilterChange(e.target.value);
                   }}
                 >
-                  <MenuItem value="all">All Plans</MenuItem>
-                  <MenuItem value="monthly">Monthly</MenuItem>
-                  <MenuItem value="yearly">Yearly</MenuItem>
+                  <MenuItem value="all">All Methods</MenuItem>
+                  <MenuItem value="credit_card">Credit Card</MenuItem>
+                  <MenuItem value="paypal">PayPal</MenuItem>
+                  <MenuItem value="bank_transfer">Bank Transfer</MenuItem>
+                  <MenuItem value="crypto">Cryptocurrency</MenuItem>
+                </Select>
+              </FormControl>
+            </MenuItem>
+            <MenuItem sx={{ minWidth: 200 }}>
+              <FormControl fullWidth size="small">
+                <InputLabel>Amount Range</InputLabel>
+                <Select
+                  value={amountRangeFilter}
+                  label="Amount Range"
+                  onChange={(e) => {
+                    onAmountRangeFilterChange(e.target.value);
+                  }}
+                >
+                  <MenuItem value="all">All Amounts</MenuItem>
+                  <MenuItem value="0-50">$0 - $50</MenuItem>
+                  <MenuItem value="50-100">$50 - $100</MenuItem>
+                  <MenuItem value="100-500">$100 - $500</MenuItem>
+                  <MenuItem value="500+">$500+</MenuItem>
                 </Select>
               </FormControl>
             </MenuItem>
@@ -183,7 +229,7 @@ const TransactionsTable = ({
           variant="outlined"
           startIcon={<DownloadIcon />}
           onClick={onExportCSV}
-          disabled={exportLoading}
+          disabled={exportLoading || transactions.length === 0}
         >
           {exportLoading ? 'Exporting...' : 'Export CSV'}
         </Button>
@@ -194,11 +240,14 @@ const TransactionsTable = ({
         <Table sx={{ minWidth: 650 }}>
           <TableHead sx={{ bgcolor: 'grey.50' }}>
             <TableRow>
-              <TableCell>ID</TableCell>
-              <TableCell>Full Name</TableCell>
-              <TableCell>Plan</TableCell>
+              <TableCell padding="checkbox">
+                {/* <Checkbox disabled={transactions.length === 0} /> */}
+              </TableCell>
+              <TableCell>Transaction ID</TableCell>
+              <TableCell>Customer</TableCell>
               <TableCell>Amount</TableCell>
               <TableCell>Date</TableCell>
+              <TableCell>Payment Method</TableCell>
               <TableCell>Status</TableCell>
               <TableCell align="right">Actions</TableCell>
             </TableRow>
@@ -206,12 +255,31 @@ const TransactionsTable = ({
           <TableBody>
             {loading ? renderLoadingSkeletons() : 
              transactions.length > 0 ? paginatedTransactions.map((transaction) => (
-                <TableRow key={transaction.id} hover sx={{ '&:hover': { bgcolor: 'action.hover' } }}>
+                <TableRow 
+                  key={transaction.id} 
+                  hover 
+                  sx={{ '&:hover': { bgcolor: 'action.hover' } }}
+                  selected={selectedTransaction?.id === transaction.id}
+                >
+                  <TableCell padding="checkbox">
+                    <Checkbox
+                      checked={selectedTransaction?.id === transaction.id}
+                      onChange={() => onTransactionSelect(transaction)}
+                    />
+                  </TableCell>
                   <TableCell>#{transaction.id}</TableCell>
-                  <TableCell>{transaction.fullName}</TableCell>
-                  <TableCell>{transaction.plan}</TableCell>
+                  <TableCell>{transaction.customerName || 'N/A'}</TableCell>
                   <TableCell>{transaction.amount}</TableCell>
-                  <TableCell>{transaction.date}</TableCell>
+                  <TableCell>
+                    {new Date(transaction.date).toLocaleDateString('en-US', {
+                      year: 'numeric',
+                      month: 'short',
+                      day: 'numeric'
+                    })}
+                  </TableCell>
+                  <TableCell>
+                    {transaction.paymentMethod?.replace('_', ' ') || 'N/A'}
+                  </TableCell>
                   <TableCell>
                     <Chip 
                       label={transaction.status} 
@@ -235,7 +303,7 @@ const TransactionsTable = ({
       {transactions.length > 0 && (
         <Box sx={{ mt: 3, p: 2, bgcolor: 'background.paper', borderRadius: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <Typography variant="body2" color="text.secondary">
-            Page {page} of {pageCount}
+            Showing {(page - 1) * PAGE_SIZE + 1}-{Math.min(page * PAGE_SIZE, transactions.length)} of {transactions.length} transactions
           </Typography>
           <Stack direction="row" spacing={2} alignItems="center">
             <Button

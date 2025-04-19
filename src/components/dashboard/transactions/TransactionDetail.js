@@ -1,5 +1,5 @@
-// components/dashboard/transactions/TransactionDetailView.js
-import React from 'react';
+// components/dashboard/transactions/TransactionDetail.js
+import React, { useState } from 'react';
 import {
   Box,
   Typography,
@@ -13,12 +13,22 @@ import {
   TableCell,
   Chip,
   Breadcrumbs,
-  Link
+  Link,
+  Stack,
+  Dialog
 } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import HomeIcon from '@mui/icons-material/Home';
+import { useDispatch } from 'react-redux';
+import { markAsPaid, retryCharge, refundTransaction } from '@/store/slices/transactionSlice';
 
 const TransactionDetail = ({ transaction, onBack }) => {
+  const dispatch = useDispatch();
+  const [openMarkPaidDialog, setOpenMarkPaidDialog] = useState(false);
+  const [openRetryDialog, setOpenRetryDialog] = useState(false);
+  const [openRefundDialog, setOpenRefundDialog] = useState(false);
+  const [actionLoading, setActionLoading] = useState(false);
+
   if (!transaction) {
     return (
       <Box>
@@ -30,20 +40,95 @@ const TransactionDetail = ({ transaction, onBack }) => {
     );
   }
 
+  // Action handlers
+  const handleMarkPaidConfirm = async () => {
+    setActionLoading(true);
+    try {
+      await dispatch(markAsPaid(transaction.id));
+      onBack(); // Return to list after action
+    } finally {
+      setActionLoading(false);
+      setOpenMarkPaidDialog(false);
+    }
+  };
+
+  const handleRetryConfirm = async () => {
+    setActionLoading(true);
+    try {
+      await dispatch(retryCharge(transaction.id));
+      onBack();
+    } finally {
+      setActionLoading(false);
+      setOpenRetryDialog(false);
+    }
+  };
+
+  const handleRefundConfirm = async () => {
+    setActionLoading(true);
+    try {
+      await dispatch(refundTransaction(transaction.id));
+      onBack();
+    } finally {
+      setActionLoading(false);
+      setOpenRefundDialog(false);
+    }
+  };
+
+  // Safely handle all possible undefined values
+  const firstName = transaction.customerName ? transaction.customerName.split(' ')[0] : 'N/A';
+  const lastName = transaction.customerName ? transaction.customerName.split(' ').slice(1).join(' ') : 'N/A';
+  const formattedDate = transaction.date ? new Date(transaction.date).toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric'
+  }) : 'N/A';
+
   return (
     <Box>
-      {/* Breadcrumb navigation */}
-      <Breadcrumbs aria-label="breadcrumb" sx={{ mb: 3 }}>
-        <Link 
-          color="inherit" 
-          onClick={onBack}
-          sx={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}
-        >
-          <HomeIcon sx={{ mr: 0.5 }} fontSize="inherit" />
-          Transactions
-        </Link>
-        <Typography color="text.primary">Transaction #{transaction.id}</Typography>
-      </Breadcrumbs>
+      {/* Header with breadcrumb and action buttons */}
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+        <Breadcrumbs aria-label="breadcrumb">
+          <Link 
+            color="inherit" 
+            onClick={onBack}
+            sx={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}
+          >
+            <HomeIcon sx={{ mr: 0.5 }} fontSize="inherit" />
+            Transactions
+          </Link>
+          <Typography color="text.primary">Transaction #{transaction.id || 'N/A'}</Typography>
+        </Breadcrumbs>
+
+        <Stack direction="row" spacing={2}>
+          {transaction.status === 'failed' && (
+            <Button 
+              variant="contained" 
+              color="primary"
+              onClick={() => setOpenRetryDialog(true)}
+            >
+              Retry Charge
+            </Button>
+          )}
+          {transaction.status === 'pending' && (
+            <Button 
+              variant="contained" 
+              onClick={() => setOpenMarkPaidDialog(true)}
+            >
+              Mark as Paid
+            </Button>
+          )}
+          {transaction.status === 'completed' && (
+            <Button 
+              variant="contained" 
+              color="error"
+              onClick={() => setOpenRefundDialog(true)}
+            >
+              Issue Refund
+            </Button>
+          )}
+
+        </Stack>
+      </Box>
 
       {/* Transaction summary card */}
       <Card sx={{ mb: 3 }}>
@@ -57,54 +142,126 @@ const TransactionDetail = ({ transaction, onBack }) => {
             <TableBody>
               <TableRow>
                 <TableCell sx={{ fontWeight: 'bold' }}>First Name</TableCell>
-                <TableCell>{transaction.fullName.split(' ')[0]}</TableCell>
+                <TableCell>{firstName}</TableCell>
               </TableRow>
               <TableRow>
                 <TableCell sx={{ fontWeight: 'bold' }}>Last Name</TableCell>
-                <TableCell>{transaction.fullName.split(' ').slice(1).join(' ')}</TableCell>
+                <TableCell>{lastName}</TableCell>
               </TableRow>
               <TableRow>
                 <TableCell sx={{ fontWeight: 'bold' }}>Transaction ID</TableCell>
-                <TableCell>#{transaction.id}</TableCell>
+                <TableCell>#{transaction.id || 'N/A'}</TableCell>
               </TableRow>
               <TableRow>
                 <TableCell sx={{ fontWeight: 'bold' }}>Amount</TableCell>
-                <TableCell>{transaction.amount}</TableCell>
+                <TableCell>{transaction.amount || 'N/A'}</TableCell>
               </TableRow>
               <TableRow>
                 <TableCell sx={{ fontWeight: 'bold' }}>Date</TableCell>
-                <TableCell>{transaction.date}</TableCell>
+                <TableCell>{formattedDate}</TableCell>
               </TableRow>
               <TableRow>
-                <TableCell sx={{ fontWeight: 'bold' }}>Plan</TableCell>
-                <TableCell>{transaction.plan}</TableCell>
+                <TableCell sx={{ fontWeight: 'bold' }}>Payment Method</TableCell>
+                <TableCell>{(transaction.paymentMethod || 'N/A').replace('_', ' ')}</TableCell>
               </TableRow>
               <TableRow>
                 <TableCell sx={{ fontWeight: 'bold' }}>Status</TableCell>
                 <TableCell>
                   <Chip 
-                    label={transaction.status} 
+                    label={transaction.status || 'N/A'} 
                     color={
-                      transaction.status === 'Completed' ? 'success' :
-                      transaction.status === 'Failed' ? 'error' : 'warning'
+                      transaction.status === 'completed' ? 'success' :
+                      transaction.status === 'failed' ? 'error' : 
+                      transaction.status === 'pending' ? 'warning' : 'default'
                     }
                   />
                 </TableCell>
               </TableRow>
             </TableBody>
           </Table>
-
-          <Box sx={{ mt: 3, display: 'flex', justifyContent: 'flex-end' }}>
-            <Button 
-              variant="outlined" 
-              startIcon={<ArrowBackIcon />}
-              onClick={onBack}
-            >
-              Back to Transactions
-            </Button>
-          </Box>
         </CardContent>
       </Card>
+
+      {/* Confirmation dialogs */}
+      <Dialog open={openMarkPaidDialog} onClose={() => setOpenMarkPaidDialog(false)}>
+        <Box sx={{ p: 3 }}>
+          <Typography variant="h6" gutterBottom>Mark as Paid</Typography>
+          <Divider sx={{ mb: 2 }} />
+          <Typography sx={{ mb: 3 }}>
+            Are you sure you want to mark transaction #{transaction.id} as paid?
+          </Typography>
+          <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 2 }}>
+            <Button 
+              variant="outlined" 
+              onClick={() => setOpenMarkPaidDialog(false)}
+              disabled={actionLoading}
+            >
+              Cancel
+            </Button>
+            <Button 
+              variant="contained" 
+              onClick={handleMarkPaidConfirm}
+              disabled={actionLoading}
+            >
+              {actionLoading ? 'Processing...' : 'Confirm'}
+            </Button>
+          </Box>
+        </Box>
+      </Dialog>
+
+      <Dialog open={openRetryDialog} onClose={() => setOpenRetryDialog(false)}>
+        <Box sx={{ p: 3 }}>
+          <Typography variant="h6" gutterBottom>Retry Charge</Typography>
+          <Divider sx={{ mb: 2 }} />
+          <Typography sx={{ mb: 3 }}>
+            Retry failed transaction #{transaction.id}?
+          </Typography>
+          <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 2 }}>
+            <Button 
+              variant="outlined" 
+              onClick={() => setOpenRetryDialog(false)}
+              disabled={actionLoading}
+            >
+              Cancel
+            </Button>
+            <Button 
+              variant="contained" 
+              color="primary"
+              onClick={handleRetryConfirm}
+              disabled={actionLoading}
+            >
+              {actionLoading ? 'Processing...' : 'Retry'}
+            </Button>
+          </Box>
+        </Box>
+      </Dialog>
+
+      <Dialog open={openRefundDialog} onClose={() => setOpenRefundDialog(false)}>
+        <Box sx={{ p: 3 }}>
+          <Typography variant="h6" gutterBottom>Issue Refund</Typography>
+          <Divider sx={{ mb: 2 }} />
+          <Typography sx={{ mb: 3 }}>
+            Refund transaction #{transaction.id} for {transaction.amount}?
+          </Typography>
+          <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 2 }}>
+            <Button 
+              variant="outlined" 
+              onClick={() => setOpenRefundDialog(false)}
+              disabled={actionLoading}
+            >
+              Cancel
+            </Button>
+            <Button 
+              variant="contained" 
+              color="error"
+              onClick={handleRefundConfirm}
+              disabled={actionLoading}
+            >
+              {actionLoading ? 'Processing...' : 'Confirm Refund'}
+            </Button>
+          </Box>
+        </Box>
+      </Dialog>
     </Box>
   );
 };

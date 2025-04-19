@@ -1,4 +1,4 @@
-// store/slices/usersSlice.js
+// store/slices/userSlice.js
 import { createSlice, createAsyncThunk, createSelector } from '@reduxjs/toolkit';
 import { HYDRATE } from 'next-redux-wrapper';
 import axios from 'axios';
@@ -196,7 +196,7 @@ const initialState = {
 
 // ==================== SLICE DEFINITION ==================== //
 
-const usersSlice = createSlice({
+const userSlice = createSlice({
   name: 'users', // Slice name used in Redux store
   initialState,
   reducers: {
@@ -324,7 +324,7 @@ export const {
   setPageSize,
   clearUsersError,
   clearStatsError
-} = usersSlice.actions;
+} = userSlice.actions;
 
 // ==================== SELECTORS ==================== //
 
@@ -386,4 +386,4 @@ export const selectPagination = createSelector(
   (filters) => filters.pagination
 );
 
-export default usersSlice.reducer;
+export default userSlice.reducer;

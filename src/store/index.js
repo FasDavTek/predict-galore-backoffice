@@ -4,13 +4,15 @@ import { HYDRATE } from 'next-redux-wrapper';
 import authReducer from './slices/authSlice';
 import quoteReducer from './slices/quoteSlice';
 import dashboardReducer from './slices/dashboardSlice'
-import usersReducer from './slices/usersSlice'
+import usersReducer from './slices/userSlice'
+import transactionsReducer from './slices/transactionSlice';
 
 const combinedReducer = combineReducers({
   auth: authReducer,
   quote: quoteReducer,
   dashboard: dashboardReducer,
   users: usersReducer,
+  transactions: transactionsReducer,
 });
 
 const reducer = (state, action) => {

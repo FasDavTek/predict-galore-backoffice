@@ -11,12 +11,12 @@ import {
 } from '@mui/material';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
 import { useDispatch } from 'react-redux';
-import { deleteUser, upgradeUser } from '@/store/slices/usersSlice';
+import { deleteUser, upgradeUser } from '@/store/slices/userSlice';
 
 /**
  * UserActionsMenu - Provides contextual actions for a user
  */
-const UserActionsMenu = ({ user, onViewDetails }) => {
+const UserActions = ({ user, onViewDetails }) => {
   const dispatch = useDispatch();
   const [anchorEl, setAnchorEl] = useState(null);
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
@@ -167,4 +167,4 @@ const UserActionsMenu = ({ user, onViewDetails }) => {
   );
 };
 
-export default UserActionsMenu;
+export default UserActions;

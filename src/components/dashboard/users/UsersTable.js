@@ -36,8 +36,8 @@ import {
 } from '@mui/icons-material';
 
 import Image from 'next/image';
-import UserActionsMenu from './UserActionsMenu';
-import UserDetailView from './UserDetailView';
+import UserActions from './UserActions';
+import UserDetail from './UserDetail';
 
 /**
  * UsersTable - Displays a table of users with sorting, pagination and actions
@@ -90,7 +90,7 @@ const UsersTable = ({
           </Link>
           <Typography color="text.primary">{selectedUser.fullName}</Typography>
         </Breadcrumbs>
-        <UserDetailView 
+        <UserDetail 
           user={selectedUser} 
           onBack={onBackToList}
           users={users}
@@ -283,7 +283,7 @@ const UsersTable = ({
                   <TableCell>{user.phone}</TableCell>
                   <TableCell>{user.location}</TableCell>
                   <TableCell align="right">
-                    <UserActionsMenu user={user} onViewDetails={() => onUserSelect(user)} />
+                    <UserActions user={user} onViewDetails={() => onUserSelect(user)} />
                   </TableCell>
                 </TableRow>
               )) : renderEmptyState()}

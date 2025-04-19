@@ -1,36 +1,37 @@
+// pages/transactions.js
 import React, { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { ErrorBoundary } from 'react-error-boundary';
 import { Box, Snackbar, Alert } from '@mui/material';
-import { People as UsersIcon } from '@mui/icons-material';
+import { Receipt as TransactionsIcon } from '@mui/icons-material';
 
 // Component imports
 import DashboardLayout from '@/layouts/DashboardLayout';
-import { Header } from '@/components/dashboard/users/Header';
-import UserStats from '@/components/dashboard/users/UserStats';
-import UsersTable from '@/components/dashboard/users/UsersTable';
+import { Header } from '@/components/dashboard/transactions/Header';
+import TransactionStats from '@/components/dashboard/transactions/TransactionStats';
+import TransactionsTable from '@/components/dashboard/transactions/TransactionsTable';
+import TransactionDetail from '@/components/dashboard/transactions/TransactionDetail';
 
 // Redux imports
 import {
-  fetchUserStats,
-  fetchUsersList,
-  exportUsersCSV,
+  fetchTransactionStats,
+  fetchTransactionsList,
+  exportTransactionsCSV,
   setTimeRange,
   setSearchQuery,
   setStatusFilter,
   setPlanFilter,
   selectStatusFilter,
   selectPlanFilter,
-  selectUserStats,
-  selectUsersList,
-  selectUsersLoading,
+  selectTransactionStats,
+  selectTransactionsList,
+  selectTransactionsLoading,
   selectTimeRange,
   selectSearchQuery
-} from '@/store/slices/userSlice';
+} from '@/store/slices/transactionSlice';
 
 /**
  * Error boundary fallback component
- * Shows error message when components fail to render
  */
 function ErrorFallback({ error }) {
   return (
@@ -42,23 +43,22 @@ function ErrorFallback({ error }) {
 }
 
 /**
- * UsersPage - Main component for users dashboard
- * Manages user data fetching, filtering, and display
+ * TransactionsPage - Main component for transactions dashboard
  */
-const UsersPage = () => {
+const TransactionsPage = () => {
   const dispatch = useDispatch();
   
   // Select data from Redux store
-  const stats = useSelector(selectUserStats);
-  const users = useSelector(selectUsersList);
-  const loading = useSelector(selectUsersLoading);
+  const stats = useSelector(selectTransactionStats);
+  const transactions = useSelector(selectTransactionsList);
+  const loading = useSelector(selectTransactionsLoading);
   const timeRange = useSelector(selectTimeRange);
   const searchQuery = useSelector(selectSearchQuery);
   const statusFilter = useSelector(selectStatusFilter);
   const planFilter = useSelector(selectPlanFilter);
   
-  // Local state for selected user and notifications
-  const [selectedUser, setSelectedUser] = useState(null);
+  // Local state for selected transaction and notifications
+  const [selectedTransaction, setSelectedTransaction] = useState(null);
   const [notification, setNotification] = useState({
     open: false,
     message: '',
@@ -67,8 +67,8 @@ const UsersPage = () => {
 
   // Fetch data on mount and when filters change
   useEffect(() => {
-    dispatch(fetchUserStats());
-    dispatch(fetchUsersList({ searchQuery, timeRange }));
+    dispatch(fetchTransactionStats());
+    dispatch(fetchTransactionsList({ searchQuery, timeRange }));
   }, [dispatch, searchQuery, timeRange]);
 
   // Handler for time range filter change
@@ -92,7 +92,7 @@ const UsersPage = () => {
   // Handler for CSV export with loading state
   const handleExportCSV = async () => {
     try {
-      await dispatch(exportUsersCSV());
+      await dispatch(exportTransactionsCSV());
       showNotification('Export started successfully', 'success');
     } catch (error) {
       showNotification('Export failed', 'error');
@@ -104,14 +104,14 @@ const UsersPage = () => {
     setNotification({ open: true, message, severity });
   };
 
-  // Handler for user selection
-  const handleUserSelect = (user) => {
-    setSelectedUser(user);
+  // Handler for transaction selection
+  const handleTransactionSelect = (transaction) => {
+    setSelectedTransaction(transaction);
   };
 
   // Handler for returning to list view
   const handleBackToList = () => {
-    setSelectedUser(null);
+    setSelectedTransaction(null);
   };
 
   // Handler for closing notifications
@@ -124,21 +124,21 @@ const UsersPage = () => {
       <ErrorBoundary FallbackComponent={ErrorFallback}>
         {/* Page Header with title and time range selector */}
         <Header
-          title="Users"
-          subtitle="Manage and analyze user accounts"
+          title="Transactions"
+          subtitle="Track and manage all transactions"
           timeRange={timeRange}
           onTimeRangeChange={handleTimeRangeChange}
         />
 
-        {/* Stats cards section - only shown when no user is selected */}
-        {!selectedUser && (
-          <Box sx={{ mb: 4, display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: 'repeat(4, 1fr)' }, gap: 3 }}>
+        {/* Stats cards section - only shown when no transaction is selected */}
+        {!selectedTransaction && (
+          <Box sx={{ mb: 4, display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: 'repeat(5, 1fr)' }, gap: 3 }}>
             {stats.map((card, index) => (
-              <UserStats
+              <TransactionStats
                 key={index}
                 title={card.title}
                 value={card.value}
-                icon={<UsersIcon />}
+                icon={<TransactionsIcon />}
                 change={card.change}
                 bgColor={card.bgColor}
               />
@@ -146,23 +146,28 @@ const UsersPage = () => {
           </Box>
         )}
 
-        {/* Main users table component */}
+        {/* Main transactions table or detail view */}
         <Box sx={{ width: '100%' }}>
-          <UsersTable
-            users={users}
-            loading={loading.users}
-            searchQuery={searchQuery}
-            onSearchChange={handleSearchChange}
-            statusFilter={statusFilter}
-            planFilter={planFilter}
-            onStatusFilterChange={handleStatusFilterChange}
-            onPlanFilterChange={handlePlanFilterChange}
-            onExportCSV={handleExportCSV}
-            exportLoading={loading.export}
-            selectedUser={selectedUser}
-            onUserSelect={handleUserSelect}
-            onBackToList={handleBackToList}
-          />
+          {selectedTransaction ? (
+            <TransactionDetail
+              transaction={selectedTransaction}
+              onBack={handleBackToList}
+            />
+          ) : (
+            <TransactionsTable
+              transactions={transactions}
+              loading={loading.transactions}
+              searchQuery={searchQuery}
+              onSearchChange={handleSearchChange}
+              statusFilter={statusFilter}
+              planFilter={planFilter}
+              onStatusFilterChange={handleStatusFilterChange}
+              onPlanFilterChange={handlePlanFilterChange}
+              onExportCSV={handleExportCSV}
+              exportLoading={loading.export}
+              onTransactionSelect={handleTransactionSelect}
+            />
+          )}
         </Box>
 
         {/* Global notification system */}
@@ -184,4 +189,4 @@ const UsersPage = () => {
   );
 };
 
-export default UsersPage;
+export default TransactionsPage;

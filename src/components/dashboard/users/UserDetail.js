@@ -23,9 +23,9 @@ import {
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
 import { useDispatch } from 'react-redux';
-import { deleteUser, upgradeUser } from '@/store/slices/usersSlice';
+import { deleteUser, upgradeUser } from '@/store/slices/userSlice';
 
-const UserDetailView = ({ user, onBack }) => {
+const UserDetail = ({ user, onBack }) => {
   const dispatch = useDispatch();
   const [actionLoading, setActionLoading] = useState(false);
   const [anchorEl, setAnchorEl] = useState(null);
@@ -216,4 +216,4 @@ const UserDetailView = ({ user, onBack }) => {
   );
 };
 
-export default UserDetailView;
+export default UserDetail;

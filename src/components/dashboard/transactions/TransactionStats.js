@@ -1,4 +1,4 @@
-// components/dashboard/users/UsersStat.js
+// components/dashboard/transactions/TransactionsStat.js
 import React from 'react';
 import {
   Card,
@@ -11,7 +11,7 @@ import {
   ArrowDownward as ArrowDownIcon
 } from '@mui/icons-material';
 
-const UsersStat = ({ title, value, icon, change, bgColor }) => {
+const TransactionStats = ({ title, value, icon, change, bgColor }) => {
   const isPositive = parseFloat(change) >= 0;
 
   return (
@@ -19,7 +19,6 @@ const UsersStat = ({ title, value, icon, change, bgColor }) => {
       <CardContent sx={{ p: 3 }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
           <Box>
-            {/* Title with gray color */}
             <Typography sx={{ 
               color: '#7A7A9D', 
               fontSize: '0.875rem', 
@@ -29,7 +28,6 @@ const UsersStat = ({ title, value, icon, change, bgColor }) => {
               {title}
             </Typography>
             
-            {/* Main value with dark color */}
             <Typography variant="h4" sx={{ 
               color: '#101012', 
               mb: 2, 
@@ -38,7 +36,6 @@ const UsersStat = ({ title, value, icon, change, bgColor }) => {
               {value}
             </Typography>
             
-            {/* Change indicator */}
             <Box sx={{ 
               display: 'flex', 
               alignItems: 'center', 
@@ -52,7 +49,7 @@ const UsersStat = ({ title, value, icon, change, bgColor }) => {
                 }} />
               ) : (
                 <ArrowDownIcon sx={{ 
-                  color: '#D92D20', // Error color for negative
+                  color: '#D92D20',
                   width: 20, 
                   height: 20 
                 }} />
@@ -74,9 +71,8 @@ const UsersStat = ({ title, value, icon, change, bgColor }) => {
             </Box>
           </Box>
           
-          {/* Icon container */}
           <Box sx={{ 
-            bgcolor: bgColor || '#F2F4F7', // Default gray if not provided
+            bgcolor: bgColor || '#F2F4F7',
             width: 40,
             height: 40,
             borderRadius: '20px',
@@ -92,4 +88,4 @@ const UsersStat = ({ title, value, icon, change, bgColor }) => {
   );
 };
 
-export default UsersStat;
+export default TransactionStats;

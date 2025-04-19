@@ -77,12 +77,18 @@ const DashboardStat = ({
               variant="subtitle2" 
               color="text.secondary" 
               gutterBottom
-              sx={{ textTransform: 'uppercase' }}
+              sx={{ textTransform: 'uppercase',  color: '#7A7A9D', 
+                fontSize: '0.875rem', 
+                fontWeight: 500, }}
             >
               {title}
             </Typography>
             {/* Stat value */}
-            <Typography variant="h4" fontWeight={700}>
+            <Typography variant="h4" sx={{ 
+              color: '#101012', 
+              mb: 2, 
+              fontWeight: 400 
+            }} >
               {value}
             </Typography>
           </Box>
@@ -107,7 +113,11 @@ const DashboardStat = ({
           <Typography variant="body2" sx={{ color: iconColor, fontWeight: 500 }}>
             {change}
           </Typography>
-          <Typography variant="caption" color="text.secondary">
+          <Typography variant="caption"  sx={{ 
+                color: '#475467', 
+                fontSize: '0.5rem', 
+                fontWeight: 500 
+              }}>
             vs last month
           </Typography>
         </Stack>

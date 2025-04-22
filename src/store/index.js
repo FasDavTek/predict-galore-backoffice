@@ -6,6 +6,8 @@ import quoteReducer from './slices/quoteSlice';
 import dashboardReducer from './slices/dashboardSlice'
 import usersReducer from './slices/userSlice'
 import transactionsReducer from './slices/transactionSlice';
+import predictionsReducer from './slices/predictionSlice'
+
 
 const combinedReducer = combineReducers({
   auth: authReducer,
@@ -13,6 +15,7 @@ const combinedReducer = combineReducers({
   dashboard: dashboardReducer,
   users: usersReducer,
   transactions: transactionsReducer,
+  predictions: predictionsReducer,
 });
 
 const reducer = (state, action) => {

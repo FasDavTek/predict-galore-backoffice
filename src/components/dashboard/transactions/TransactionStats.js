@@ -11,16 +11,53 @@ import {
   ArrowDownward as ArrowDownIcon
 } from '@mui/icons-material';
 
-const TransactionStats = ({ title, value, icon, change, bgColor }) => {
+const statusStyles = {
+  completed: {
+    bgColor: '#ECFDF5',
+    textColor: '#065F46',
+    iconColor: '#059669'
+  },
+  pending: {
+    bgColor: '#EFF6FF',
+    textColor: '#1E40AF',
+    iconColor: '#3B82F6'
+  },
+  failed: {
+    bgColor: '#FEF2F2',
+    textColor: '#991B1B',
+    iconColor: '#EF4444'
+  },
+  default: {
+    bgColor: '#F8FAFC',
+    textColor: '#1E293B',
+    iconColor: '#64748B'
+  }
+};
+
+const TransactionStats = ({ title, value, icon, change }) => {
   const isPositive = parseFloat(change) >= 0;
+  
+  // Determine which status style to use based on title
+  const getStatusStyle = () => {
+    if (title.toLowerCase().includes('completed')) return statusStyles.completed;
+    if (title.toLowerCase().includes('pending')) return statusStyles.pending;
+    if (title.toLowerCase().includes('failed')) return statusStyles.failed;
+    return statusStyles.default;
+  };
+  
+  const statusStyle = getStatusStyle();
 
   return (
-    <Card sx={{ border: '1px solid #EEEEF0' }}>
+    <Card sx={{ 
+      border: 'none',
+      backgroundColor: statusStyle.bgColor,
+      boxShadow: 'none'
+    }}>
       <CardContent sx={{ p: 3 }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
           <Box>
             <Typography sx={{ 
-              color: '#7A7A9D', 
+              color: statusStyle.textColor, 
               fontSize: '0.875rem', 
               fontWeight: 500, 
               mb: 1 
@@ -29,9 +66,9 @@ const TransactionStats = ({ title, value, icon, change, bgColor }) => {
             </Typography>
             
             <Typography variant="h4" sx={{ 
-              color: '#101012', 
+              color: statusStyle.textColor, 
               mb: 2, 
-              fontWeight: 400 
+              fontWeight: 600 
             }}>
               {value}
             </Typography>
@@ -62,9 +99,10 @@ const TransactionStats = ({ title, value, icon, change, bgColor }) => {
                 {change}%
               </Typography>
               <Typography sx={{ 
-                color: '#475467', 
+                color: statusStyle.textColor, 
                 fontSize: '0.5rem', 
-                fontWeight: 500 
+                fontWeight: 500,
+                opacity: 0.8
               }}>
                 vs last month
               </Typography>
@@ -72,7 +110,7 @@ const TransactionStats = ({ title, value, icon, change, bgColor }) => {
           </Box>
           
           <Box sx={{ 
-            bgcolor: bgColor || '#F2F4F7',
+            bgcolor: statusStyle.iconColor + '20', // Add opacity to the icon background
             width: 40,
             height: 40,
             borderRadius: '20px',
@@ -80,7 +118,12 @@ const TransactionStats = ({ title, value, icon, change, bgColor }) => {
             alignItems: 'center',
             justifyContent: 'center'
           }}>
-            {React.cloneElement(icon, { sx: { color: '#414147' } })}
+            {React.cloneElement(icon, { 
+              sx: { 
+                color: statusStyle.iconColor,
+                fontSize: '1.25rem'
+              } 
+            })}
           </Box>
         </Box>
       </CardContent>

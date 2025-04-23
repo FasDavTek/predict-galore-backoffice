@@ -12,33 +12,24 @@ const mockStatsData = [
   {
     title: "Total Users",
     value: "1,234",
-    change: "+12.5%",
-    bgColor: "bg-gray-50",
-    icon: "users",
+    change: "+12.5%"
   },
   {
     title: "Free Users",
     value: "1,000",
-    change: "+5.2%",
-    bgColor: "bg-red-50",
-    icon: "users",
+    change: "+5.2%"
   },
   {
     title: "Premium Users",
     value: "234",
-    change: "+15.8%",
-    bgColor: "bg-green-50",
-    icon: "users",
+    change: "+15.8%"
   },
   {
-    title: "Payments",
+    title: "Revenue",
     value: "$12.4k",
-    change: "+18.3%",
-    bgColor: "bg-[#e8f9ff]",
-    icon: "wallet",
-  },
+    change: "+18.3%"
+  }
 ];
-
 
 
 const mockEngagementData = {

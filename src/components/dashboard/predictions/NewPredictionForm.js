@@ -4,6 +4,8 @@ import {
   Box,
   Typography,
   Button,
+  Breadcrumbs,
+  Link,
   Stepper,
   Step,
   StepLabel,
@@ -44,7 +46,8 @@ import {
   Schedule as ScheduleIcon,
   Lock as LockIcon,
   Public as PublicIcon,
-  Group as GroupIcon
+  Group as GroupIcon,
+  Home as HomeIcon,
 } from '@mui/icons-material';
 import {
   SportsSoccer as SportsSoccerIcon,
@@ -165,6 +168,11 @@ const NewPredictionForm = ({ onBack, onSubmit }) => {
   const getSportIcon = (sportValue) => {
     const sport = sports.find(s => s.value === sportValue);
     return sport ? sport.icon : <SportsSoccerIcon />;
+  };
+
+  // Function to handle step click
+  const handleStepClick = (stepIndex) => {
+    setActiveStep(stepIndex);
   };
 
   // Function to render content for each step
@@ -513,60 +521,26 @@ const NewPredictionForm = ({ onBack, onSubmit }) => {
     }
   };
 
-  // Function to validate each step
-  const isStepValid = (step) => {
-    switch (step) {
-      case 0:
-        return formData.sport && formData.league;
-      case 1:
-        return formData.match;
-      case 2:
-        return formData.predictedOutcome;
-      case 3:
-        return true; // Expert analysis is optional
-      case 4:
-        return true; // Preview step is always valid
-      default:
-        return false;
-    }
-  };
-
   return (
     <Box>
-      {/* Header with back and next buttons */}
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-        <Button 
-          startIcon={<ArrowBackIcon />} 
-          onClick={onBack}
-          sx={{ mr: 2 }}
-        >
-          Back to Predictions
-        </Button>
-        
-        {activeStep < steps.length - 1 ? (
-          <Button 
-            variant="contained" 
-            onClick={handleNext}
-            disabled={!isStepValid(activeStep)}
+      {/* Header with back button */}
+      <Box sx={{ mb: 3 }}>
+        <Breadcrumbs aria-label="breadcrumb">
+          <Link
+            color="inherit"
+            onClick={onBack}
+            sx={{ display: "flex", alignItems: "center", cursor: "pointer" }}
           >
-            Next
-          </Button>
-        ) : (
-          <Button 
-            variant="contained" 
-            color="success"
-            onClick={handleNext}
-            startIcon={<AddIcon />}
-          >
-            Post Prediction
-          </Button>
-        )}
+            <HomeIcon sx={{ mr: 0.5 }} fontSize="inherit" />
+            Predictions
+          </Link>
+        </Breadcrumbs>
       </Box>
 
-      {/* Stepper to show progress */}
+      {/* Stepper with clickable steps */}
       <Stepper activeStep={activeStep} sx={{ mb: 3 }}>
-        {steps.map((label) => (
-          <Step key={label}>
+        {steps.map((label, index) => (
+          <Step key={label} onClick={() => handleStepClick(index)} sx={{ cursor: 'pointer' }}>
             <StepLabel>{label}</StepLabel>
           </Step>
         ))}
@@ -576,7 +550,7 @@ const NewPredictionForm = ({ onBack, onSubmit }) => {
       {renderStepContent(activeStep)}
 
       {/* Navigation buttons at bottom */}
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 3 }}>
+      <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 3 }}>
         <Button
           disabled={activeStep === 0}
           onClick={handleBack}
@@ -584,25 +558,22 @@ const NewPredictionForm = ({ onBack, onSubmit }) => {
         >
           Back
         </Button>
-        <Box>
-          {activeStep === steps.length - 1 && (
-            <Button
-              variant="outlined"
-              startIcon={<ScheduleIcon />}
-              sx={{ mr: 2 }}
-              onClick={() => handleSchedule(new Date())}
-            >
-              Schedule
-            </Button>
-          )}
+        {activeStep === steps.length - 1 && (
           <Button
-            variant="contained"
-            onClick={handleNext}
-            disabled={!isStepValid(activeStep)}
+            variant="outlined"
+            startIcon={<ScheduleIcon />}
+            sx={{ mr: 2 }}
+            onClick={() => handleSchedule(new Date())}
           >
-            {activeStep === steps.length - 1 ? 'Post Prediction' : 'Next'}
+            Schedule
           </Button>
-        </Box>
+        )}
+        <Button
+          variant="contained"
+          onClick={handleNext}
+        >
+          {activeStep === steps.length - 1 ? 'Post Prediction' : 'Next'}
+        </Button>
       </Box>
 
       {/* Confirmation dialog before posting */}

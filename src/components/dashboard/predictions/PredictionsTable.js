@@ -75,6 +75,7 @@ const PredictionsTable = ({
 
   const handleCreateNew = () => {
     setIsCreatingNew(true);
+    onPredictionSelect(null);
   };
 
   const handleCancelCreate = () => {
@@ -86,6 +87,7 @@ const PredictionsTable = ({
     setIsCreatingNew(false);
   };
 
+  
   // If creating new or viewing details, show appropriate view
   if (isCreatingNew) {
     return <NewPredictionForm onBack={handleCancelCreate} onSubmit={handleSubmitNew} />;
@@ -95,13 +97,6 @@ const PredictionsTable = ({
   if (selectedPrediction) {
     return (
       <Box>
-        <Button 
-          startIcon={<NavigateBeforeIcon />} 
-          onClick={onBackToList}
-          sx={{ mb: 2 }}
-        >
-          Back to Predictions
-        </Button>
         <PredictionDetail 
           prediction={selectedPrediction} 
           onBack={onBackToList}
@@ -237,7 +232,7 @@ const PredictionsTable = ({
               '&:hover': { bgcolor: 'primary.dark' }
             }}
           >
-            Create New Prediction
+          New Prediction
           </Button>
           <Button
             variant="outlined"

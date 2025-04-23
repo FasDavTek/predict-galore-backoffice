@@ -14,18 +14,63 @@ import {
   ArrowDownward,
   AccountBalanceWallet as WalletIcon,
   People as UsersIcon,
+  Person as FreeUserIcon,
   Star as PremiumIcon,
-  CreditCard as PaymentIcon
+  CreditCard as PaymentIcon,
+  Receipt as TransactionIcon,
+  TrendingUp as GrowthIcon
 } from '@mui/icons-material';
 
-// Icon mapping with different icons for each stat type
-const iconMap = {
-  'Total Users': <UsersIcon />,
-  'Free Users': <UsersIcon />,
-  'Premium Users': <PremiumIcon />,
-  'Payments': <PaymentIcon />,
-  'wallet': <WalletIcon />,
-  'users': <UsersIcon />
+// Style mapping for different stat types
+const statTypeStyles = {
+  'Total Users': {
+    bgColor: '#F0F9FF',
+    textColor: '#0369A1',
+    iconColor: '#0EA5E9',
+    icon: <UsersIcon />
+  },
+  'Free Users': {
+    bgColor: '#ECFDF5',
+    textColor: '#065F46',
+    iconColor: '#059669',
+    icon: <FreeUserIcon />
+  },
+  'Premium Users': {
+    bgColor: '#F5F3FF',
+    textColor: '#5B21B6',
+    iconColor: '#7C3AED',
+    icon: <PremiumIcon />
+  },
+  'Payments': {
+    bgColor: '#FEF2F2',
+    textColor: '#991B1B',
+    iconColor: '#EF4444',
+    icon: <PaymentIcon />
+  },
+  'Revenue': {
+    bgColor: '#F0FDF4',
+    textColor: '#166534',
+    iconColor: '#22C55E',
+    icon: <WalletIcon />
+  },
+  'Transactions': {
+    bgColor: '#FFFBEB',
+    textColor: '#92400E',
+    iconColor: '#F59E0B',
+    icon: <TransactionIcon />
+  },
+  'Growth': {
+    bgColor: '#ECFDF3',
+    textColor: '#065F46',
+    iconColor: '#12B76A',
+    icon: <GrowthIcon />
+  },
+  'default': {
+    bgColor: '#F8FAFC',
+    textColor: '#1E293B',
+    iconColor: '#64748B',
+    icon: <UsersIcon />
+  }
 };
 
 const DashboardStat = ({ 
@@ -37,11 +82,13 @@ const DashboardStat = ({
   // Determine if the change is positive or negative
   const isPositive = parseFloat(change) >= 0;
   
-  // Set colors based on change direction
-  const positiveColor = '#3C9705';
-  const negativeColor = '#D72638';
-  const iconColor = isPositive ? positiveColor : negativeColor;
-  const bgColor = isPositive ? '#E6F4EA' : '#FFEBEE'; // Light green/red backgrounds
+  // Get styles based on stat title
+  const getStatStyle = () => {
+    if (statTypeStyles[title]) return statTypeStyles[title];
+    return statTypeStyles.default;
+  };
+  
+  const statStyle = getStatStyle();
 
   // Loading state
   if (loading) {
@@ -49,8 +96,8 @@ const DashboardStat = ({
       <Card sx={{ 
         height: '100%',
         boxShadow: 'none',
-        border: '1px solid',
-        borderColor: 'divider'
+        border: 'none',
+        backgroundColor: '#F8FAFC'
       }}>
         <CardContent>
           <Skeleton variant="text" width="60%" height={24} />
@@ -65,8 +112,8 @@ const DashboardStat = ({
     <Card sx={{ 
       height: '100%',
       boxShadow: 'none',
-      border: '1px solid',
-      borderColor: 'divider',
+      border: 'none',
+      backgroundColor: statStyle.bgColor,
       '&:hover': { boxShadow: 1 }
     }}>
       <CardContent>
@@ -75,49 +122,64 @@ const DashboardStat = ({
             {/* Stat title */}
             <Typography 
               variant="subtitle2" 
-              color="text.secondary" 
               gutterBottom
-              sx={{ textTransform: 'uppercase',  color: '#7A7A9D', 
+              sx={{ 
+                textTransform: 'uppercase',
+                color: statStyle.textColor,
                 fontSize: '0.875rem', 
-                fontWeight: 500, }}
+                fontWeight: 500,
+                opacity: 0.8
+              }}
             >
               {title}
             </Typography>
+            
             {/* Stat value */}
             <Typography variant="h4" sx={{ 
-              color: '#101012', 
+              color: statStyle.textColor, 
               mb: 2, 
-              fontWeight: 400 
+              fontWeight: 600 
             }} >
               {value}
             </Typography>
           </Box>
+          
           {/* Stat icon with dynamic color */}
           <Avatar sx={{
-            bgcolor: bgColor,
-            color: iconColor,
+            bgcolor: statStyle.iconColor + '20', // Add opacity
+            color: statStyle.iconColor,
             width: 44,
             height: 44
           }}>
-            {iconMap[title] || iconMap['users']}
+            {statStyle.icon}
           </Avatar>
         </Stack>
 
         {/* Change indicator */}
         <Stack direction="row" alignItems="center" spacing={0.5} mt={1}>
           {isPositive ? (
-            <ArrowUpward sx={{ color: positiveColor, fontSize: '1rem' }} />
+            <ArrowUpward sx={{ 
+              color: '#3C9705', 
+              fontSize: '1rem' 
+            }} />
           ) : (
-            <ArrowDownward sx={{ color: negativeColor, fontSize: '1rem' }} />
+            <ArrowDownward sx={{ 
+              color: '#D92D20', 
+              fontSize: '1rem' 
+            }} />
           )}
-          <Typography variant="body2" sx={{ color: iconColor, fontWeight: 500 }}>
+          <Typography variant="body2" sx={{ 
+            color: isPositive ? '#3C9705' : '#D92D20', 
+            fontWeight: 500 
+          }}>
             {change}
           </Typography>
-          <Typography variant="caption"  sx={{ 
-                color: '#475467', 
-                fontSize: '0.5rem', 
-                fontWeight: 500 
-              }}>
+          <Typography variant="caption" sx={{ 
+            color: statStyle.textColor, 
+            fontSize: '0.5rem', 
+            fontWeight: 500,
+            opacity: 0.8
+          }}>
             vs last month
           </Typography>
         </Stack>

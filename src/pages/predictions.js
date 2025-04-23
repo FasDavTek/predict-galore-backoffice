@@ -63,6 +63,7 @@ const PredictionsPage = () => {
   
   // Local state for selected prediction and notifications
   const [selectedPrediction, setSelectedPrediction] = useState(null);
+  const [isCreatingNew, setIsCreatingNew] = useState(false);
   const [notification, setNotification] = useState({
     open: false,
     message: '',
@@ -107,9 +108,9 @@ const PredictionsPage = () => {
   // Handler for creating new prediction
   const handleCreateNew = async (newPrediction) => {
     try {
-      // Here you would dispatch an action to create the new prediction
-      // await dispatch(createPrediction(newPrediction));
+      await dispatch(createPrediction(newPrediction));
       showNotification('Prediction created successfully', 'success');
+      setIsCreatingNew(false);
     } catch (error) {
       showNotification('Failed to create prediction', 'error');
     }
@@ -117,7 +118,6 @@ const PredictionsPage = () => {
 
 
 
-  
   // Handler for prediction selection
   const handlePredictionSelect = (prediction) => {
     setSelectedPrediction(prediction);
@@ -151,17 +151,15 @@ const PredictionsPage = () => {
           onTimeRangeChange={handleTimeRangeChange}
         />
 
-       {/* Stats cards section - only shown when no prediction is selected or being edited */}
-        {!selectedPrediction  && (
+     {/* Stats cards section - only shown when viewing list */}
+     {!selectedPrediction && !isCreatingNew && (
           <Box sx={{ mb: 4, display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: 'repeat(4, 1fr)' }, gap: 3 }}>
             {stats.map((card, index) => (
               <PredictionStat
                 key={index}
                 title={card.title}
                 value={card.value}
-                icon={<PredictionsIcon />}
                 change={card.change}
-                bgColor={card.bgColor}
               />
             ))}
           </Box>
@@ -184,7 +182,8 @@ const PredictionsPage = () => {
             onPredictionSelect={handlePredictionSelect}
             onBackToList={handleBackToList}
             onCreateNew={handleCreateNew}
-            // onEditPrediction={handleEditPrediction}
+            isCreatingNew={isCreatingNew}
+            setIsCreatingNew={setIsCreatingNew}
           />
         </Box>
 

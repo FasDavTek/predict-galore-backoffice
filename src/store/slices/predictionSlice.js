@@ -11,30 +11,22 @@ const mockPredictionStats = [
   {
     title: "Total Predictions",
     value: "1,856",
-    change: "+24.5",
-    bgColor: "#F0FDF4",
-    icon: "predictions"
+    change: "+24.5"
   },
   {
     title: "Active Predictions",
     value: "432",
-    change: "+8.3",
-    bgColor: "#EFF8FF",
-    icon: "predictions"
+    change: "+8.3"
   },
   {
     title: "Winning Predictions",
     value: "1,284",
-    change: "+15.2",
-    bgColor: "#F5F3FF",
-    icon: "predictions"
+    change: "+15.2"
   },
   {
     title: "Accuracy Rate",
     value: "72.4%",
-    change: "+3.8",
-    bgColor: "#FEF2F2",
-    icon: "predictions"
+    change: "+3.8"
   }
 ];
 

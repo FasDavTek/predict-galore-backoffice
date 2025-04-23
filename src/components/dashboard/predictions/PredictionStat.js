@@ -8,19 +8,82 @@ import {
 } from '@mui/material';
 import {
   ArrowUpward as ArrowUpIcon,
-  ArrowDownward as ArrowDownIcon
+  ArrowDownward as ArrowDownIcon,
+  SportsSoccer as FootballIcon,
+  EmojiEvents as TrophyIcon,
+  Timeline as StatsIcon,
+  CheckCircle as CorrectIcon,
+  Cancel as WrongIcon,
+  AllInclusive as TotalIcon
 } from '@mui/icons-material';
 
-const PredictionStat = ({ title, value, icon, change, bgColor }) => {
+const predictionTypeStyles = {
+  'Total Predictions': {
+    bgColor: '#F0F9FF',
+    textColor: '#0369A1',
+    iconColor: '#0EA5E9',
+    icon: <TotalIcon />
+  },
+  'Active Predictions': {
+    bgColor: '#FFFBEB',
+    textColor: '#92400E',
+    iconColor: '#F59E0B',
+    icon: <FootballIcon />
+  },
+  'Winning Predictions': {
+    bgColor: '#ECFDF5',
+    textColor: '#065F46',
+    iconColor: '#10B981',
+    icon: <TrophyIcon />
+  },
+  'Accuracy Rate': {
+    bgColor: '#F5F3FF',
+    textColor: '#5B21B6',
+    iconColor: '#8B5CF6',
+    icon: <StatsIcon />
+  },
+  'Correct Predictions': {
+    bgColor: '#ECFDF3',
+    textColor: '#065F46',
+    iconColor: '#12B76A',
+    icon: <CorrectIcon />
+  },
+  'Wrong Predictions': {
+    bgColor: '#FEF2F2',
+    textColor: '#991B1B',
+    iconColor: '#EF4444',
+    icon: <WrongIcon />
+  },
+  'default': {
+    bgColor: '#F8FAFC',
+    textColor: '#1E293B',
+    iconColor: '#64748B',
+    icon: <StatsIcon />
+  }
+};
+
+const PredictionStat = ({ title, value, change = '0%' }) => {
   const isPositive = parseFloat(change) >= 0;
+  
+  // Get styles based on prediction title
+  const getPredictionStyle = () => {
+    if (predictionTypeStyles[title]) return predictionTypeStyles[title];
+    return predictionTypeStyles.default;
+  };
+  
+  const predictionStyle = getPredictionStyle();
 
   return (
-    <Card sx={{ border: '1px solid #EEEEF0' }}>
+    <Card sx={{ 
+      border: 'none',
+      backgroundColor: predictionStyle.bgColor,
+      boxShadow: 'none'
+    }}>
       <CardContent sx={{ p: 3 }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
           <Box>
             <Typography sx={{ 
-              color: '#7A7A9D', 
+              color: predictionStyle.textColor, 
               fontSize: '0.875rem', 
               fontWeight: 500, 
               mb: 1 
@@ -29,9 +92,9 @@ const PredictionStat = ({ title, value, icon, change, bgColor }) => {
             </Typography>
             
             <Typography variant="h4" sx={{ 
-              color: '#101012', 
+              color: predictionStyle.textColor, 
               mb: 2, 
-              fontWeight: 400 
+              fontWeight: 600 
             }}>
               {value}
             </Typography>
@@ -62,9 +125,10 @@ const PredictionStat = ({ title, value, icon, change, bgColor }) => {
                 {change}%
               </Typography>
               <Typography sx={{ 
-                color: '#475467', 
+                color: predictionStyle.textColor, 
                 fontSize: '0.5rem', 
-                fontWeight: 500 
+                fontWeight: 500,
+                opacity: 0.8
               }}>
                 vs last month
               </Typography>
@@ -72,7 +136,7 @@ const PredictionStat = ({ title, value, icon, change, bgColor }) => {
           </Box>
           
           <Box sx={{ 
-            bgcolor: bgColor || '#F2F4F7',
+            bgcolor: predictionStyle.iconColor + '20', // Add opacity to the icon background
             width: 40,
             height: 40,
             borderRadius: '20px',
@@ -80,7 +144,12 @@ const PredictionStat = ({ title, value, icon, change, bgColor }) => {
             alignItems: 'center',
             justifyContent: 'center'
           }}>
-            {React.cloneElement(icon, { sx: { color: '#414147' } })}
+            {React.cloneElement(predictionStyle.icon, { 
+              sx: { 
+                color: predictionStyle.iconColor,
+                fontSize: '1.25rem'
+              } 
+            })}
           </Box>
         </Box>
       </CardContent>

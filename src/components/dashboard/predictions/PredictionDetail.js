@@ -1,7 +1,8 @@
 // components/dashboard/predictions/PredictionDetail.js
-import React, { useState } from 'react';
+import React, { useState } from "react";
 import {
   Box,
+  Link,
   Typography,
   Button,
   Card,
@@ -16,11 +17,14 @@ import {
   Dialog,
   DialogTitle,
   DialogContent,
-  DialogActions
-} from '@mui/material';
-import ArrowBackIcon from '@mui/icons-material/ArrowBack';
-import { useDispatch } from 'react-redux';
-import { cancelPrediction } from '../../../store/slices/predictionSlice';
+  DialogActions,
+  Breadcrumbs,
+} from "@mui/material";
+import ArrowBackIcon from "@mui/icons-material/ArrowBack";
+import HomeIcon from "@mui/icons-material/Home";
+
+import { useDispatch } from "react-redux";
+import { cancelPrediction } from "../../../store/slices/predictionSlice";
 
 const PredictionDetail = ({ prediction, onBack }) => {
   const dispatch = useDispatch();
@@ -52,19 +56,32 @@ const PredictionDetail = ({ prediction, onBack }) => {
   return (
     <Box>
       {/* Header with breadcrumb and action buttons */}
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-        <Button 
-          startIcon={<ArrowBackIcon />} 
-          onClick={onBack}
-          sx={{ mr: 2 }}
-        >
-          Back to Predictions
-        </Button>
+      <Box
+        sx={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          mb: 3,
+        }}
+      >
+        <Breadcrumbs aria-label="breadcrumb">
+          <Link
+            color="inherit"
+            onClick={onBack}
+            sx={{ display: "flex", alignItems: "center", cursor: "pointer" }}
+          >
+            <HomeIcon sx={{ mr: 0.5 }} fontSize="inherit" />
+            Predictions
+          </Link>
+          <Typography color="text.primary">
+            Prediction #{prediction.id || "N/A"}
+          </Typography>
+        </Breadcrumbs>
 
         <Stack direction="row" spacing={2}>
-          {prediction.status === 'scheduled' && (
-            <Button 
-              variant="contained" 
+          {prediction.status === "scheduled" && (
+            <Button
+              variant="contained"
               color="error"
               onClick={() => setOpenCancelDialog(true)}
             >
@@ -85,48 +102,52 @@ const PredictionDetail = ({ prediction, onBack }) => {
           <Table>
             <TableBody>
               <TableRow>
-                <TableCell sx={{ fontWeight: 'bold' }}>Prediction ID</TableCell>
+                <TableCell sx={{ fontWeight: "bold" }}>Prediction ID</TableCell>
                 <TableCell>#{prediction.id}</TableCell>
               </TableRow>
               <TableRow>
-                <TableCell sx={{ fontWeight: 'bold' }}>Sport</TableCell>
+                <TableCell sx={{ fontWeight: "bold" }}>Sport</TableCell>
                 <TableCell>
                   <Chip label={prediction.sport} size="small" />
                 </TableCell>
               </TableRow>
               <TableRow>
-                <TableCell sx={{ fontWeight: 'bold' }}>Predictions</TableCell>
+                <TableCell sx={{ fontWeight: "bold" }}>Predictions</TableCell>
                 <TableCell>{prediction.predictions}</TableCell>
               </TableRow>
               <TableRow>
-                <TableCell sx={{ fontWeight: 'bold' }}>Accuracy</TableCell>
+                <TableCell sx={{ fontWeight: "bold" }}>Accuracy</TableCell>
                 <TableCell>
-                  <Chip 
-                    label={`${prediction.accuracy}%`} 
-                    color={prediction.accuracy === 100 ? 'success' : 'default'}
+                  <Chip
+                    label={`${prediction.accuracy}%`}
+                    color={prediction.accuracy === 100 ? "success" : "default"}
                     size="small"
                   />
                 </TableCell>
               </TableRow>
               <TableRow>
-                <TableCell sx={{ fontWeight: 'bold' }}>Date Posted</TableCell>
+                <TableCell sx={{ fontWeight: "bold" }}>Date Posted</TableCell>
                 <TableCell>
-                  {new Date(prediction.datePosted).toLocaleDateString('en-US', {
-                    year: 'numeric',
-                    month: 'short',
-                    day: 'numeric'
+                  {new Date(prediction.datePosted).toLocaleDateString("en-US", {
+                    year: "numeric",
+                    month: "short",
+                    day: "numeric",
                   })}
                 </TableCell>
               </TableRow>
               <TableRow>
-                <TableCell sx={{ fontWeight: 'bold' }}>Status</TableCell>
+                <TableCell sx={{ fontWeight: "bold" }}>Status</TableCell>
                 <TableCell>
-                  <Chip 
-                    label={prediction.status} 
+                  <Chip
+                    label={prediction.status}
                     color={
-                      prediction.status === 'active' ? 'success' :
-                      prediction.status === 'scheduled' ? 'info' :
-                      prediction.status === 'expired' ? 'warning' : 'error'
+                      prediction.status === "active"
+                        ? "success"
+                        : prediction.status === "scheduled"
+                        ? "info"
+                        : prediction.status === "expired"
+                        ? "warning"
+                        : "error"
                     }
                     size="small"
                   />
@@ -151,18 +172,18 @@ const PredictionDetail = ({ prediction, onBack }) => {
           </Typography>
         </DialogContent>
         <DialogActions>
-          <Button 
+          <Button
             onClick={() => setOpenCancelDialog(false)}
             disabled={actionLoading}
           >
             No, Keep
           </Button>
-          <Button 
+          <Button
             onClick={handleCancelConfirm}
             color="error"
             disabled={actionLoading}
           >
-            {actionLoading ? 'Processing...' : 'Yes, Cancel'}
+            {actionLoading ? "Processing..." : "Yes, Cancel"}
           </Button>
         </DialogActions>
       </Dialog>

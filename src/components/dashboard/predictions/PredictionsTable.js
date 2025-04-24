@@ -22,7 +22,8 @@ import {
   MenuItem,
   FormControl,
   Select,
-  InputLabel
+  InputLabel,
+  Avatar
 } from '@mui/material';
 import {
   Search as SearchIcon,
@@ -30,16 +31,14 @@ import {
   Download as DownloadIcon,
   NavigateBefore as NavigateBeforeIcon,
   NavigateNext as NavigateNextIcon,
-  Add as AddIcon
+  Add as AddIcon,
+  SportsSoccer as FootballIcon,
+  SportsBasketball as BasketballIcon,
+  SportsTennis as TennisIcon
 } from '@mui/icons-material';
 
 import PredictionActions from './PredictionActions';
-import PredictionDetail from './PredictionDetail';
-import NewPredictionForm from './NewPredictionForm';
 
-/**
- * PredictionsTable - Displays a table of predictions with filtering and actions
- */
 const PredictionsTable = ({
   predictions = [],
   loading = false,
@@ -48,13 +47,11 @@ const PredictionsTable = ({
   sportFilter = 'all',
   statusFilter = 'all',
   onSportFilterChange = () => {},
-  onStatusFilterChange = () => {},   
+  onStatusFilterChange = () => {},
   onExportCSV,
   exportLoading = false,
-  selectedPrediction,
   onPredictionSelect,
-  onBackToList,
-  onCreateNew,
+  onNewPredictionClick,
   page = 1,
   setPage = () => {}
 }) => {
@@ -63,7 +60,7 @@ const PredictionsTable = ({
   const paginatedPredictions = predictions.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   const [filterAnchorEl, setFilterAnchorEl] = useState(null);
-  const [isCreatingNew, setIsCreatingNew] = useState(false); // Add this state
+  const [selectedRows, setSelectedRows] = useState([]);
 
   const handleFilterMenuOpen = (event) => {
     setFilterAnchorEl(event.currentTarget);
@@ -73,56 +70,70 @@ const PredictionsTable = ({
     setFilterAnchorEl(null);
   };
 
-  const handleCreateNew = () => {
-    setIsCreatingNew(true);
-    onPredictionSelect(null);
+  const handleSelectAllRows = (event) => {
+    if (event.target.checked) {
+      const newSelected = paginatedPredictions.map((prediction) => prediction.id);
+      setSelectedRows(newSelected);
+    } else {
+      setSelectedRows([]);
+    }
   };
 
-  const handleCancelCreate = () => {
-    setIsCreatingNew(false);
+  const handleSelectRow = (event, id) => {
+    if (event.target.checked) {
+      setSelectedRows([...selectedRows, id]);
+    } else {
+      setSelectedRows(selectedRows.filter((rowId) => rowId !== id));
+    }
   };
 
-  const handleSubmitNew = (newPrediction) => {
-    onCreateNew(newPrediction);
-    setIsCreatingNew(false);
+  const getStatusChipStyles = (status) => {
+    switch (status?.toLowerCase()) {
+      case 'won':
+        return {
+          bgcolor: '#ECFDF3',
+          color: '#027A48'
+        };
+      case 'lost':
+        return {
+          bgcolor: '#FEF3F2',
+          color: '#B42318'
+        };
+      case 'pending':
+        return {
+          bgcolor: '#FFFAEB',
+          color: '#B54708'
+        };
+      default:
+        return {};
+    }
   };
 
-  
-  // If creating new or viewing details, show appropriate view
-  if (isCreatingNew) {
-    return <NewPredictionForm onBack={handleCancelCreate} onSubmit={handleSubmitNew} />;
-  }
-
-  // If a prediction is selected, show detailed view instead of table
-  if (selectedPrediction) {
-    return (
-      <Box>
-        <PredictionDetail 
-          prediction={selectedPrediction} 
-          onBack={onBackToList}
-        />
-      </Box>
-    );
-  }
-
-  // Rest of the component remains the same...
-  // Helper to get color for status chips
-  const getChipColor = (status) => {
-    const statusMap = {
-      scheduled: 'info',
-      active: 'success',
-      expired: 'warning',
-      cancelled: 'error'
-    };
-    return statusMap[status?.toLowerCase()] || 'default';
+  const getLeagueIcon = (league) => {
+    // This is a simplified example - you would replace with actual league icons
+    if (league.includes('Premier League') || league.includes('LaLiga') || league.includes('Serie A')) {
+      return <FootballIcon sx={{ width: 24, height: 24 }} />;
+    } else if (league.includes('NBA') || league.includes('EuroLeague')) {
+      return <BasketballIcon sx={{ width: 24, height: 24 }} />;
+    } else {
+      return <TennisIcon sx={{ width: 24, height: 24 }} />;
+    }
   };
 
-  // Loading skeleton rows
+  const formatDate = (dateString) => {
+    const date = new Date(dateString);
+    return `${date.getDate().toString().padStart(2, '0')}/${(date.getMonth() + 1).toString().padStart(2, '0')}/${date.getFullYear()}`;
+  };
+
+  const formatTime = (dateString) => {
+    const date = new Date(dateString);
+    return `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
+  };
+
   const renderLoadingSkeletons = () => {
     return Array(PAGE_SIZE).fill(0).map((_, index) => (
       <TableRow key={`skeleton-${index}`}>
-        <TableCell padding="checkbox"><Skeleton variant="rectangular" width={20} height={20} /></TableCell>
-        <TableCell><Skeleton variant="text" /></TableCell>
+        <TableCell><Skeleton variant="rectangular" width={20} height={20} /></TableCell>
         <TableCell><Skeleton variant="text" /></TableCell>
         <TableCell><Skeleton variant="text" /></TableCell>
         <TableCell><Skeleton variant="text" /></TableCell>
@@ -133,10 +144,9 @@ const PredictionsTable = ({
     ));
   };
 
-  // Empty state display
   const renderEmptyState = () => (
     <TableRow>
-      <TableCell colSpan={8} sx={{ border: 'none' }}>
+      <TableCell colSpan={7} sx={{ border: 'none' }}>
         <Box sx={{ py: 8, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
           <Typography variant="h6" sx={{ color: '#101012', mb: 1 }}>
             {loading ? 'Loading predictions...' : 'No Predictions Found'}
@@ -170,7 +180,6 @@ const PredictionsTable = ({
             }}
           />
           
-          {/* Filter Button with Dropdown */}
           <Button
             variant="outlined"
             startIcon={<FilterListIcon />}
@@ -213,26 +222,26 @@ const PredictionsTable = ({
                   }}
                 >
                   <MenuItem value="all">All Statuses</MenuItem>
-                  <MenuItem value="scheduled">Scheduled</MenuItem>
-                  <MenuItem value="active">Active</MenuItem>
-                  <MenuItem value="expired">Expired</MenuItem>
+                  <MenuItem value="won">Won</MenuItem>
+                  <MenuItem value="lost">Lost</MenuItem>
+                  <MenuItem value="pending">Pending</MenuItem>
                 </Select>
               </FormControl>
             </MenuItem>
           </Menu>
         </Box>
         
-       <Box sx={{ display: 'flex', gap: 2 }}>
+        <Box sx={{ display: 'flex', gap: 2 }}>
           <Button
             variant="contained"
             startIcon={<AddIcon />}
-            onClick={handleCreateNew}
+            onClick={onNewPredictionClick}
             sx={{ 
               bgcolor: 'primary.main',
               '&:hover': { bgcolor: 'primary.dark' }
             }}
           >
-          New Prediction
+            New Prediction
           </Button>
           <Button
             variant="outlined"
@@ -251,15 +260,20 @@ const PredictionsTable = ({
           <TableHead sx={{ bgcolor: 'grey.50' }}>
             <TableRow>
               <TableCell padding="checkbox">
-                <Checkbox disabled={predictions.length === 0} />
+                <Checkbox
+                  indeterminate={
+                    selectedRows.length > 0 && selectedRows.length < paginatedPredictions.length
+                  }
+                  checked={paginatedPredictions.length > 0 && selectedRows.length === paginatedPredictions.length}
+                  onChange={handleSelectAllRows}
+                  disabled={predictions.length === 0}
+                />
               </TableCell>
-              <TableCell>ID</TableCell>
               <TableCell>Match</TableCell>
-              <TableCell>Sport</TableCell>
-              <TableCell>Predictions</TableCell>
-              <TableCell>Accuracy</TableCell>
-              <TableCell>Date Posted</TableCell>
+              <TableCell>League</TableCell>
+              <TableCell>Prediction</TableCell>
               <TableCell>Status</TableCell>
+              <TableCell>Date</TableCell>
               <TableCell align="right">Actions</TableCell>
             </TableRow>
           </TableHead>
@@ -270,43 +284,49 @@ const PredictionsTable = ({
                   key={prediction.id} 
                   hover 
                   sx={{ '&:hover': { bgcolor: 'action.hover' } }}
-                  selected={selectedPrediction?.id === prediction.id}
                 >
                   <TableCell padding="checkbox">
                     <Checkbox
-                      checked={selectedPrediction?.id === prediction.id}
-                      onChange={() => onPredictionSelect(prediction)}
-                    />
-                  </TableCell>
-                  <TableCell>#{prediction.id}</TableCell>
-                  <TableCell>{prediction.match}</TableCell>
-                  <TableCell>
-                    <Chip 
-                      label={prediction.sport} 
-                      size="small"
-                    />
-                  </TableCell>
-                  <TableCell>{prediction.predictions}</TableCell>
-                  <TableCell>
-                    <Chip 
-                      label={`${prediction.accuracy}%`} 
-                      color={prediction.accuracy === 100 ? 'success' : 'default'}
-                      size="small"
+                      checked={selectedRows.includes(prediction.id)}
+                      onChange={(event) => handleSelectRow(event, prediction.id)}
                     />
                   </TableCell>
                   <TableCell>
-                    {new Date(prediction.datePosted).toLocaleDateString('en-US', {
-                      year: 'numeric',
-                      month: 'short',
-                      day: 'numeric'
-                    })}
+                    <Typography fontWeight={500}>
+                      {prediction.match}
+                    </Typography>
+                    {prediction.score && (
+                      <Typography variant="body2">
+                        <strong>{prediction.score.home}</strong> - <strong>{prediction.score.away}</strong>
+                      </Typography>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <Avatar sx={{ width: 24, height: 24 }}>
+                        {getLeagueIcon(prediction.league)}
+                      </Avatar>
+                      <Typography>{prediction.league}</Typography>
+                    </Box>
+                  </TableCell>
+                  <TableCell>
+                    <Typography fontSize={14}>
+                      {prediction.prediction}
+                      {prediction.predictedScore && (
+                        <span> ({prediction.predictedScore.home}-{prediction.predictedScore.away})</span>
+                      )}
+                    </Typography>
                   </TableCell>
                   <TableCell>
                     <Chip 
                       label={prediction.status} 
-                      color={getChipColor(prediction.status)}
                       size="small"
+                      sx={getStatusChipStyles(prediction.status)}
                     />
+                  </TableCell>
+                  <TableCell>
+                    <Typography>{formatDate(prediction.date)}</Typography>
+                    <Typography variant="body2">{formatTime(prediction.date)}</Typography>
                   </TableCell>
                   <TableCell align="right">
                     <PredictionActions 
@@ -322,7 +342,15 @@ const PredictionsTable = ({
 
       {/* Pagination controls */}
       {predictions.length > 0 && (
-        <Box sx={{ mt: 3, p: 2, bgcolor: 'background.paper', borderRadius: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <Box sx={{ 
+          mt: 3, 
+          p: 2, 
+          bgcolor: 'background.paper', 
+          borderRadius: 2, 
+          display: 'flex', 
+          justifyContent: 'space-between', 
+          alignItems: 'center' 
+        }}>
           <Typography variant="body2" color="text.secondary">
             Showing {(page - 1) * PAGE_SIZE + 1}-{Math.min(page * PAGE_SIZE, predictions.length)} of {predictions.length} predictions
           </Typography>

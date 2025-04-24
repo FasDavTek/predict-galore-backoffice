@@ -80,10 +80,7 @@ const PredictionActions = ({ prediction, onViewDetails, onEdit }) => {
         <MenuItem onClick={onViewDetails}>
           View Details
         </MenuItem>
-        <MenuItem onClick={onEdit}>
-          <EditIcon sx={{ mr: 1, fontSize: 20 }} />
-          Edit Details
-        </MenuItem>
+       
         {prediction.status === 'scheduled' && (
           <MenuItem onClick={handleCancelClick}>
             Cancel Schedule

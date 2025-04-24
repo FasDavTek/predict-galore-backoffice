@@ -1,5 +1,5 @@
 // components/dashboard/predictions/NewPredictionForm.js
-import React, { useState } from 'react';
+import React, { useState } from "react";
 import {
   Box,
   Typography,
@@ -36,8 +36,12 @@ import {
   ListItemText,
   Avatar,
   InputAdornment,
-  IconButton
-} from '@mui/material';
+  IconButton,
+  Card,
+  CardContent,
+  CardHeader,
+  TextareaAutosize,
+} from "@mui/material";
 import {
   ArrowBack as ArrowBackIcon,
   Add as AddIcon,
@@ -48,581 +52,900 @@ import {
   Public as PublicIcon,
   Group as GroupIcon,
   Home as HomeIcon,
-} from '@mui/icons-material';
+  ChevronRight,
+  FormatBold,
+  FormatItalic,
+  FormatUnderlined,
+  Link as LinkIcon,
+  FormatAlignLeft,
+  FormatAlignCenter,
+  FormatAlignRight,
+} from "@mui/icons-material";
 import {
   SportsSoccer as SportsSoccerIcon,
   SportsBasketball as SportsBasketballIcon,
   SportsTennis as SportsTennisIcon,
-  SportsBaseball as SportsBaseballIcon,
-  SportsFootball as SportsFootballIcon
-} from '@mui/icons-material';
+} from "@mui/icons-material";
+import { DateTimePicker } from "@mui/x-date-pickers/DateTimePicker";
+import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
+import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 
 // Define the steps for the prediction form
-const steps = ['Sport & League', 'Match Selection', 'Prediction Details', 'Expert Analysis', 'Preview'];
+const steps = ["Match Selection", "Prediction Details", "Preview"];
 
-// Available sports with icons
+// Available sports
 const sports = [
-  { value: 'football', label: 'Football', icon: <SportsSoccerIcon /> },
-  { value: 'american_football', label: 'American Football', icon: <SportsFootballIcon /> },
-  { value: 'tennis', label: 'Tennis', icon: <SportsTennisIcon /> },
-  { value: 'basketball', label: 'Basketball', icon: <SportsBasketballIcon /> },
-  { value: 'baseball', label: 'Baseball', icon: <SportsBaseballIcon /> },
+  { value: "football", label: "Football" },
+  { value: "basketball", label: "Basketball" },
+  { value: "tennis", label: "Tennis" },
 ];
 
-// Football leagues for selection
-const footballLeagues = [
-  'English Premier League',
-  'Champions League',
-  'LaLiga',
-  'Serie A',
-  'Ligue 1',
-  'Bundesliga'
+// Leagues by sport
+const leaguesBySport = {
+  football: [
+    "English Premier League",
+    "Champions League",
+    "LaLiga",
+    "Serie A",
+    "Ligue 1",
+    "Bundesliga",
+  ],
+  basketball: ["NBA", "EuroLeague", "CBA", "ACB", "BBL"],
+  tennis: ["ATP Tour", "WTA Tour", "Grand Slams", "Davis Cup", "Fed Cup"],
+};
+
+// Matches by league
+// Initialize matchesByLeague with all leagues
+const matchesByLeague = {
+  // Football leagues
+  "English Premier League": [
+    {
+      id: 1,
+      home: "Arsenal",
+      away: "Chelsea",
+      date: "2023-05-15 15:00",
+      stage: "Premier League",
+    },
+    {
+      id: 2,
+      home: "Manchester United",
+      away: "Liverpool",
+      date: "2023-05-16 17:30",
+      stage: "Premier League",
+    },
+  ],
+  "Champions League": [],
+  LaLiga: [],
+  "Serie A": [],
+  "Ligue 1": [],
+  Bundesliga: [],
+
+  // Basketball leagues
+  NBA: [
+    {
+      id: 1,
+      home: "LA Lakers",
+      away: "Boston Celtics",
+      date: "2023-05-15 20:00",
+      stage: "Regular Season",
+    },
+    {
+      id: 2,
+      home: "Golden State Warriors",
+      away: "Chicago Bulls",
+      date: "2023-05-16 19:00",
+      stage: "Regular Season",
+    },
+  ],
+  EuroLeague: [],
+  CBA: [],
+  ACB: [],
+  BBL: [],
+
+  // Tennis leagues
+  "ATP Tour": [
+    {
+      id: 1,
+      home: "Novak Djokovic",
+      away: "Rafael Nadal",
+      date: "2023-05-15 14:00",
+      stage: "Quarter Final",
+    },
+    {
+      id: 2,
+      home: "Roger Federer",
+      away: "Andy Murray",
+      date: "2023-05-16 16:00",
+      stage: "Semi Final",
+    },
+  ],
+  "WTA Tour": [],
+  "Grand Slams": [],
+  "Davis Cup": [],
+  "Fed Cup": [],
+};
+
+// Confidence levels
+const confidenceLevels = [
+  { value: "low", label: "Low" },
+  { value: "medium", label: "Medium" },
+  { value: "high", label: "High" },
 ];
 
-// Types of predictions users can make
-const predictionTypes = [
-  'Match Winner',
-  'Correct Score',
-  'Goal Scorer',
-  '1X2',
-  'Over/Under',
-  'Handicap',
-  'Double Chance',
-  'Draw no Bet',
-  'Both Teams to Score'
-];
-
-// Options for who can view the prediction
-const audienceOptions = [
-  { value: 'public', label: 'Public', icon: <PublicIcon />, description: 'Visible to everyone' },
-  { value: 'subscribers', label: 'Subscribers Only', icon: <GroupIcon />, description: 'Visible to your subscribers' },
-  { value: 'private', label: 'Private', icon: <LockIcon />, description: 'Only visible to you' }
+// Common prediction tags
+const commonTags = [
+  "Underdog",
+  "Favorite",
+  "Derby",
+  "Rivalry",
+  "High Scoring",
+  "Defensive",
+  "Home Advantage",
+  "Away Form",
 ];
 
 const NewPredictionForm = ({ onBack, onSubmit }) => {
-  // State for tracking which step we're on
   const [activeStep, setActiveStep] = useState(0);
-  
-  // State for the form data
+  const [selectedMatch, setSelectedMatch] = useState(null);
+  const [selectedTags, setSelectedTags] = useState([]);
+  const [score, setScore] = useState({ home: "", away: "" });
+  const [charCount, setCharCount] = useState({ comment: 0, analysis: 0 });
+
   const [formData, setFormData] = useState({
-    sport: 'football',
-    league: 'English Premier League',
-    match: '',
-    homeTeam: '',
-    awayTeam: '',
-    predictionType: 'Match Winner',
-    predictedOutcome: '',
-    confidence: 95,
-    comment: '',
-    expertAnalysis: '',
-    audience: 'public',
-    scheduledDate: null
+    sport: "",
+    league: "",
+    match: null,
+    predictedOutcome: "",
+    score: { home: "", away: "" },
+    comment: "",
+    expertAnalysis: "",
+    confidence: "medium",
+    includeTeamForm: true,
+    includeTeamComparison: true,
+    includeTopScorers: false,
+    includeHeadToHead: true,
+    includeTeamStatistics: true,
+    tags: [],
+    scheduledDate: null,
   });
 
-  // State for confirmation dialog
   const [openConfirmDialog, setOpenConfirmDialog] = useState(false);
+  const [openScheduleDialog, setOpenScheduleDialog] = useState(false);
+  const [selectedDateTime, setSelectedDateTime] = useState(new Date());
 
-  // Function to move to next step
   const handleNext = () => {
     if (activeStep === steps.length - 1) {
-      // On last step, open confirmation dialog instead of submitting directly
       setOpenConfirmDialog(true);
     } else {
-      setActiveStep((prevActiveStep) => prevActiveStep + 1);
+      setActiveStep((prev) => prev + 1);
     }
   };
 
-  // Function to go back to previous step
   const handleBack = () => {
-    setActiveStep((prevActiveStep) => prevActiveStep - 1);
+    setActiveStep((prev) => prev - 1);
   };
 
-  // Function to handle form field changes
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
+    setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  // Function to handle audience selection
-  const handleAudienceChange = (value) => {
-    setFormData(prev => ({
-      ...prev,
-      audience: value
-    }));
+  const handleSportChange = (e) => {
+    const sport = e.target.value;
+    setFormData((prev) => ({ ...prev, sport, league: "", match: null }));
   };
 
-  // Function to handle scheduling
-  const handleSchedule = (date) => {
-    setFormData(prev => ({
-      ...prev,
-      scheduledDate: date
-    }));
-    setOpenConfirmDialog(false);
-    onSubmit(formData);
+  const handleLeagueChange = (e) => {
+    const league = e.target.value;
+    setFormData((prev) => ({ ...prev, league, match: null }));
   };
 
-  // Function to get sport icon
-  const getSportIcon = (sportValue) => {
-    const sport = sports.find(s => s.value === sportValue);
-    return sport ? sport.icon : <SportsSoccerIcon />;
+  const handleMatchChange = (match) => {
+    setFormData((prev) => ({ ...prev, match }));
+    setSelectedMatch(match);
   };
 
-  // Function to handle step click
-  const handleStepClick = (stepIndex) => {
-    setActiveStep(stepIndex);
+  const handleScoreChange = (e, team) => {
+    const value = e.target.value;
+    if (value === "" || /^[0-9\b]+$/.test(value)) {
+      setScore((prev) => ({ ...prev, [team]: value }));
+      setFormData((prev) => ({
+        ...prev,
+        score: { ...prev.score, [team]: value },
+      }));
+    }
   };
 
-  // Function to render content for each step
+  const handleCommentChange = (e) => {
+    const value = e.target.value;
+    if (value.length <= 100) {
+      setFormData((prev) => ({ ...prev, comment: value }));
+      setCharCount((prev) => ({ ...prev, comment: value.length }));
+    }
+  };
+
+  const handleAnalysisChange = (e) => {
+    const value = e.target.value;
+    if (value.length <= 3000) {
+      setFormData((prev) => ({ ...prev, expertAnalysis: value }));
+      setCharCount((prev) => ({ ...prev, analysis: value.length }));
+    }
+  };
+
+  const handleTagChange = (event, value) => {
+    setSelectedTags(value.slice(0, 5));
+    setFormData((prev) => ({ ...prev, tags: value.slice(0, 5) }));
+  };
+
+  const handleSchedule = () => {
+    setOpenScheduleDialog(true);
+  };
+
+  const confirmSchedule = () => {
+    setFormData((prev) => ({ ...prev, scheduledDate: selectedDateTime }));
+    setOpenScheduleDialog(false);
+    onSubmit({ ...formData, scheduledDate: selectedDateTime });
+  };
+
   const renderStepContent = (step) => {
     switch (step) {
-      case 0: // Sport & League selection
+      case 0: // Match Selection
         return (
-          <Box sx={{ mt: 3 }}>
-            <Grid container spacing={3}>
-              <Grid item xs={12}>
-                <Typography variant="h6" gutterBottom>Select Sport</Typography>
-                <FormControl fullWidth>
-                  <Autocomplete
-                    options={sports}
-                    getOptionLabel={(option) => option.label}
-                    renderOption={(props, option) => (
-                      <Box component="li" {...props}>
-                        {option.icon}
-                        <Typography sx={{ ml: 1 }}>{option.label}</Typography>
-                      </Box>
-                    )}
-                    renderInput={(params) => (
-                      <TextField
-                        {...params}
-                        label="Search sport"
-                        InputProps={{
-                          ...params.InputProps,
-                          startAdornment: (
-                            <InputAdornment position="start">
-                              <SearchIcon />
-                            </InputAdornment>
-                          ),
-                        }}
-                      />
-                    )}
-                    value={sports.find(s => s.value === formData.sport) || null}
-                    onChange={(e, newValue) => {
-                      setFormData(prev => ({
-                        ...prev,
-                        sport: newValue ? newValue.value : '',
-                        league: '' // Reset league when sport changes
-                      }));
-                    }}
-                  />
-                </FormControl>
-              </Grid>
-              
-              {formData.sport && (
-                <Grid item xs={12}>
-                  <Typography variant="h6" gutterBottom>Select League</Typography>
-                  <FormControl fullWidth>
-                    <Autocomplete
-                      options={footballLeagues}
-                      getOptionLabel={(option) => option}
-                      renderInput={(params) => (
-                        <TextField
-                          {...params}
-                          label="Search league"
-                          InputProps={{
-                            ...params.InputProps,
-                            startAdornment: (
-                              <InputAdornment position="start">
-                                <SearchIcon />
-                              </InputAdornment>
-                            ),
-                          }}
-                        />
-                      )}
-                      value={formData.league || null}
-                      onChange={(e, newValue) => {
-                        setFormData(prev => ({
-                          ...prev,
-                          league: newValue || ''
-                        }));
+          <Paper sx={{ p: 3, mb: 3, width: "100%" }}>
+            <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
+              {/* Sport Selection */}
+              <FormControl fullWidth>
+                <InputLabel id="sport-label">Sport *</InputLabel>
+                <Select
+                  labelId="sport-label"
+                  value={formData.sport}
+                  onChange={handleSportChange}
+                  label="Sport *"
+                  IconComponent={ChevronRight}
+                >
+                  {sports.map((sport) => (
+                    <MenuItem key={sport.value} value={sport.value}>
+                      {sport.label}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+
+              {/* League Selection */}
+              <FormControl fullWidth disabled={!formData.sport}>
+                <InputLabel id="league-label">League *</InputLabel>
+                <Select
+                  labelId="league-label"
+                  value={formData.league}
+                  onChange={handleLeagueChange}
+                  label="League *"
+                  IconComponent={ChevronRight}
+                >
+                  {formData.sport &&
+                    leaguesBySport[formData.sport].map((league) => (
+                      <MenuItem key={league} value={league}>
+                        {league}
+                      </MenuItem>
+                    ))}
+                </Select>
+              </FormControl>
+
+              {/* Match Selection */}
+              {/* Match Selection */}
+              <FormControl fullWidth disabled={!formData.league}>
+                <Autocomplete
+                  options={
+                    formData.league && matchesByLeague[formData.league]
+                      ? matchesByLeague[formData.league]
+                      : []
+                  }
+                  getOptionLabel={(option) =>
+                    `${option.home} vs ${option.away}`
+                  }
+                  renderInput={(params) => (
+                    <TextField
+                      {...params}
+                      label="Match *"
+                      InputProps={{
+                        ...params.InputProps,
+                        endAdornment: <ChevronRight />,
                       }}
                     />
-                  </FormControl>
-                </Grid>
-              )}
-            </Grid>
-          </Box>
+                  )}
+                  renderOption={(props, option) => (
+                    <Box component="li" {...props}>
+                      <Box sx={{ width: "100%" }}>
+                        <Typography>
+                          {option.home} vs {option.away}
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          {new Date(option.date).toLocaleString()} •{" "}
+                          {option.stage}
+                        </Typography>
+                      </Box>
+                    </Box>
+                  )}
+                  noOptionsText="No matches available for this league"
+                  value={formData.match}
+                  onChange={(e, newValue) => handleMatchChange(newValue)}
+                />
+              </FormControl>
+            </Box>
+          </Paper>
         );
-      case 1: // Match selection
+
+      case 1: // Prediction Details
         return (
-          <Box sx={{ mt: 3 }}>
-            <Grid container spacing={3}>
-              <Grid item xs={12}>
-                <Typography variant="h6" gutterBottom>Select Match</Typography>
-                <FormControl fullWidth>
-                  <Autocomplete
-                    options={[
-                      'Arsenal vs Chelsea',
-                      'Manchester United vs Liverpool',
-                      'Barcelona vs Real Madrid',
-                      'Bayern Munich vs Dortmund'
-                    ]}
-                    getOptionLabel={(option) => option}
-                    renderInput={(params) => (
+          <Paper sx={{ p: 3, mb: 3, width: "100%" }}>
+            <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
+              {/* Predicted Outcome Card */}
+              <Card variant="outlined">
+                <CardHeader title="Predicted Outcome" />
+                <CardContent>
+                  <Box
+                    sx={{ display: "flex", flexDirection: "column", gap: 3 }}
+                  >
+                    {/* Match Winner */}
+                    <FormControl fullWidth>
+                      <InputLabel id="outcome-label">Match Winner *</InputLabel>
+                      <Select
+                        labelId="outcome-label"
+                        value={formData.predictedOutcome}
+                        onChange={(e) =>
+                          setFormData((prev) => ({
+                            ...prev,
+                            predictedOutcome: e.target.value,
+                          }))
+                        }
+                        label="Match Winner *"
+                      >
+                        {selectedMatch && [
+                          <MenuItem key="home" value={selectedMatch.home}>
+                            {selectedMatch.home}
+                          </MenuItem>,
+                          <MenuItem key="away" value={selectedMatch.away}>
+                            {selectedMatch.away}
+                          </MenuItem>,
+                          <MenuItem key="draw" value="Draw">
+                            Draw
+                          </MenuItem>,
+                        ]}
+                      </Select>
+                    </FormControl>
+
+                    {/* Score Prediction */}
+                    <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
                       <TextField
-                        {...params}
-                        label="Search match"
-                        InputProps={{
-                          ...params.InputProps,
-                          startAdornment: (
-                            <InputAdornment position="start">
-                              <SearchIcon />
-                            </InputAdornment>
-                          ),
-                        }}
+                        label="Home Score"
+                        value={score.home}
+                        onChange={(e) => handleScoreChange(e, "home")}
+                        type="number"
+                        InputProps={{ inputProps: { min: 0 } }}
+                        sx={{ flex: 1 }}
                       />
-                    )}
-                    value={formData.match || null}
-                    onChange={(e, newValue) => {
-                      if (newValue) {
-                        const [home, away] = newValue.split(' vs ');
-                        setFormData(prev => ({
-                          ...prev,
-                          match: newValue,
-                          homeTeam: home,
-                          awayTeam: away
-                        }));
-                      } else {
-                        setFormData(prev => ({
-                          ...prev,
-                          match: '',
-                          homeTeam: '',
-                          awayTeam: ''
-                        }));
-                      }
-                    }}
-                  />
-                </FormControl>
-              </Grid>
-            </Grid>
-          </Box>
-        );
-      case 2: // Prediction details
-        return (
-          <Box sx={{ mt: 3 }}>
-            <Grid container spacing={3}>
-              <Grid item xs={12}>
-                <Typography variant="h6" gutterBottom>Prediction Type</Typography>
-                <FormControl fullWidth>
-                  <Autocomplete
-                    options={predictionTypes}
-                    getOptionLabel={(option) => option}
-                    renderInput={(params) => (
-                      <TextField {...params} label="Select prediction type" />
-                    )}
-                    value={formData.predictionType || null}
-                    onChange={(e, newValue) => {
-                      setFormData(prev => ({
-                        ...prev,
-                        predictionType: newValue || ''
-                      }));
-                    }}
-                  />
-                </FormControl>
-              </Grid>
-              
-              {formData.predictionType === 'Match Winner' && (
-                <Grid item xs={12}>
-                  <Typography variant="h6" gutterBottom>Predicted Outcome</Typography>
-                  <FormControl fullWidth>
-                    <RadioGroup
-                      name="predictedOutcome"
-                      value={formData.predictedOutcome}
-                      onChange={handleChange}
-                    >
-                      <FormControlLabel 
-                        value={formData.homeTeam} 
-                        control={<Radio />} 
-                        label={formData.homeTeam} 
+                      <Typography>vs</Typography>
+                      <TextField
+                        label="Away Score"
+                        value={score.away}
+                        onChange={(e) => handleScoreChange(e, "away")}
+                        type="number"
+                        InputProps={{ inputProps: { min: 0 } }}
+                        sx={{ flex: 1 }}
                       />
-                      <FormControlLabel 
-                        value="Draw" 
-                        control={<Radio />} 
-                        label="Draw" 
-                      />
-                      <FormControlLabel 
-                        value={formData.awayTeam} 
-                        control={<Radio />} 
-                        label={formData.awayTeam} 
-                      />
-                    </RadioGroup>
-                  </FormControl>
-                </Grid>
-              )}
-              
-              <Grid item xs={12}>
-                <Typography variant="h6" gutterBottom>Confidence Level</Typography>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                  <Slider
-                    value={formData.confidence}
-                    onChange={(e, newValue) => setFormData(prev => ({ ...prev, confidence: newValue }))}
-                    aria-labelledby="confidence-slider"
-                    valueLabelDisplay="auto"
-                    sx={{ flexGrow: 1 }}
-                  />
-                  <Typography sx={{ minWidth: '50px' }}>{formData.confidence}%</Typography>
-                </Box>
-              </Grid>
-              
-              <Grid item xs={12}>
-                <TextField
-                  fullWidth
-                  label="Comment"
-                  name="comment"
-                  value={formData.comment}
-                  onChange={handleChange}
-                  multiline
-                  rows={3}
-                  placeholder="Explain your prediction (e.g., Based on Chelsea's recent losses and player injuries)"
-                />
-              </Grid>
-            </Grid>
-          </Box>
-        );
-      case 3: // Expert analysis
-        return (
-          <Box sx={{ mt: 3 }}>
-            <Grid container spacing={3}>
-              <Grid item xs={12}>
-                <Typography variant="h6" gutterBottom>Expert Analysis</Typography>
-                <TextField
-                  fullWidth
-                  name="expertAnalysis"
-                  value={formData.expertAnalysis}
-                  onChange={handleChange}
-                  multiline
-                  rows={10}
-                  placeholder="Provide detailed analysis (e.g., Arsenal is coming into this match with an unbeaten run of 6 home games...)"
-                />
-              </Grid>
-            </Grid>
-          </Box>
-        );
-      case 4: // Preview
-        return (
-          <Box sx={{ mt: 3 }}>
-            <Paper sx={{ p: 3, mb: 3 }}>
-              <Typography variant="h6" gutterBottom>Preview Your Prediction</Typography>
-              <Divider sx={{ mb: 3 }} />
-              
-              {/* Sport, League, Match */}
-              <Grid container spacing={2} sx={{ mb: 3 }}>
-                <Grid item xs={12} md={4}>
-                  <Typography variant="subtitle2">Sport:</Typography>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    {getSportIcon(formData.sport)}
-                    <Typography>
-                      {sports.find(s => s.value === formData.sport)?.label || 'Not selected'}
-                    </Typography>
+                    </Box>
+
+                    {/* Comment */}
+                    <TextField
+                      label="Comment"
+                      value={formData.comment}
+                      onChange={handleCommentChange}
+                      helperText={`${charCount.comment}/100 characters`}
+                      inputProps={{ maxLength: 100 }}
+                    />
                   </Box>
-                </Grid>
-                <Grid item xs={12} md={4}>
-                  <Typography variant="subtitle2">League:</Typography>
-                  <Typography>{formData.league || 'Not selected'}</Typography>
-                </Grid>
-                <Grid item xs={12} md={4}>
-                  <Typography variant="subtitle2">Match:</Typography>
-                  <Typography>{formData.match || 'Not selected'}</Typography>
-                </Grid>
-              </Grid>
-              
-              {/* Prediction Details */}
-              <Box sx={{ mb: 3 }}>
-                <Typography variant="subtitle1" sx={{ fontWeight: 'bold', mb: 1 }}>Predicted Outcome</Typography>
-                <Box sx={{ 
-                  p: 2, 
-                  bgcolor: 'action.hover', 
-                  borderRadius: 1,
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 2
-                }}>
-                  <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
-                    {formData.predictedOutcome || 'Not selected'}
-                  </Typography>
-                  <Chip 
-                    label={`${formData.confidence}%`} 
-                    color="primary" 
-                    variant="outlined"
-                  />
+                </CardContent>
+              </Card>
+
+              {/* Expert Analysis */}
+              <Box>
+                <Typography variant="h6" gutterBottom>
+                  Expert Analysis *
+                </Typography>
+                <TextareaAutosize
+                  minRows={6}
+                  style={{
+                    width: "100%",
+                    padding: "16.5px 14px",
+                    fontFamily: "inherit",
+                    fontSize: "inherit",
+                    border: "1px solid rgba(0, 0, 0, 0.23)",
+                    borderRadius: "4px",
+                    resize: "vertical",
+                  }}
+                  value={formData.expertAnalysis}
+                  onChange={handleAnalysisChange}
+                  placeholder="Provide detailed analysis..."
+                />
+                <Box
+                  sx={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    mt: 1,
+                  }}
+                >
+                  <Box sx={{ display: "flex", gap: 1 }}>
+                    <IconButton size="small">
+                      <FormatBold fontSize="small" />
+                    </IconButton>
+                    <IconButton size="small">
+                      <FormatItalic fontSize="small" />
+                    </IconButton>
+                    <IconButton size="small">
+                      <FormatUnderlined fontSize="small" />
+                    </IconButton>
+                    <IconButton size="small">
+                      <LinkIcon fontSize="small" />
+                    </IconButton>
+                    <IconButton size="small">
+                      <FormatAlignLeft fontSize="small" />
+                    </IconButton>
+                    <IconButton size="small">
+                      <FormatAlignCenter fontSize="small" />
+                    </IconButton>
+                    <IconButton size="small">
+                      <FormatAlignRight fontSize="small" />
+                    </IconButton>
+                  </Box>
+                  <Typography variant="caption">{`${charCount.analysis}/3000 characters`}</Typography>
                 </Box>
+              </Box>
+
+              {/* Additional Analysis Options */}
+              <Box>
+                <Typography variant="h6" gutterBottom>
+                  Additional Analysis Options
+                </Typography>
+                <FormGroup>
+                  <FormControlLabel
+                    control={
+                      <Switch
+                        checked={formData.includeTeamForm}
+                        onChange={(e) =>
+                          setFormData((prev) => ({
+                            ...prev,
+                            includeTeamForm: e.target.checked,
+                          }))
+                        }
+                      />
+                    }
+                    label="Include Team Form"
+                  />
+                  <FormControlLabel
+                    control={
+                      <Switch
+                        checked={formData.includeTeamComparison}
+                        onChange={(e) =>
+                          setFormData((prev) => ({
+                            ...prev,
+                            includeTeamComparison: e.target.checked,
+                          }))
+                        }
+                      />
+                    }
+                    label="Include Team Comparison"
+                  />
+                  <FormControlLabel
+                    control={
+                      <Switch
+                        checked={formData.includeTopScorers}
+                        onChange={(e) =>
+                          setFormData((prev) => ({
+                            ...prev,
+                            includeTopScorers: e.target.checked,
+                          }))
+                        }
+                      />
+                    }
+                    label="Include Top Scorers"
+                  />
+                  <FormControlLabel
+                    control={
+                      <Switch
+                        checked={formData.includeHeadToHead}
+                        onChange={(e) =>
+                          setFormData((prev) => ({
+                            ...prev,
+                            includeHeadToHead: e.target.checked,
+                          }))
+                        }
+                      />
+                    }
+                    label="Include Head-to-Head"
+                  />
+                  <FormControlLabel
+                    control={
+                      <Switch
+                        checked={formData.includeTeamStatistics}
+                        onChange={(e) =>
+                          setFormData((prev) => ({
+                            ...prev,
+                            includeTeamStatistics: e.target.checked,
+                          }))
+                        }
+                      />
+                    }
+                    label="Include Team Statistics"
+                  />
+                </FormGroup>
+              </Box>
+
+              {/* Prediction Tags */}
+              <Box>
+                <Typography variant="h6" gutterBottom>
+                  Prediction Tags
+                </Typography>
+                <Autocomplete
+                  multiple
+                  options={commonTags}
+                  value={selectedTags}
+                  onChange={handleTagChange}
+                  freeSolo
+                  renderInput={(params) => (
+                    <TextField
+                      {...params}
+                      label="Add tags (max 5)"
+                      placeholder="Type to add tags"
+                    />
+                  )}
+                />
+              </Box>
+
+              {/* Confidence Level */}
+              <Box>
+                <Typography variant="h6" gutterBottom>
+                  Confidence Level *
+                </Typography>
+                <RadioGroup
+                  row
+                  value={formData.confidence}
+                  onChange={(e) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      confidence: e.target.value,
+                    }))
+                  }
+                >
+                  {confidenceLevels.map((level) => (
+                    <FormControlLabel
+                      key={level.value}
+                      value={level.value}
+                      control={<Radio />}
+                      label={level.label}
+                    />
+                  ))}
+                </RadioGroup>
+              </Box>
+            </Box>
+          </Paper>
+        );
+
+      case 2: // Preview
+        return (
+          <Paper sx={{ p: 3, mb: 3, width: "100%" }}>
+            <Typography variant="h6" gutterBottom>
+              Preview Your Prediction
+            </Typography>
+            <Divider sx={{ mb: 3 }} />
+
+            {/* Match Information */}
+            <Box sx={{ mb: 3 }}>
+              <Typography
+                variant="subtitle1"
+                sx={{ fontWeight: "bold", mb: 1 }}
+              >
+                Match Information
+              </Typography>
+              <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
+                <Typography>
+                  <strong>Sport:</strong>{" "}
+                  {sports.find((s) => s.value === formData.sport)?.label}
+                </Typography>
+                <Typography>
+                  <strong>League:</strong> {formData.league}
+                </Typography>
+                <Typography>
+                  <strong>Match:</strong>{" "}
+                  {formData.match
+                    ? `${formData.match.home} vs ${formData.match.away}`
+                    : ""}
+                </Typography>
+                <Typography>
+                  <strong>Date:</strong>{" "}
+                  {formData.match
+                    ? new Date(formData.match.date).toLocaleString()
+                    : ""}
+                </Typography>
+                <Typography>
+                  <strong>Stage:</strong> {formData.match?.stage}
+                </Typography>
+              </Box>
+            </Box>
+
+            {/* Prediction Summary */}
+            <Box sx={{ mb: 3 }}>
+              <Typography
+                variant="subtitle1"
+                sx={{ fontWeight: "bold", mb: 1 }}
+              >
+                Prediction Summary
+              </Typography>
+              <Box
+                sx={{
+                  p: 2,
+                  bgcolor: "action.hover",
+                  borderRadius: 1,
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 1,
+                }}
+              >
+                <Typography>
+                  <strong>Predicted Winner:</strong> {formData.predictedOutcome}
+                </Typography>
+                {score.home !== "" && score.away !== "" && (
+                  <Typography>
+                    <strong>Predicted Score:</strong> {score.home} -{" "}
+                    {score.away}
+                  </Typography>
+                )}
+                <Typography>
+                  <strong>Confidence Level:</strong>{" "}
+                  {formData.confidence.charAt(0).toUpperCase() +
+                    formData.confidence.slice(1)}
+                </Typography>
                 {formData.comment && (
-                  <Typography sx={{ mt: 1, fontStyle: 'italic' }}>
+                  <Typography sx={{ fontStyle: "italic" }}>
                     &quot;{formData.comment}&quot;
                   </Typography>
                 )}
               </Box>
-              
-              {/* Expert Analysis */}
-              {formData.expertAnalysis && (
-                <Box sx={{ mb: 3 }}>
-                  <Typography variant="subtitle1" sx={{ fontWeight: 'bold', mb: 1 }}>Expert Analysis</Typography>
-                  <Paper sx={{ p: 2, bgcolor: 'background.paper' }}>
-                    <Typography sx={{ whiteSpace: 'pre-line' }}>
-                      {formData.expertAnalysis}
-                    </Typography>
-                  </Paper>
-                </Box>
-              )}
-              
-              {/* Audience Selection */}
-              <Box sx={{ mb: 3 }}>
-                <Typography variant="subtitle1" sx={{ fontWeight: 'bold', mb: 2 }}>Post Prediction</Typography>
-                <Typography variant="body2" sx={{ mb: 2 }}>Select who can view this prediction before posting</Typography>
-                
-                <Typography variant="subtitle2" sx={{ mb: 1 }}>Audience</Typography>
-                <FormControl fullWidth>
-                  <RadioGroup
-                    value={formData.audience}
-                    onChange={(e) => handleAudienceChange(e.target.value)}
-                  >
-                    {audienceOptions.map((option) => (
-                      <Paper key={option.value} sx={{ mb: 1, p: 1 }}>
-                        <FormControlLabel
-                          value={option.value}
-                          control={<Radio />}
-                          label={
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                              <Avatar sx={{ bgcolor: 'primary.main' }}>
-                                {option.icon}
-                              </Avatar>
-                              <Box>
-                                <Typography>{option.label}</Typography>
-                                <Typography variant="body2" color="text.secondary">
-                                  {option.description}
-                                </Typography>
-                              </Box>
-                            </Box>
-                          }
-                          sx={{ width: '100%', m: 0 }}
-                        />
-                      </Paper>
-                    ))}
-                  </RadioGroup>
-                </FormControl>
-              </Box>
-            </Paper>
-          </Box>
+            </Box>
+
+            {/* Analysis Preview */}
+            <Box sx={{ mb: 3 }}>
+              <Typography
+                variant="subtitle1"
+                sx={{ fontWeight: "bold", mb: 1 }}
+              >
+                Analysis Preview
+              </Typography>
+              <Paper sx={{ p: 2 }}>
+                <Typography sx={{ whiteSpace: "pre-line" }}>
+                  {formData.expertAnalysis}
+                </Typography>
+              </Paper>
+            </Box>
+
+            {/* Selected Options */}
+            <Box sx={{ mb: 3 }}>
+              <Typography
+                variant="subtitle1"
+                sx={{ fontWeight: "bold", mb: 1 }}
+              >
+                Selected Options
+              </Typography>
+              <List dense>
+                {formData.includeTeamForm && (
+                  <ListItem>
+                    <ListItemText primary="✓ Include Team Form" />
+                  </ListItem>
+                )}
+                {formData.includeTeamComparison && (
+                  <ListItem>
+                    <ListItemText primary="✓ Include Team Comparison" />
+                  </ListItem>
+                )}
+                {formData.includeTopScorers && (
+                  <ListItem>
+                    <ListItemText primary="✓ Include Top Scorers" />
+                  </ListItem>
+                )}
+                {formData.includeHeadToHead && (
+                  <ListItem>
+                    <ListItemText primary="✓ Include Head-to-Head" />
+                  </ListItem>
+                )}
+                {formData.includeTeamStatistics && (
+                  <ListItem>
+                    <ListItemText primary="✓ Include Team Statistics" />
+                  </ListItem>
+                )}
+                {selectedTags.length > 0 && (
+                  <ListItem>
+                    <ListItemText
+                      primary="Tags:"
+                      secondary={selectedTags.join(", ")}
+                    />
+                  </ListItem>
+                )}
+              </List>
+            </Box>
+          </Paper>
         );
+
       default:
         return null;
     }
   };
 
   return (
-    <Box>
-      {/* Header with back button */}
-      <Box sx={{ mb: 3 }}>
-        <Breadcrumbs aria-label="breadcrumb">
-          <Link
-            color="inherit"
-            onClick={onBack}
-            sx={{ display: "flex", alignItems: "center", cursor: "pointer" }}
-          >
-            <HomeIcon sx={{ mr: 0.5 }} fontSize="inherit" />
-            Predictions
-          </Link>
-        </Breadcrumbs>
-      </Box>
+    <LocalizationProvider dateAdapter={AdapterDateFns}>
+      <Box>
+        {/* breadcrumb*/}
+        <Box sx={{ mb: 3 }}>
+          <Breadcrumbs aria-label="breadcrumb">
+            <Link
+              color="inherit"
+              onClick={onBack}
+              sx={{ display: "flex", alignItems: "center", cursor: "pointer" }}
+            >
+              <HomeIcon sx={{ mr: 0.5 }} fontSize="inherit" />
+              Predictions
+            </Link>
+          </Breadcrumbs>
+        </Box>
 
-      {/* Stepper with clickable steps */}
-      <Stepper activeStep={activeStep} sx={{ mb: 3 }}>
-        {steps.map((label, index) => (
-          <Step key={label} onClick={() => handleStepClick(index)} sx={{ cursor: 'pointer' }}>
-            <StepLabel>{label}</StepLabel>
-          </Step>
-        ))}
-      </Stepper>
+        {/* Stepper */}
+        <Stepper activeStep={activeStep} sx={{ mb: 3 }}>
+          {steps.map((label) => (
+            <Step key={label}>
+              <StepLabel>{label}</StepLabel>
+            </Step>
+          ))}
+        </Stepper>
 
-      {/* Form content for current step */}
-      {renderStepContent(activeStep)}
+        {/* Form content */}
+        {renderStepContent(activeStep)}
 
-      {/* Navigation buttons at bottom */}
-      <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 3 }}>
-        <Button
-          disabled={activeStep === 0}
-          onClick={handleBack}
-          sx={{ mr: 1 }}
+        {/* Navigation buttons */}
+        <Box
+          sx={{
+            display: "flex",
+            justifyContent:
+              activeStep === steps.length - 1 ? "space-between" : "flex-end",
+            mt: 3,
+          }}
         >
-          Back
-        </Button>
-        {activeStep === steps.length - 1 && (
           <Button
-            variant="outlined"
-            startIcon={<ScheduleIcon />}
-            sx={{ mr: 2 }}
-            onClick={() => handleSchedule(new Date())}
+            disabled={activeStep === 0}
+            onClick={handleBack}
+            sx={{ mr: 1 }}
           >
-            Schedule
+            Back
           </Button>
-        )}
-        <Button
-          variant="contained"
-          onClick={handleNext}
-        >
-          {activeStep === steps.length - 1 ? 'Post Prediction' : 'Next'}
-        </Button>
-      </Box>
+          <Box>
+            {activeStep === steps.length - 1 && (
+              <Button
+                variant="outlined"
+                startIcon={<ScheduleIcon />}
+                sx={{ mr: 2 }}
+                onClick={handleSchedule}
+              >
+                Schedule
+              </Button>
+            )}
+            <Button
+              variant="contained"
+              onClick={handleNext}
+              disabled={
+                (activeStep === 0 &&
+                  (!formData.sport || !formData.league || !formData.match)) ||
+                (activeStep === 1 &&
+                  (!formData.predictedOutcome ||
+                    !formData.expertAnalysis ||
+                    !formData.confidence))
+              }
+            >
+              {activeStep === steps.length - 1 ? "Post Prediction" : "Next"}
+            </Button>
+          </Box>
+        </Box>
 
-      {/* Confirmation dialog before posting */}
-      <Dialog
-        open={openConfirmDialog}
-        onClose={() => setOpenConfirmDialog(false)}
+        {/* Confirmation Dialog */}
+     {/* Confirmation Dialog */}
+<Dialog
+  open={openConfirmDialog}
+  onClose={() => setOpenConfirmDialog(false)}
+>
+  <DialogTitle>Confirm Prediction</DialogTitle>
+  <DialogContent>
+    
+    <DialogContentText sx={{ mb: 1 }}>
+      Select who can view this prediction before posting
+    </DialogContentText>
+    
+    <FormControl fullWidth sx={{ mt: 1, mb: 2 }}>
+      <InputLabel id="audience-select-label">Audience</InputLabel>
+      <Select
+        labelId="audience-select-label"
+        id="audience-select"
+        value={formData.audience || 'all'}
+        label="Audience"
+        onChange={(e) => setFormData(prev => ({
+          ...prev,
+          audience: e.target.value
+        }))}
       >
-        <DialogTitle>Confirm Prediction</DialogTitle>
-        <DialogContent>
-          <DialogContentText>
-            Are you sure you want to post this prediction? Once posted, it will be visible to your selected audience.
-          </DialogContentText>
-          <List>
-            <ListItem>
-              <ListItemText 
-                primary="Match" 
-                secondary={formData.match} 
-              />
-            </ListItem>
-            <ListItem>
-              <ListItemText 
-                primary="Prediction" 
-                secondary={`${formData.predictedOutcome} (${formData.confidence}% confidence)`} 
-              />
-            </ListItem>
-            <ListItem>
-              <ListItemText 
-                primary="Audience" 
-                secondary={audienceOptions.find(a => a.value === formData.audience)?.label} 
-              />
-            </ListItem>
-          </List>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setOpenConfirmDialog(false)}>Cancel</Button>
-          <Button 
-            onClick={() => {
-              setOpenConfirmDialog(false);
-              onSubmit(formData);
-            }} 
-            variant="contained"
-            color="primary"
-            startIcon={<CheckIcon />}
-          >
-            Confirm Post
-          </Button>
-        </DialogActions>
-      </Dialog>
-    </Box>
+        <MenuItem value="all">All users</MenuItem>
+        <MenuItem value="free">Free users</MenuItem>
+        <MenuItem value="premium">Premium users</MenuItem>
+      </Select>
+    </FormControl>
+
+    {/* <List>
+      <ListItem>
+        <ListItemText 
+          primary="Match" 
+          secondary={formData.match} 
+        />
+      </ListItem>
+      <ListItem>
+        <ListItemText 
+          primary="Prediction" 
+          secondary={formData.predictedOutcome} 
+        />
+      </ListItem>
+    </List> */}
+  </DialogContent>
+  <DialogActions>
+    <Button onClick={() => setOpenConfirmDialog(false)}>Cancel</Button>
+    <Button
+      onClick={() => {
+        setOpenConfirmDialog(false);
+        onSubmit(formData);
+      }}
+      variant="contained"
+      startIcon={<CheckIcon />}
+    >
+      Confirm Post
+    </Button>
+  </DialogActions>
+</Dialog>
+
+        {/* Schedule Dialog */}
+        <Dialog
+          open={openScheduleDialog}
+          onClose={() => setOpenScheduleDialog(false)}
+          maxWidth="sm"
+          fullWidth
+        >
+          <DialogTitle>Schedule Prediction</DialogTitle>
+          <DialogContent>
+            <DialogContentText sx={{ mb: 3 }}>
+              Select when you want this prediction to be posted.
+            </DialogContentText>
+            <DateTimePicker
+              label="Date & Time"
+              value={selectedDateTime}
+              onChange={setSelectedDateTime}
+              minDateTime={new Date()}
+              minutesStep={15}
+              renderInput={(params) => <TextField {...params} fullWidth />}
+            />
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setOpenScheduleDialog(false)}>Cancel</Button>
+            <Button
+              onClick={confirmSchedule}
+              variant="contained"
+              startIcon={<ScheduleIcon />}
+            >
+              Schedule
+            </Button>
+          </DialogActions>
+        </Dialog>
+      </Box>
+    </LocalizationProvider>
   );
 };
 

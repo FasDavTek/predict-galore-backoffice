@@ -10,6 +10,8 @@ import DashboardLayout from '@/layouts/DashboardLayout';
 import { Header } from '@/components/dashboard/predictions/Header';
 import PredictionStat from '@/components/dashboard/predictions/PredictionStat';
 import PredictionsTable from '@/components/dashboard/predictions/PredictionsTable';
+import PredictionDetail from '@/components/dashboard/predictions/PredictionDetail';
+import NewPredictionForm from '@/components/dashboard/predictions/NewPredictionForm';
 
 // Redux imports
 import {
@@ -62,6 +64,7 @@ const PredictionsPage = () => {
   const statusFilter = useSelector(selectStatusFilter);
   
   // Local state for selected prediction and notifications
+  const [viewMode, setViewMode] = useState('list'); // 'list', 'detail', or 'create'
   const [selectedPrediction, setSelectedPrediction] = useState(null);
   const [isCreatingNew, setIsCreatingNew] = useState(false);
   const [notification, setNotification] = useState({
@@ -110,24 +113,24 @@ const PredictionsPage = () => {
     try {
       await dispatch(createPrediction(newPrediction));
       showNotification('Prediction created successfully', 'success');
-      setIsCreatingNew(false);
+      setViewMode('list');
     } catch (error) {
       showNotification('Failed to create prediction', 'error');
     }
   };
 
-
-
-  // Handler for prediction selection
   const handlePredictionSelect = (prediction) => {
     setSelectedPrediction(prediction);
+    setViewMode('detail');
   };
 
-  // Handler for returning to list view
   const handleBackToList = () => {
-    setSelectedPrediction(null);
+    setViewMode('list');
   };
 
+  const handleNewPredictionClick = () => {
+    setViewMode('create');
+  };
 
   // Handler for closing notifications
   const handleNotificationClose = () => {
@@ -152,7 +155,7 @@ const PredictionsPage = () => {
         />
 
      {/* Stats cards section - only shown when viewing list */}
-     {!selectedPrediction && !isCreatingNew && (
+     {viewMode === 'list' && (
           <Box sx={{ mb: 4, display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: 'repeat(4, 1fr)' }, gap: 3 }}>
             {stats.map((card, index) => (
               <PredictionStat
@@ -165,26 +168,40 @@ const PredictionsPage = () => {
           </Box>
         )}
 
+
         {/* Main predictions table */}
         <Box sx={{ width: '100%' }}>
-          <PredictionsTable
-            predictions={predictions}
-            loading={loading.predictions}
-            searchQuery={searchQuery}
-            onSearchChange={handleSearchChange}
-            sportFilter={sportFilter}
-            statusFilter={statusFilter}
-            onSportFilterChange={handleSportFilterChange}
-            onStatusFilterChange={handleStatusFilterChange}
-            onExportCSV={handleExportCSV}
-            exportLoading={loading.export}
-            selectedPrediction={selectedPrediction }
-            onPredictionSelect={handlePredictionSelect}
-            onBackToList={handleBackToList}
-            onCreateNew={handleCreateNew}
-            isCreatingNew={isCreatingNew}
-            setIsCreatingNew={setIsCreatingNew}
-          />
+           {viewMode === 'list' && (
+            <PredictionsTable
+              predictions={predictions}
+              loading={loading.predictions}
+              searchQuery={searchQuery}
+              onSearchChange={handleSearchChange}
+              sportFilter={sportFilter}
+              statusFilter={statusFilter}
+              onSportFilterChange={handleSportFilterChange}
+              onStatusFilterChange={handleStatusFilterChange}
+              onExportCSV={handleExportCSV}
+              exportLoading={loading.export}
+              onPredictionSelect={handlePredictionSelect}
+              onNewPredictionClick={handleNewPredictionClick}
+            />
+          )}
+
+
+{viewMode === 'detail' && selectedPrediction && (
+            <PredictionDetail 
+              prediction={selectedPrediction} 
+              onBack={handleBackToList}
+            />
+          )}
+
+          {viewMode === 'create' && (
+            <NewPredictionForm 
+              onBack={handleBackToList}
+              onSubmit={handleCreateNew}
+            />
+          )}
         </Box>
 
         {/* Global notification system */}

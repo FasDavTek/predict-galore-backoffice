@@ -18,10 +18,11 @@ const statusStyles = {
     iconColor: '#059669'
   },
   pending: {
-    bgColor: '#EFF6FF',
-    textColor: '#1E40AF',
-    iconColor: '#3B82F6'
+    bgColor: '#FFF7ED',        // Light orange (background)
+    textColor: '#C2410C',      // Deep orange (text)
+    iconColor: '#FB923C'       // Vivid orange (icon)
   },
+  
   failed: {
     bgColor: '#FEF2F2',
     textColor: '#991B1B',

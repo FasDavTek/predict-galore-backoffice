@@ -114,13 +114,13 @@ const PredictionDetail = ({ prediction, onBack }) => {
         </Breadcrumbs>
 
         <Stack direction="row" spacing={2}>
-          <Button
+          {/* <Button
             variant="outlined"
             startIcon={<EditIcon />}
             sx={{ color: 'text.secondary', borderColor: 'text.secondary' }}
           >
             Edit Prediction
-          </Button>
+          </Button> */}
           <Button
             variant="outlined"
             startIcon={<DeleteIcon />}

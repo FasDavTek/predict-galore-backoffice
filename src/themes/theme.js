@@ -123,8 +123,10 @@ const theme = createTheme({
       styleOverrides: {
         root: {
           fontFamily: 'Inter, sans-serif',
+          borderRadius: '8px',
           '& .MuiInputBase-root': {
             fontFamily: 'Inter, sans-serif',
+            borderRadius: '8px',
           },
           '& .MuiInputLabel-root': {
             fontFamily: 'Inter, sans-serif',
@@ -140,6 +142,7 @@ const theme = createTheme({
       styleOverrides: {
         root: {
           fontFamily: 'Inter, sans-serif',
+          borderRadius: '8px',
         },
       },
     },
@@ -147,6 +150,7 @@ const theme = createTheme({
       styleOverrides: {
         root: {
           fontFamily: 'Inter, sans-serif',
+          borderRadius: '8px',
         },
       },
     },
@@ -154,6 +158,7 @@ const theme = createTheme({
       styleOverrides: {
         root: {
           fontFamily: 'Inter, sans-serif',
+          borderRadius: '8px',
         },
       },
     },

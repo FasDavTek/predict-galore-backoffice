@@ -18,7 +18,7 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
-  Breadcrumbs
+  Breadcrumbs,
 } from "@mui/material";
 import {
   ArrowBack as ArrowBackIcon,
@@ -26,7 +26,7 @@ import {
   Edit as EditIcon,
   Delete as DeleteIcon,
   ExpandMore as ExpandMoreIcon,
-  ExpandLess as ExpandLessIcon
+  ExpandLess as ExpandLessIcon,
 } from "@mui/icons-material";
 import { useDispatch } from "react-redux";
 import { cancelPrediction } from "../../../store/slices/predictionSlice";
@@ -40,35 +40,35 @@ const PredictionDetail = ({ prediction, onBack }) => {
     teamComparison: true,
     topScorers: false,
     headToHead: true,
-    teamStatistics: true
+    teamStatistics: true,
   });
 
   const toggleSection = (section) => {
-    setExpandedSections(prev => ({
+    setExpandedSections((prev) => ({
       ...prev,
-      [section]: !prev[section]
+      [section]: !prev[section],
     }));
   };
 
   const getStatusStyles = (status) => {
     switch (status?.toLowerCase()) {
-      case 'won':
+      case "won":
         return {
-          bgcolor: '#ECFDF3',
-          color: '#027A48',
-          borderColor: '#027A48'
+          bgcolor: "#ECFDF3",
+          color: "#027A48",
+          borderColor: "#027A48",
         };
-      case 'lost':
+      case "lost":
         return {
-          bgcolor: '#FEF3F2',
-          color: '#B42318',
-          borderColor: '#B42318'
+          bgcolor: "#FEF3F2",
+          color: "#B42318",
+          borderColor: "#B42318",
         };
-      case 'pending':
+      case "pending":
         return {
-          bgcolor: '#FFFAEB',
-          color: '#B54708',
-          borderColor: '#B54708'
+          bgcolor: "#FFFAEB",
+          color: "#B54708",
+          borderColor: "#B54708",
         };
       default:
         return {};
@@ -98,14 +98,22 @@ const PredictionDetail = ({ prediction, onBack }) => {
   }
 
   return (
-    <Box sx={{ bgcolor: 'background.paper', p: 3, borderRadius: 2 }}>
+    <Box sx={{ bgcolor: "background.paper", p: 3, borderRadius: 2 }}>
+      
       {/* Header with breadcrumb and action buttons */}
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+      <Box
+        sx={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          mb: 3,
+        }}
+      >
         <Breadcrumbs aria-label="breadcrumb">
           <Link
             color="inherit"
             onClick={onBack}
-            sx={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}
+            sx={{ display: "flex", alignItems: "center", cursor: "pointer" }}
           >
             <HomeIcon sx={{ mr: 0.5 }} fontSize="inherit" />
             Predictions
@@ -114,13 +122,6 @@ const PredictionDetail = ({ prediction, onBack }) => {
         </Breadcrumbs>
 
         <Stack direction="row" spacing={2}>
-          {/* <Button
-            variant="outlined"
-            startIcon={<EditIcon />}
-            sx={{ color: 'text.secondary', borderColor: 'text.secondary' }}
-          >
-            Edit Prediction
-          </Button> */}
           <Button
             variant="outlined"
             startIcon={<DeleteIcon />}
@@ -133,24 +134,48 @@ const PredictionDetail = ({ prediction, onBack }) => {
       </Box>
 
       {/* Match Information Card */}
-      <Card sx={{ mb: 3 }}>
+      <Card sx={{ mb: 6 }}>
         <CardContent>
           {/* Match Header */}
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <Avatar sx={{ width: 24, height: 24 }}>{/* League icon would go here */}</Avatar>
+          <Box
+            sx={{
+              display: "flex",
+              justifyContent: "center",
+              alignItems: "center",
+              mb: 6,
+            }}
+          >
+            <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+               {/* League icon would go here */}
+              {/* <Avatar sx={{ width: 24, height: 24 }}>
+               
+              </Avatar> */}
               <Typography variant="h6">{prediction.league}</Typography>
             </Box>
-            <Typography variant="body2" color="text.secondary">
-              {new Date(prediction.date).toLocaleDateString('en-GB')}
-            </Typography>
+            {/* <Typography variant="body2" color="text.secondary">
+              {new Date(prediction.date).toLocaleDateString("en-GB")}
+            </Typography> */}
           </Box>
 
           {/* Teams Section */}
-          <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 4, mb: 3 }}>
-            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-              <Avatar 
-                src={prediction.homeTeamLogo} 
+          <Box
+            sx={{
+              display: "flex",
+              justifyContent: "center",
+              alignItems: "center",
+              gap: 4,
+              mb: 3,
+            }}
+          >
+            <Box
+              sx={{
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+              }}
+            >
+              <Avatar
+                src={prediction.homeTeamLogo}
                 sx={{ width: 64, height: 64 }}
               />
               <Typography variant="subtitle1" sx={{ mt: 1 }}>
@@ -158,11 +183,19 @@ const PredictionDetail = ({ prediction, onBack }) => {
               </Typography>
             </Box>
 
-            <Typography variant="h4" sx={{ mx: 2 }}>VS</Typography>
+            <Typography variant="h4" sx={{ mx: 2 }}>
+              VS
+            </Typography>
 
-            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-              <Avatar 
-                src={prediction.awayTeamLogo} 
+            <Box
+              sx={{
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+              }}
+            >
+              <Avatar
+                src={prediction.awayTeamLogo}
                 sx={{ width: 64, height: 64 }}
               />
               <Typography variant="subtitle1" sx={{ mt: 1 }}>
@@ -172,153 +205,220 @@ const PredictionDetail = ({ prediction, onBack }) => {
           </Box>
 
           {/* Status Badge */}
-          <Box sx={{ display: 'flex', justifyContent: 'center', mb: 3 }}>
+          <Box sx={{ display: "flex", justifyContent: "center", mb: 3 }}>
             <Chip
               label={prediction.status}
-              sx={{ 
+              sx={{
                 ...getStatusStyles(prediction.status),
-                borderRadius: '8px',
+                borderRadius: "8px",
                 px: 2,
                 py: 1,
-                fontSize: '0.875rem'
+                fontSize: "0.875rem",
               }}
             />
           </Box>
+        </CardContent>
+      </Card>
 
-          {/* Prediction Information */}
-          <Grid container spacing={2} sx={{ mb: 2 }}>
-            <Grid item xs={6}>
-              <Typography variant="subtitle2" color="text.secondary">Predicted Winner</Typography>
+      {/* Prediction Information */}
+      <Card sx={{ mb: 6 }}>
+        <CardContent>
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
+            {/* Predicted Winner */}
+            <Box sx={{ display: "flex", gap: 4, alignItems: "center" }}>
+              <Typography
+                variant="subtitle2"
+                color="text.secondary"
+                sx={{ minWidth: 120 }}
+              >
+                Predicted Winner:
+              </Typography>
               <Typography>{prediction.predictedWinner}</Typography>
-            </Grid>
-            <Grid item xs={6}>
-              <Typography variant="subtitle2" color="text.secondary">Predicted Score</Typography>
-              <Typography>
-                {prediction.predictedScore ? 
-                  `${prediction.predictedScore.home}-${prediction.predictedScore.away}` : 
-                  'N/A'}
+            </Box>
+
+            {/* Predicted Score */}
+            <Box sx={{ display: "flex", gap: 4, alignItems: "center" }}>
+              <Typography
+                variant="subtitle2"
+                color="text.secondary"
+                sx={{ minWidth: 120 }}
+              >
+                Predicted Score:
               </Typography>
-            </Grid>
-            <Grid item xs={6}>
-              <Typography variant="subtitle2" color="text.secondary">Actual Score</Typography>
               <Typography>
-                {prediction.actualScore ? 
-                  `${prediction.actualScore.home}-${prediction.actualScore.away}` : 
-                  'Not available'}
+                {prediction.predictedScore
+                  ? `${prediction.predictedScore.home}-${prediction.predictedScore.away}`
+                  : "N/A"}
               </Typography>
-            </Grid>
-            <Grid item xs={6}>
-              <Typography variant="subtitle2" color="text.secondary">Prediction Date</Typography>
+            </Box>
+
+            {/* Actual Score */}
+            <Box sx={{ display: "flex", gap: 4, alignItems: "center" }}>
+              <Typography
+                variant="subtitle2"
+                color="text.secondary"
+                sx={{ minWidth: 120 }}
+              >
+                Actual Score:
+              </Typography>
               <Typography>
-                {new Date(prediction.predictionDate).toLocaleDateString('en-GB')}
+                {prediction.actualScore
+                  ? `${prediction.actualScore.home}-${prediction.actualScore.away}`
+                  : "Not available"}
               </Typography>
-            </Grid>
-            <Grid item xs={6}>
-              <Typography variant="subtitle2" color="text.secondary">Last Updated</Typography>
+            </Box>
+
+            {/* Prediction Date */}
+            <Box sx={{ display: "flex", gap: 4, alignItems: "center" }}>
+              <Typography
+                variant="subtitle2"
+                color="text.secondary"
+                sx={{ minWidth: 120 }}
+              >
+                Prediction Date:
+              </Typography>
               <Typography>
-                {new Date(prediction.lastUpdated).toLocaleDateString('en-GB')}
+                {new Date(prediction.predictionDate).toLocaleDateString(
+                  "en-GB"
+                )}
               </Typography>
-            </Grid>
-          </Grid>
+            </Box>
+
+            {/* Last Updated */}
+            <Box sx={{ display: "flex", gap: 4, alignItems: "center" }}>
+              <Typography
+                variant="subtitle2"
+                color="text.secondary"
+                sx={{ minWidth: 120 }}
+              >
+                Last Updated:
+              </Typography>
+              <Typography>
+                {new Date(prediction.lastUpdated).toLocaleDateString("en-GB")}
+              </Typography>
+            </Box>
+          </Box>
         </CardContent>
       </Card>
 
       {/* Analysis Section */}
-      <Card sx={{ mb: 3 }}>
+      <Card sx={{ mb: 6 }}>
         <CardContent>
-          <Typography variant="h6" gutterBottom>Expert Analysis</Typography>
-          <Typography sx={{ whiteSpace: 'pre-line' }}>
-            {prediction.expertAnalysis || 'No analysis provided'}
+          <Typography variant="h6" gutterBottom>
+            Expert Analysis
+          </Typography>
+          <Typography sx={{ whiteSpace: "pre-line" }}>
+            {prediction.expertAnalysis || "No analysis provided"}
           </Typography>
         </CardContent>
       </Card>
 
       {/* Additional Information Sections */}
-      <Typography variant="h6" gutterBottom sx={{ mb: 2 }}>Additional Information</Typography>
+      <Card >  
+        <CardContent>
+        <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
 
-      {/* Team Form */}
-      <Card variant="outlined" sx={{ mb: 2 }}>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', p: 2 }}>
-          <Typography variant="subtitle1">Team Form</Typography>
-          <IconButton size="small" onClick={() => toggleSection('teamForm')}>
-            {expandedSections.teamForm ? <ExpandLessIcon /> : <ExpandMoreIcon />}
-          </IconButton>
-        </Box>
-        <Collapse in={expandedSections.teamForm}>
-          <CardContent>
-            <Typography>
-              {prediction.teamForm || 'Team form data not available'}
-            </Typography>
-          </CardContent>
-        </Collapse>
-      </Card>
+          <Typography variant="h6" gutterBottom>
+            Additional Information
+          </Typography>
 
-      {/* Team Comparison */}
-      <Card variant="outlined" sx={{ mb: 2 }}>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', p: 2 }}>
-          <Typography variant="subtitle1">Team Comparison</Typography>
-          <IconButton size="small" onClick={() => toggleSection('teamComparison')}>
-            {expandedSections.teamComparison ? <ExpandLessIcon /> : <ExpandMoreIcon />}
-          </IconButton>
-        </Box>
-        <Collapse in={expandedSections.teamComparison}>
-          <CardContent>
-            <Typography>
-              {prediction.teamComparison || 'Team comparison data not available'}
-            </Typography>
-          </CardContent>
-        </Collapse>
-      </Card>
+          {/* Team Form */}
+          <Card variant="outlined" sx={{ mb: 2 }}>
+            <Box
+              sx={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                p: 2,
+              }}
+            >
+              <Typography variant="subtitle1">Team Form</Typography>
+              <IconButton
+                size="small"
+                onClick={() => toggleSection("teamForm")}
+              >
+                {expandedSections.teamForm ? (
+                  <ExpandLessIcon />
+                ) : (
+                  <ExpandMoreIcon />
+                )}
+              </IconButton>
+            </Box>
+            <Collapse in={expandedSections.teamForm}>
+              <CardContent>
+                <Typography>
+                  {prediction.teamForm || "Team form data not available"}
+                </Typography>
+              </CardContent>
+            </Collapse>
+          </Card>
 
-      {/* Top Scorers */}
-      <Card variant="outlined" sx={{ mb: 2 }}>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', p: 2 }}>
-          <Typography variant="subtitle1">Top Scorers</Typography>
-          <IconButton size="small" onClick={() => toggleSection('topScorers')}>
-            {expandedSections.topScorers ? <ExpandLessIcon /> : <ExpandMoreIcon />}
-          </IconButton>
-        </Box>
-        <Collapse in={expandedSections.topScorers}>
-          <CardContent>
-            <Typography>
-              {prediction.topScorers || 'Top scorers data not available'}
-            </Typography>
-          </CardContent>
-        </Collapse>
-      </Card>
+          {/* Team Comparison */}
+          <Card variant="outlined" sx={{ mb: 2 }}>
+            <Box
+              sx={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                p: 2,
+              }}
+            >
+              <Typography variant="subtitle1">Team Comparison</Typography>
+              <IconButton
+                size="small"
+                onClick={() => toggleSection("teamComparison")}
+              >
+                {expandedSections.teamComparison ? (
+                  <ExpandLessIcon />
+                ) : (
+                  <ExpandMoreIcon />
+                )}
+              </IconButton>
+            </Box>
+            <Collapse in={expandedSections.teamComparison}>
+              <CardContent>
+                <Typography>
+                  {prediction.teamComparison ||
+                    "Team comparison data not available"}
+                </Typography>
+              </CardContent>
+            </Collapse>
+          </Card>
 
-      {/* Head-to-Head */}
-      <Card variant="outlined" sx={{ mb: 2 }}>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', p: 2 }}>
-          <Typography variant="subtitle1">Head-to-Head</Typography>
-          <IconButton size="small" onClick={() => toggleSection('headToHead')}>
-            {expandedSections.headToHead ? <ExpandLessIcon /> : <ExpandMoreIcon />}
-          </IconButton>
-        </Box>
-        <Collapse in={expandedSections.headToHead}>
-          <CardContent>
-            <Typography>
-              {prediction.headToHead || 'Head-to-head data not available'}
-            </Typography>
-          </CardContent>
-        </Collapse>
-      </Card>
+          {/* Top Scorers */}
+          <Card variant="outlined">
+            <Box
+              sx={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                p: 2,
+              }}
+            >
+              <Typography variant="subtitle1">Top Scorers</Typography>
+              <IconButton
+                size="small"
+                onClick={() => toggleSection("topScorers")}
+              >
+                {expandedSections.topScorers ? (
+                  <ExpandLessIcon />
+                ) : (
+                  <ExpandMoreIcon />
+                )}
+              </IconButton>
+            </Box>
+            <Collapse in={expandedSections.topScorers}>
+              <CardContent>
+                <Typography>
+                  {prediction.topScorers || "Top scorers data not available"}
+                </Typography>
+              </CardContent>
+            </Collapse>
+          </Card>
 
-      {/* Team Statistics */}
-      <Card variant="outlined" sx={{ mb: 2 }}>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', p: 2 }}>
-          <Typography variant="subtitle1">Team Statistics</Typography>
-          <IconButton size="small" onClick={() => toggleSection('teamStatistics')}>
-            {expandedSections.teamStatistics ? <ExpandLessIcon /> : <ExpandMoreIcon />}
-          </IconButton>
-        </Box>
-        <Collapse in={expandedSections.teamStatistics}>
-          <CardContent>
-            <Typography>
-              {prediction.teamStatistics || 'Team statistics not available'}
-            </Typography>
-          </CardContent>
-        </Collapse>
+          </Box>
+        </CardContent>
+        
       </Card>
 
       {/* Cancel Confirmation Dialog */}
@@ -331,7 +431,8 @@ const PredictionDetail = ({ prediction, onBack }) => {
         <DialogTitle>Delete Prediction</DialogTitle>
         <DialogContent>
           <Typography>
-            Are you sure you want to delete this prediction? This action cannot be undone.
+            Are you sure you want to delete this prediction? This action cannot
+            be undone.
           </Typography>
         </DialogContent>
         <DialogActions>

@@ -1,20 +1,47 @@
+import React, { useState, useEffect } from "react";
 import { Box, Typography, TextField, Button, Divider } from "@mui/material";
-import { useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
 import TimezoneSelect from 'react-timezone-select';
+import { updateProfile } from "@/store/slices/settingsSlice";
 
-const ProfileTab = () => {
-  // Mockup profile data
-  const [profileData, setProfileData] = useState({
-    firstName: "Andrew",
-    lastName: "Smith",
-    email: "andrewsmith@gmail.com",
-    role: "Super Admin",
-    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone // Auto-detect timezone
+/**
+ * ProfileTab - Handles user profile information
+ * Features:
+ * - Displays and edits personal information
+ * - Timezone selection
+ * - Save functionality with Redux integration
+ */
+const ProfileTab = ({ showNotification }) => {
+  const dispatch = useDispatch();
+  const { profile, loading, error } = useSelector((state) => ({
+    profile: state.settings.profile,
+    loading: state.settings.loading.profile,
+    error: state.settings.error.profile
+  }));
+
+  // Local form state initialized with Redux data
+  const [formData, setFormData] = useState({
+    firstName: profile?.firstName || '',
+    lastName: profile?.lastName || '',
+    email: profile?.email || '',
+    timezone: profile?.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone
   });
 
-  // Handle changes for all fields
+  // Update local state when Redux profile changes
+  useEffect(() => {
+    if (profile) {
+      setFormData({
+        firstName: profile.firstName,
+        lastName: profile.lastName,
+        email: profile.email,
+        timezone: profile.timezone
+      });
+    }
+  }, [profile]);
+
+  // Handle input changes for text fields
   const handleInputChange = (field) => (event) => {
-    setProfileData(prev => ({
+    setFormData(prev => ({
       ...prev,
       [field]: event.target.value
     }));
@@ -22,22 +49,25 @@ const ProfileTab = () => {
 
   // Handle timezone change
   const handleTimezoneChange = (timezone) => {
-    setProfileData(prev => ({
+    setFormData(prev => ({
       ...prev,
-      timezone: timezone.value // react-timezone-select returns an object with value property
+      timezone: timezone.value
     }));
   };
 
-  // Handle save action
-  const handleSave = () => {
-    console.log("Saved data:", profileData);
-    // Here you would typically make an API call to save the data
-    alert("Profile changes saved!");
+  // Handle form submission
+  const handleSave = async () => {
+    try {
+      await dispatch(updateProfile(formData)).unwrap();
+      showNotification('Profile updated successfully!');
+    } catch (error) {
+      showNotification('Failed to update profile', 'error');
+    }
   };
 
   return (
     <Box>
-      {/* Personal Information Grid */}
+      {/* Personal Information Section */}
       <div className="grid grid-cols-1 md:grid-cols-12 gap-8">
         {/* Left Column - Header and Description */}
         <Box className="md:col-span-4">
@@ -51,9 +81,15 @@ const ProfileTab = () => {
             variant="contained" 
             sx={{ mb: 4 }}
             onClick={handleSave}
+            disabled={loading}
           >
-            Save Changes
+            {loading ? 'Saving...' : 'Save Changes'}
           </Button>
+          {error && (
+            <Typography color="error" variant="body2">
+              {error.message || 'Failed to update profile'}
+            </Typography>
+          )}
         </Box>
 
         {/* Right Column - Form Fields */}
@@ -62,7 +98,7 @@ const ProfileTab = () => {
             {/* First Name */}
             <TextField
               label="First name"
-              value={profileData.firstName}
+              value={formData.firstName}
               onChange={handleInputChange('firstName')}
               fullWidth
             />
@@ -70,28 +106,17 @@ const ProfileTab = () => {
             {/* Last Name */}
             <TextField
               label="Last name"
-              value={profileData.lastName}
+              value={formData.lastName}
               onChange={handleInputChange('lastName')}
               fullWidth
             />
           </Box>
 
-          {/* Email Address */}
+          {/* Email Address (readonly) */}
           <Box sx={{ mb: 3 }}>
             <TextField
               label="Email Address"
-              value={profileData.email}
-              onChange={handleInputChange('email')}
-              fullWidth
-              disabled
-            />
-          </Box>
-
-          {/* Role */}
-          <Box sx={{ mb: 3 }}>
-            <TextField
-              label="Role"
-              value={profileData.role}
+              value={formData.email}
               fullWidth
               disabled
               InputProps={{
@@ -104,7 +129,7 @@ const ProfileTab = () => {
 
       <Divider sx={{ my: 4 }} />
 
-      {/* Timezone Grid */}
+      {/* Timezone Section */}
       <div className="grid grid-cols-1 md:grid-cols-12 gap-8">
         {/* Left Column - Header and Description */}
         <Box className="md:col-span-4">
@@ -120,7 +145,7 @@ const ProfileTab = () => {
         <Box className="md:col-span-8">
           <Box sx={{ mb: 3 }}>
             <TimezoneSelect
-              value={profileData.timezone}
+              value={formData.timezone}
               onChange={handleTimezoneChange}
               labelStyle="original"
               className="timezone-select"

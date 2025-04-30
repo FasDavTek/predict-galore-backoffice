@@ -7,47 +7,75 @@ import {
   FormControlLabel,
   Stack,
 } from "@mui/material";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import { 
+  fetchNotificationSettings,
+  updateNotificationSettings
+} from "@/store/slices/settingsSlice";
 
-const NotificationsTab = () => {
+/**
+ * NotificationsTab - Handles notification preferences
+ * Features:
+ * - Per-category notification toggles (in-app, push, email)
+ * - Real-time saving of preferences
+ * - Loading states
+ */
+const NotificationsTab = ({ showNotification }) => {
+  const dispatch = useDispatch();
+  const { 
+    notifications: settings,
+    loading,
+    error
+  } = useSelector((state) => ({
+    notifications: state.settings.notifications,
+    loading: state.settings.loading.notifications,
+    error: state.settings.error.notifications
+  }));
+
+  // Local state for notification settings
   const [notificationSettings, setNotificationSettings] = useState({
-    userActivity: {
-      inApp: true,
-      push: true,
-      email: true,
-    },
-    predictionsPosts: {
-      inApp: true,
-      push: true,
-      email: true,
-    },
-    paymentsTransactions: {
-      inApp: true,
-      push: true,
-      email: true,
-    },
-    securityAlerts: {
-      inApp: true,
-      push: true,
-      email: true,
-    },
+    userActivity: { inApp: true, push: true, email: true },
+    predictionsPosts: { inApp: true, push: true, email: true },
+    paymentsTransactions: { inApp: true, push: true, email: true },
+    securityAlerts: { inApp: true, push: true, email: true }
   });
 
-  const handleToggleChange = (category, type) => (event) => {
-    setNotificationSettings((prev) => ({
-      ...prev,
+  // Initialize with Redux data when loaded
+  useEffect(() => {
+    if (settings) {
+      setNotificationSettings(settings);
+    }
+  }, [settings]);
+
+  // Load notification settings on mount
+  useEffect(() => {
+    dispatch(fetchNotificationSettings());
+  }, [dispatch]);
+
+  // Handle toggle changes and save automatically
+  const handleToggleChange = (category, type) => async (event) => {
+    const newSettings = {
+      ...notificationSettings,
       [category]: {
-        ...prev[category],
-        [type]: event.target.checked,
-      },
-    }));
+        ...notificationSettings[category],
+        [type]: event.target.checked
+      }
+    };
+    
+    setNotificationSettings(newSettings);
+    
+    try {
+      await dispatch(updateNotificationSettings(newSettings)).unwrap();
+      showNotification('Notification settings updated!');
+    } catch (error) {
+      showNotification('Failed to update notifications', 'error');
+      // Revert to previous settings on error
+      setNotificationSettings(notificationSettings);
+    }
   };
 
-  const handleSave = () => {
-    console.log("Notification settings saved:", notificationSettings);
-    alert("Notification settings updated successfully!");
-  };
-
+  // Notification switch component for consistent styling
   const NotificationSwitch = ({ label, checked, onChange }) => (
     <Box sx={{ 
       display: 'flex', 
@@ -61,6 +89,7 @@ const NotificationsTab = () => {
         checked={checked}
         onChange={onChange}
         color="primary"
+        disabled={loading}
       />
     </Box>
   );
@@ -78,9 +107,11 @@ const NotificationsTab = () => {
             Get notifications to find out what&apos;s going on when you&apos;re
             not online. You can turn them off anytime.
           </Typography>
-          <Button variant="contained" sx={{ mb: 4 }} onClick={handleSave}>
-            Save Changes
-          </Button>
+          {error && (
+            <Typography color="error" variant="body2">
+              {error.message || 'Failed to load notifications'}
+            </Typography>
+          )}
         </Box>
 
         {/* Right Column */}

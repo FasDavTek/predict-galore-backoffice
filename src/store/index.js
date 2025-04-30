@@ -7,6 +7,7 @@ import dashboardReducer from './slices/dashboardSlice'
 import usersReducer from './slices/userSlice'
 import transactionsReducer from './slices/transactionSlice';
 import predictionsReducer from './slices/predictionSlice'
+import settingsReducer from './slices/settingsSlice'
 
 
 const combinedReducer = combineReducers({
@@ -16,6 +17,7 @@ const combinedReducer = combineReducers({
   users: usersReducer,
   transactions: transactionsReducer,
   predictions: predictionsReducer,
+  settings: settingsReducer,
 });
 
 const reducer = (state, action) => {

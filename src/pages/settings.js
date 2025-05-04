@@ -14,14 +14,15 @@ import {
   clearPasswordError,
   clearTeamError,
   clearRolesError,
-  clearNotificationsError
+  clearNotificationsError,
 } from "@/store/slices/settingsSlice";
 
 // Component imports
-import ProfileTab from "@/components/dashboard/settings/Profile";
-import SecurityTab from "@/components/dashboard/settings/Security";
-import NotificationsTab from "@/components/dashboard/settings/Notifications";
-import TeamsTab from "@/components/dashboard/settings/Teams/Teams";
+import ProfileTab from "@/components/settings/Profile";
+import SecurityTab from "@/components/settings/Security";
+import NotificationsTab from "@/components/settings/Notifications";
+import TeamsTab from "@/components/settings/Teams/Teams";
+import IntegrationsTab from "@/components/settings/Integrations";
 
 /**
  * Error boundary fallback component
@@ -48,8 +49,8 @@ const SettingsPage = () => {
   const [activeTab, setActiveTab] = useState(0);
   const [notification, setNotification] = useState({
     open: false,
-    message: '',
-    severity: 'success'
+    message: "",
+    severity: "success",
   });
 
   // Load initial data when component mounts
@@ -67,18 +68,18 @@ const SettingsPage = () => {
     if (newValue === 1) dispatch(clearPasswordError());
     if (newValue === 2) dispatch(clearNotificationsError());
     if (newValue === 3) dispatch(clearTeamError());
-    
+
     setActiveTab(newValue);
   };
 
   // Show notification helper function
-  const showNotification = (message, severity = 'success') => {
+  const showNotification = (message, severity = "success") => {
     setNotification({ open: true, message, severity });
   };
 
   // Close notification handler
   const handleNotificationClose = () => {
-    setNotification(prev => ({ ...prev, open: false }));
+    setNotification((prev) => ({ ...prev, open: false }));
   };
 
   return (
@@ -93,9 +94,9 @@ const SettingsPage = () => {
           </Typography>
 
           {/* Settings tabs navigation */}
-          <Tabs 
-            value={activeTab} 
-            onChange={handleTabChange} 
+          <Tabs
+            value={activeTab}
+            onChange={handleTabChange}
             sx={{ mb: 4 }}
             variant="scrollable"
             scrollButtons="auto"
@@ -104,10 +105,11 @@ const SettingsPage = () => {
             <Tab label="Security" />
             <Tab label="Notifications" />
             <Tab label="Team" />
+            <Tab label="Integrations" />
           </Tabs>
 
           {/* Tab content */}
-          <Box sx={{ width: '100%' }}>
+          <Box sx={{ width: "100%" }}>
             {activeTab === 0 && (
               <ProfileTab showNotification={showNotification} />
             )}
@@ -123,6 +125,10 @@ const SettingsPage = () => {
             {activeTab === 3 && (
               <TeamsTab showNotification={showNotification} />
             )}
+
+            {activeTab === 4 && (
+              <IntegrationsTab showNotification={showNotification} />
+            )}
           </Box>
 
           {/* Global notification system */}
@@ -131,10 +137,10 @@ const SettingsPage = () => {
             autoHideDuration={6000}
             onClose={handleNotificationClose}
           >
-            <Alert 
-              onClose={handleNotificationClose} 
+            <Alert
+              onClose={handleNotificationClose}
               severity={notification.severity}
-              sx={{ width: '100%' }}
+              sx={{ width: "100%" }}
             >
               {notification.message}
             </Alert>

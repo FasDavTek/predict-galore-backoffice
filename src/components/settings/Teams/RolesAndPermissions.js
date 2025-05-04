@@ -7,7 +7,6 @@ import {
   TextField,
   InputAdornment,
   Paper,
-  Stack,
   Pagination,
   TableContainer,
   Table,
@@ -38,10 +37,10 @@ import {
   createRole,
   updateRole,
   deleteRole,
-  selectRolesList,
+  selectRoles,
   selectRolesLoading,
   selectRolesError
-} from '@/store/slices/settingsSlice';
+} from '../../../store/slices/settingsSlice';
 
 // Available permissions for roles
 const AVAILABLE_PERMISSIONS = [
@@ -67,7 +66,7 @@ const RolesAndPermissions = ({ onBack, showNotification }) => {
   const dispatch = useDispatch();
   
   // Select data from Redux store
-  const roles = useSelector(selectRolesList);
+  const roles = useSelector(selectRoles);
   const loading = useSelector(selectRolesLoading);
   const error = useSelector(selectRolesError);
 

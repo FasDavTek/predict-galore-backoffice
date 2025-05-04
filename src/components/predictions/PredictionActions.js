@@ -14,7 +14,7 @@ import MoreVertIcon from '@mui/icons-material/MoreVert';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import { useDispatch } from 'react-redux';
-import { cancelPrediction } from '../../../store/slices/predictionSlice';
+import { cancelPrediction } from '../../store/slices/predictionSlice';
 // import { cancelPrediction, deletePrediction } from '../../../store/slices/PredictionSlice';
 
 

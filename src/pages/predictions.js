@@ -7,11 +7,11 @@ import { SportsSoccer as PredictionsIcon } from '@mui/icons-material';
 
 // Component imports
 import DashboardLayout from '@/layouts/DashboardLayout';
-import { Header } from '@/components/dashboard/predictions/Header';
-import PredictionStat from '@/components/dashboard/predictions/PredictionStat';
-import PredictionsTable from '@/components/dashboard/predictions/PredictionsTable';
-import PredictionDetail from '@/components/dashboard/predictions/PredictionDetail';
-import NewPredictionForm from '@/components/dashboard/predictions/NewPredictionForm';
+import { Header } from '@/components/predictions/Header';
+import PredictionStat from '@/components/predictions/PredictionStat';
+import PredictionsTable from '@/components/predictions/PredictionsTable';
+import PredictionDetail from '@/components/predictions/PredictionDetail';
+import NewPredictionForm from '@/components/predictions/NewPredictionForm';
 
 // Redux imports
 import {

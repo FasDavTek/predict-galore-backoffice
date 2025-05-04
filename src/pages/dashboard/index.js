@@ -6,8 +6,8 @@ import { ChevronLeft as BackIcon } from "@mui/icons-material";
 
 // Layout and components
 import DashboardLayout from "@/layouts/DashboardLayout";
-import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
-import DashboardStat from "@/components/dashboard/DashboardStat";
+import { DashboardHeader } from "@/components/dashboard/Header";
+import DashboardStat from "@/components/dashboard/Stat";
 import UserEngagementChart from "@/components/charts/UserEngagementChart";
 import Traffic from "@/components/dashboard/Traffic";
 import ActivityLog from "@/components/dashboard/ActivityLog";

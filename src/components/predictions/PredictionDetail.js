@@ -29,7 +29,7 @@ import {
   ExpandLess as ExpandLessIcon,
 } from "@mui/icons-material";
 import { useDispatch } from "react-redux";
-import { cancelPrediction } from "../../../store/slices/predictionSlice";
+import { cancelPrediction } from "../../store/slices/predictionSlice";
 
 const PredictionDetail = ({ prediction, onBack }) => {
   const dispatch = useDispatch();

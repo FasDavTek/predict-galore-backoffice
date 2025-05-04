@@ -15,6 +15,7 @@ import {
   Paper,
   Skeleton
 } from '@mui/material';
+
 import ReactCountryFlag from 'react-country-flag';
 
 const Traffic = ({ 
@@ -23,6 +24,7 @@ const Traffic = ({
   filterValue, 
   onFilterChange
 }) => {
+  
   // Sample data structure (used as fallback)
   const fallbackData = [
     { name: 'Nigeria', percentage: '28%', users: '27,650', countryCode: 'NG' },

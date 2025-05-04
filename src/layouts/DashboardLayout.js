@@ -1,8 +1,8 @@
 // layouts/DashboardLayout.js
 import React, { useState } from 'react';
 import { Box, useMediaQuery, useTheme } from '@mui/material';
-import Sidebar from '@/components/dashboard/Sidebar';
-import Header from '@/components/dashboard/Header';
+import Sidebar from '@/components/Sidebar';
+import Header from '@/components/Header';
 
 const drawerWidth = 260;
 const collapsedWidth = 72;

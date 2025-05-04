@@ -148,7 +148,8 @@ const SecurityTab = ({ showNotification }) => {
         </Box>
 
         {/* Right Column - Form Fields */}
-        <Box className="md:col-span-8">
+        <Box className="md:col-span-8 flex flex-col gap-3" >
+
           <Box sx={{ mb: 3 }}>
             <TextField
               label="Current Password"
@@ -242,6 +243,7 @@ const SecurityTab = ({ showNotification }) => {
               }}
             />
           </Box>
+
         </Box>
       </div>
 

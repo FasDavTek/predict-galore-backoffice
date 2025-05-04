@@ -50,6 +50,30 @@ const mockNotificationSettings = {
   securityAlerts: { inApp: true, push: true, email: true }
 };
 
+
+// Mock integration data
+const mockIntegrations = [
+  {
+    id: 1,
+    name: "Paystack",
+    description: "Payments integration for subscription",
+    status: "connected",
+    publicKey: "",
+    secretKey: "",
+    enabled: true
+  },
+  {
+    id: 2,
+    name: "Paystack",
+    description: "Payments integration",
+    status: "connected",
+    publicKey: "",
+    secretKey: "",
+    enabled: false
+  }
+];
+
+
 // ==================== ASYNC THUNKS ==================== //
 
 /**
@@ -275,6 +299,56 @@ export const updateNotificationSettings = createAsyncThunk(
   }
 );
 
+
+/**
+ * Fetches integrations
+ */
+export const fetchIntegrations = createAsyncThunk(
+  'settings/fetchIntegrations',
+  async (_, { rejectWithValue }) => {
+    try {
+      const response = await axios.get('/api/settings/integrations');
+      return response.data;
+    } catch (error) {
+      console.error('Failed to fetch integrations, using mock data. Error:', error.message);
+      return rejectWithValue(mockIntegrations);
+    }
+  }
+);
+
+/**
+ * Updates integration settings
+ */
+export const updateIntegration = createAsyncThunk(
+  'settings/updateIntegration',
+  async ({ id, integrationData }, { rejectWithValue }) => {
+    try {
+      const response = await axios.put(`/api/settings/integrations/${id}`, integrationData);
+      return response.data;
+    } catch (error) {
+      console.error('Failed to update integration:', error.message);
+      return rejectWithValue(error.response?.data);
+    }
+  }
+);
+
+/**
+ * Toggles notifications
+ */
+export const toggleNotifications = createAsyncThunk(
+  'settings/toggleNotifications',
+  async (enabled, { rejectWithValue }) => {
+    try {
+      const response = await axios.put('/api/settings/integrations/notifications', { enabled });
+      return response.data;
+    } catch (error) {
+      console.error('Failed to toggle notifications:', error.message);
+      return rejectWithValue(error.response?.data);
+    }
+  }
+);
+
+
 // ==================== INITIAL STATE ==================== //
 
 /**
@@ -305,19 +379,27 @@ const initialState = {
     loading: false,
     error: null
   },
+  integrations: {
+    list: mockIntegrations,
+    loading: false,
+    error: null,
+    notificationsEnabled: true
+  },
   loading: {
     profile: false,
     password: false,
     notifications: false,
     team: false,
-    roles: false
+    roles: false,
+    integrations: false
   },
   error: {
     profile: null,
     password: null,
     notifications: null,
     team: null,
-    roles: null
+    roles: null,
+    integrations: null
   }
 };
 
@@ -358,6 +440,9 @@ const settingsSlice = createSlice({
     // Clears notifications-related errors
     clearNotificationsError: (state) => {
       state.error.notifications = null;
+    },
+    clearIntegrationsError: (state) => {
+      state.error.integrations = null;
     }
   },
   extraReducers: (builder) => {
@@ -540,9 +625,52 @@ const settingsSlice = createSlice({
       .addCase(updateNotificationSettings.rejected, (state, action) => {
         state.loading.notifications = false;
         state.error.notifications = action.error;
-      });
+      })
+
+       // ========== INTEGRATIONS REDUCERS ========== //
+    builder.addCase(fetchIntegrations.pending, (state) => {
+      state.integrations.loading = true;
+      state.integrations.error = null;
+    })
+    builder.addCase(fetchIntegrations.fulfilled, (state, action) => {
+      state.integrations.loading = false;
+      state.integrations.list = action.payload;
+    })
+    builder.addCase(fetchIntegrations.rejected, (state, action) => {
+      state.integrations.loading = false;
+      state.integrations.error = action.error;
+      state.integrations.list = action.payload || mockIntegrations;
+    })
+    
+    builder.addCase(updateIntegration.pending, (state) => {
+      state.integrations.loading = true;
+    })
+    builder.addCase(updateIntegration.fulfilled, (state, action) => {
+      state.integrations.loading = false;
+      const index = state.integrations.list.findIndex(i => i.id === action.payload.id);
+      if (index !== -1) {
+        state.integrations.list[index] = action.payload;
+      }
+    })
+    builder.addCase(updateIntegration.rejected, (state, action) => {
+      state.integrations.loading = false;
+      state.integrations.error = action.error;
+    })
+    
+    builder.addCase(toggleNotifications.pending, (state) => {
+      state.integrations.loading = true;
+    })
+    builder.addCase(toggleNotifications.fulfilled, (state, action) => {
+      state.integrations.loading = false;
+      state.integrations.notificationsEnabled = action.payload.enabled;
+    })
+    builder.addCase(toggleNotifications.rejected, (state, action) => {
+      state.integrations.loading = false;
+      state.integrations.error = action.error;
+    });
   }
 });
+  
 
 // ==================== ACTION EXPORTS ==================== //
 export const {
@@ -553,7 +681,8 @@ export const {
   clearPasswordError,
   clearTeamError,
   clearRolesError,
-  clearNotificationsError
+  clearNotificationsError,
+  clearIntegrationsError
 } = settingsSlice.actions;
 
 // ==================== SELECTORS ==================== //
@@ -678,6 +807,26 @@ export const selectNotificationsLoading = createSelector(
 export const selectNotificationsError = createSelector(
   [selectSettingsState],
   (settings) => settings.error.notifications
+);
+
+export const selectIntegrations = createSelector(
+  [selectSettingsState],
+  (settings) => settings.integrations.list
+);
+
+export const selectIntegrationsLoading = createSelector(
+  [selectSettingsState],
+  (settings) => settings.integrations.loading
+);
+
+export const selectIntegrationsError = createSelector(
+  [selectSettingsState],
+  (settings) => settings.integrations.error
+);
+
+export const selectNotificationsEnabled = createSelector(
+  [selectSettingsState],
+  (settings) => settings.integrations.notificationsEnabled
 );
 
 export default settingsSlice.reducer;

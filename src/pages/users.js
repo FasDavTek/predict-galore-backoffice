@@ -6,9 +6,9 @@ import { People as UsersIcon } from '@mui/icons-material';
 
 // Component imports
 import DashboardLayout from '@/layouts/DashboardLayout';
-import { Header } from '@/components/dashboard/users/Header';
-import UserStats from '@/components/dashboard/users/UserStats';
-import UsersTable from '@/components/dashboard/users/UsersTable';
+import { Header } from '@/components/users/Header';
+import UserStats from '@/components/users/UserStats';
+import UsersTable from '@/components/users/UsersTable';
 
 // Redux imports
 import {

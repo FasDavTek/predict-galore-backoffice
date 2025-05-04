@@ -7,10 +7,10 @@ import { Receipt as TransactionsIcon } from '@mui/icons-material';
 
 // Component imports
 import DashboardLayout from '@/layouts/DashboardLayout';
-import { Header } from '@/components/dashboard/transactions/Header';
-import TransactionStats from '@/components/dashboard/transactions/TransactionStats';
-import TransactionsTable from '@/components/dashboard/transactions/TransactionsTable';
-import TransactionDetail from '@/components/dashboard/transactions/TransactionDetail';
+import { Header } from '@/components/transactions/Header';
+import TransactionStats from '@/components/transactions/TransactionStats';
+import TransactionsTable from '@/components/transactions/TransactionsTable';
+import TransactionDetail from '@/components/transactions/TransactionDetail';
 
 // Redux imports
 import {

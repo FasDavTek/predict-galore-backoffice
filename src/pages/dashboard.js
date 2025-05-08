@@ -12,7 +12,12 @@ import UserEngagementChart from "@/components/charts/UserEngagementChart";
 import Traffic from "@/components/dashboard/Traffic";
 import ActivityLog from "@/components/dashboard/ActivityLog";
 
+import { useAuth } from "@/context/AuthContext";
 // Redux actions and selectors
+import { selectIsAuthenticated } from "@/store/slices/authSlice";
+
+// import { selectCurrentUser} from "@/store/slices/authSlice";
+
 import {
   fetchDashboardStats,
   fetchUserEngagement,
@@ -31,10 +36,23 @@ import {
 
 const DashboardPage = () => {
   const dispatch = useDispatch();
-  
+  const user = useAuth();
+  // const user = useSelector(selectCurrentUser) || {};
+
+  // Safe user name with fallback
+  const userName = user?.firstName || "User";
+
+  // const isAuthenticated = useSelector(selectIsAuthenticated);
+
+  // useEffect(() => {
+  //   if (!isAuthenticated) {
+  //     router.push(`/auth/login?returnUrl=${encodeURIComponent(router.pathname)}`);
+  //   }
+  // }, [isAuthenticated]);
+
   // State for controlling full-screen activity log view
   const [showFullActivityLog, setShowFullActivityLog] = useState(false);
-  const [userType, setUserType] = useState('free');
+  const [userType, setUserType] = useState("free");
 
   // Get data from Redux store
   const stats = useSelector(selectDashboardStats);
@@ -76,13 +94,14 @@ const DashboardPage = () => {
   };
 
   return (
-    <DashboardLayout>
+    <DashboardLayout user={user}>
       {/* Always show the header at the top */}
       <DashboardHeader
-        title="Welcome, Andrew"
+        title={`Welcome, ${userName}`}
         subtitle="Here's what's happening with your platform today"
         timeRange={filters.timeRange}
         onTimeRangeChange={handleTimeRangeChange}
+        user={user}
       />
 
       {/* Conditional rendering based on view mode */}
@@ -92,7 +111,13 @@ const DashboardPage = () => {
           {/* Back button to return to dashboard */}
           <Box
             onClick={handleBackToDashboard}
-            sx={{ display: 'flex', alignItems: 'center', mb: 3, cursor: 'pointer', "&:hover": { color: "primary.main" } }}
+            sx={{
+              display: "flex",
+              alignItems: "center",
+              mb: 3,
+              cursor: "pointer",
+              "&:hover": { color: "primary.main" },
+            }}
           >
             <BackIcon className="mr-2" />
             <Typography variant="h5" fontWeight={600}>
@@ -113,24 +138,22 @@ const DashboardPage = () => {
           {/* Top row of stat cards */}
           <Box className="w-full mb-8">
             <Box className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-              {loading.stats ? (
-                // Show loading skeletons while data loads
-                [1, 2, 3, 4].map((item) => (
-                  <DashboardStat key={`skeleton-${item}`} loading />
-                ))
-              ) : (
-                // Display actual stat cards when data is loaded
-                stats?.map((card, index) => (
-                  <DashboardStat
-                    key={`stat-${index}`}
-                    title={card.title}
-                    value={card.value}
-                    icon={card.icon}
-                    change={card.change}
-                    bgColor={card.bgColor}
-                  />
-                ))
-              )}
+              {loading.stats
+                ? // Show loading skeletons while data loads
+                  [1, 2, 3, 4].map((item) => (
+                    <DashboardStat key={`skeleton-${item}`} loading />
+                  ))
+                : // Display actual stat cards when data is loaded
+                  stats?.map((card, index) => (
+                    <DashboardStat
+                      key={`stat-${index}`}
+                      title={card.title}
+                      value={card.value}
+                      icon={card.icon}
+                      change={card.change}
+                      bgColor={card.bgColor}
+                    />
+                  ))}
             </Box>
           </Box>
 
@@ -145,7 +168,7 @@ const DashboardPage = () => {
                 userType={userType}
                 onUserTypeChange={setUserType}
               />
-              
+
               {/* Traffic component */}
               <Traffic
                 data={trafficData}

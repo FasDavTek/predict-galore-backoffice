@@ -1,11 +1,12 @@
-// components/dashboard/DashboardHeader.js
+// components/dashboard/Header.js
 import { Box, Typography, Select, MenuItem, Divider } from '@mui/material';
 
 export const DashboardHeader = ({ 
   title, 
   subtitle, 
   timeRange, 
-  onTimeRangeChange 
+  onTimeRangeChange,
+  user
 }) => {
   return (
     <Box sx={{ mb: 4 }}>

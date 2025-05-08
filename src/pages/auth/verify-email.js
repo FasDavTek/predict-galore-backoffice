@@ -105,7 +105,7 @@ const EmailVerficationPage = () => {
             "&:hover": {
               bgcolor: "#3a9504",
             },
-            fontFamily: "Inter",
+            // fontFamily: "Inter",
             fontWeight: 600,
             mb: 2,
           }}
@@ -120,7 +120,10 @@ const EmailVerficationPage = () => {
         <Box sx={{ textAlign: "center" }}>
           <Typography
             variant="body2"
-            sx={{ fontFamily: "Inter", color: "text.secondary" }}
+            sx={{ 
+              // fontFamily: "Inter", 
+              color: "text.secondary" 
+            }}
           >
             Already verified?{" "}
             <Link

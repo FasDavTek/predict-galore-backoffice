@@ -1,23 +1,25 @@
 // layouts/DashboardLayout.js
 import React, { useState } from 'react';
 import { Box, useMediaQuery, useTheme } from '@mui/material';
-import Sidebar from '@/components/Sidebar';
-import Header from '@/components/Header';
+import Sidebar from '@/components/common/Sidebar';
+import Header from '@/components/common/Header';
 
 const drawerWidth = 260;
 const collapsedWidth = 72;
 
-const DashboardLayout = ({ children }) => {
+const DashboardLayout = ({ children, user }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const [collapsed, setCollapsed] = useState(false);
 
-  // Dynamically calculate sidebar width for padding
-  const sidebarSpace = isMobile ? 0 : collapsed ? collapsedWidth : drawerWidth;
 
   return (
     <Box sx={{ display: 'flex', backgroundColor: 'background.default',  width: '100%',  }}>
-      <Sidebar collapsed={collapsed} setCollapsed={setCollapsed} />
+      <Sidebar 
+      collapsed={collapsed} 
+      setCollapsed={setCollapsed} 
+      user={user} 
+      />
 
       <Box
         sx={{
@@ -30,7 +32,9 @@ const DashboardLayout = ({ children }) => {
       >
 
         {/* Header */}
-        <Header />
+        <Header 
+        user={user}
+        />
 
         {/* main component */}
         <Box

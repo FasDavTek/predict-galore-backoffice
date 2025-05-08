@@ -108,7 +108,7 @@ export const AuthLayout = ({ children, title, subtitle }) => {
                   variant="subtitle1"
                   sx={{
                     color: "grey.50",
-                    fontFamily: "Inter",
+                    // fontFamily: "Inter",
                     fontWeight: 600,
                   }}
                 >
@@ -118,7 +118,7 @@ export const AuthLayout = ({ children, title, subtitle }) => {
                   variant="body2"
                   sx={{
                     color: "grey.50",
-                    fontFamily: "Inter",
+                    // fontFamily: "Inter",
                     fontWeight: 400,
                   }}
                 >
@@ -234,7 +234,7 @@ export const AuthLayout = ({ children, title, subtitle }) => {
               <Typography
                 variant="body1"
                 sx={{
-                  fontFamily: "Inter",
+                
                   color: "text.secondary",
                 }}
               >

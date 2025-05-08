@@ -11,6 +11,7 @@ import {
   Link,
   Alert,
   CircularProgress,
+  LinearProgress,
 } from "@mui/material";
 import {
   Mail as MailIcon,
@@ -39,6 +40,64 @@ const validationSchema = yup.object({
     .required("Confirm password is required"),
 });
 
+const PasswordStrengthIndicator = ({ password }) => {
+  const calculateStrength = () => {
+    let strength = 0;
+    if (password.length > 0) strength += 20;
+    if (password.length >= 8) strength += 20;
+    if (/[A-Z]/.test(password)) strength += 20;
+    if (/[a-z]/.test(password)) strength += 20;
+    if (/[0-9!@#$%^&*(),.?":{}|<>]/.test(password)) strength += 20;
+    return Math.min(strength, 100);
+  };
+
+  const strength = calculateStrength();
+  const strengthText = () => {
+    if (password.length === 0) return "";
+    if (strength < 40) return "Weak";
+    if (strength < 80) return "Medium";
+    return "Strong";
+  };
+
+  const getColor = () => {
+    if (password.length === 0) return "grey";
+    if (strength < 40) return "error.main";
+    if (strength < 80) return "warning.main";
+    return "success.main";
+  };
+
+  return (
+    <Box sx={{ width: "100%", mb: 4 }}>
+      <Box sx={{ display: "flex", justifyContent: "space-between", mb: 0.5 }}>
+        <Typography variant="caption" sx={{ fontFamily: "Inter" }}>
+          Password strength
+        </Typography>
+        <Typography
+          variant="caption"
+          sx={{
+            fontFamily: "Inter",
+            color: getColor(),
+          }}
+        >
+          {strengthText()}
+        </Typography>
+      </Box>
+      <LinearProgress
+        variant="determinate"
+        value={strength}
+        sx={{
+          height: 6,
+          borderRadius: 3,
+          backgroundColor: "grey.200",
+          "& .MuiLinearProgress-bar": {
+            backgroundColor: getColor(),
+          },
+        }}
+      />
+    </Box>
+  );
+};
+
 const RegisterPage = () => {
   const dispatch = useDispatch();
   const router = useRouter();
@@ -57,7 +116,7 @@ const RegisterPage = () => {
     validationSchema,
     onSubmit: async (values) => {
       if (!agreeToTerms) return;
-      
+
       const result = await dispatch(
         registerUser({
           name: values.fullName,
@@ -65,7 +124,7 @@ const RegisterPage = () => {
           password: values.password,
         })
       );
-      
+
       if (registerUser.fulfilled.match(result)) {
         router.push("/auth/verify-email");
       }
@@ -88,8 +147,12 @@ const RegisterPage = () => {
           {error.message}
         </Alert>
       )}
-      
-      <Box component="form" onSubmit={formik.handleSubmit} sx={{ width: "100%" }}>
+
+      <Box
+        component="form"
+        onSubmit={formik.handleSubmit}
+        sx={{ width: "100%" }}
+      >
         <TextField
           fullWidth
           label="Full Name"
@@ -99,7 +162,7 @@ const RegisterPage = () => {
           onBlur={formik.handleBlur}
           error={formik.touched.fullName && Boolean(formik.errors.fullName)}
           helperText={formik.touched.fullName && formik.errors.fullName}
-          sx={{ mb: 3 }}
+          sx={{ mb: 4 }}
           InputProps={{
             startAdornment: (
               <InputAdornment position="start">
@@ -119,7 +182,7 @@ const RegisterPage = () => {
           onBlur={formik.handleBlur}
           error={formik.touched.email && Boolean(formik.errors.email)}
           helperText={formik.touched.email && formik.errors.email}
-          sx={{ mb: 3 }}
+          sx={{ mb: 4 }}
           InputProps={{
             startAdornment: (
               <InputAdornment position="start">
@@ -129,6 +192,7 @@ const RegisterPage = () => {
           }}
         />
 
+        {/* password */}
         <TextField
           fullWidth
           label="Password"
@@ -139,7 +203,7 @@ const RegisterPage = () => {
           onBlur={formik.handleBlur}
           error={formik.touched.password && Boolean(formik.errors.password)}
           helperText={formik.touched.password && formik.errors.password}
-          sx={{ mb: 3 }}
+          sx={{ mb: 1 }}
           InputProps={{
             startAdornment: (
               <InputAdornment position="start">
@@ -159,6 +223,10 @@ const RegisterPage = () => {
           }}
         />
 
+        {/* password strength indicator */}
+        <PasswordStrengthIndicator password={formik.values.password} />
+
+        {/* confirm password */}
         <TextField
           fullWidth
           label="Confirm Password"
@@ -168,7 +236,8 @@ const RegisterPage = () => {
           onChange={formik.handleChange}
           onBlur={formik.handleBlur}
           error={
-            formik.touched.confirmPassword && Boolean(formik.errors.confirmPassword)
+            formik.touched.confirmPassword &&
+            Boolean(formik.errors.confirmPassword)
           }
           helperText={
             formik.touched.confirmPassword && formik.errors.confirmPassword
@@ -186,19 +255,26 @@ const RegisterPage = () => {
                   onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                   edge="end"
                 >
-                  {showConfirmPassword ? <VisibilityOffIcon /> : <VisibilityIcon />}
+                  {showConfirmPassword ? (
+                    <VisibilityOffIcon />
+                  ) : (
+                    <VisibilityIcon />
+                  )}
                 </IconButton>
               </InputAdornment>
             ),
           }}
         />
 
+        {/* terms agreement  heckbox */}
         <FormControlLabel
           control={
             <Checkbox
               checked={agreeToTerms}
               onChange={(e) => setAgreeToTerms(e.target.checked)}
-              color={!agreeToTerms && formik.submitCount > 0 ? "error" : "primary"}
+              color={
+                !agreeToTerms && formik.submitCount > 0 ? "error" : "primary"
+              }
             />
           }
           label={
@@ -206,8 +282,8 @@ const RegisterPage = () => {
               I agree to the{" "}
               <Link href="#" sx={{ color: "#42A605", textDecoration: "none" }}>
                 Terms of Service
-              </Link>
-              {" "}and{" "}
+              </Link>{" "}
+              and{" "}
               <Link href="#" sx={{ color: "#42A605", textDecoration: "none" }}>
                 Privacy Policy
               </Link>
@@ -216,11 +292,16 @@ const RegisterPage = () => {
           sx={{ mb: 3 }}
         />
         {!agreeToTerms && formik.submitCount > 0 && (
-          <Typography color="error" variant="caption" sx={{ mt: -2, mb: 2, display: "block" }}>
+          <Typography
+            color="error"
+            variant="caption"
+            sx={{ mt: -2, mb: 2, display: "block" }}
+          >
             You must agree to the terms and conditions
           </Typography>
         )}
 
+        {/* submit button */}
         <Button
           type="submit"
           fullWidth
@@ -244,6 +325,7 @@ const RegisterPage = () => {
           )}
         </Button>
 
+        {/* login link */}
         <Box sx={{ textAlign: "center" }}>
           <Typography
             variant="body2"
@@ -262,6 +344,7 @@ const RegisterPage = () => {
             </Link>
           </Typography>
         </Box>
+
       </Box>
     </AuthLayout>
   );

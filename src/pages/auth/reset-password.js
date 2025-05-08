@@ -64,7 +64,7 @@ const PasswordStrengthIndicator = ({ password }) => {
   };
 
   return (
-    <Box sx={{ width: "100%", mt: 1 }}>
+    <Box sx={{ width: "100%", mb:2 }}>
       <Box sx={{ display: "flex", justifyContent: "space-between", mb: 0.5 }}>
         <Typography variant="caption" sx={{ fontFamily: "Inter" }}>
           Password strength
@@ -155,7 +155,7 @@ const ResetPasswordPage = () => {
           onBlur={formik.handleBlur}
           error={formik.touched.password && Boolean(formik.errors.password)}
           helperText={formik.touched.password && formik.errors.password}
-          sx={{ mb: 2 }}
+          sx={{ mb: 1 }}
           InputProps={{
             startAdornment: (
               <InputAdornment position="start">
@@ -236,8 +236,6 @@ const ResetPasswordPage = () => {
               bgcolor: "#C4E3B2",
               color: "#fff"
             },
-            fontFamily: "Inter",
-            fontWeight: 600,
             mb: 3
           }}
         >
@@ -249,7 +247,7 @@ const ResetPasswordPage = () => {
         </Button>
 
         <Box sx={{ textAlign: "center" }}>
-          <Typography variant="body2" sx={{ fontFamily: "Inter", color: "text.secondary" }}>
+          <Typography variant="body2" sx={{  color: "text.secondary" }}>
             Remember your password?{" "}
             <Link href="/auth/login" sx={{ color: "#42A605", textDecoration: "none", fontWeight: 500 }}>
               Back to Login
@@ -271,10 +269,10 @@ const ResetPasswordPage = () => {
           <DialogContent>
             <Box sx={{ textAlign: "center", py: 2 }}>
               <CheckCircleIcon sx={{ fontSize: 64, color: "#42A605", mb: 2 }} />
-              <Typography variant="h5" sx={{ fontFamily: "Inter", fontWeight: 600, mb: 1 }}>
+              <Typography variant="h5" sx={{ fontWeight: 600, mb: 1 }}>
                 Password Reset Successful
               </Typography>
-              <Typography variant="body1" sx={{ fontFamily: "Inter", color: "text.secondary", mb: 3 }}>
+              <Typography variant="body1" sx={{  color: "text.secondary", mb: 3 }}>
                 Your password has been reset successfully. You can now log in with your new password.
               </Typography>
               <Button
@@ -287,7 +285,7 @@ const ResetPasswordPage = () => {
                   "&:hover": {
                     bgcolor: "#3a9504"
                   },
-                  fontFamily: "Inter",
+                
                   fontWeight: 600
                 }}
               >

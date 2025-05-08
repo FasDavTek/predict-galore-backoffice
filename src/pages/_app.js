@@ -8,6 +8,7 @@ import { ErrorBoundary } from "react-error-boundary";
 import { ThemeProvider } from "@mui/material/styles";
 import CssBaseline from "@mui/material/CssBaseline";
 import theme from "@/themes/theme";
+import { AuthProvider } from "@/context/AuthContext";
 
 function ErrorFallback({ error }) {
   return (
@@ -33,7 +34,9 @@ function App({ Component, ...rest }) {
           <ThemeProvider theme={theme}>
             <CssBaseline />
             <Toaster position="top-center" />
-            <Component {...props.pageProps} />
+            <AuthProvider>
+              <Component {...props.pageProps} />
+            </AuthProvider>
           </ThemeProvider>
         </Provider>
       </ErrorBoundary>

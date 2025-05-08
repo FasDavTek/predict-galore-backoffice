@@ -158,7 +158,11 @@ const OTPVerificationPage = () => {
         </Box>
 
         {formik.submitCount > 0 && formik.errors.otp && (
-          <Typography color="error" variant="caption" sx={{ display: 'block', mb: 2, textAlign: 'center' }}>
+          <Typography color="error" variant="caption" sx={{ 
+            display: 'block', 
+            mb: 2, 
+            textAlign: 'center' 
+            }}>
             {formik.errors.otp}
           </Typography>
         )}
@@ -174,7 +178,7 @@ const OTPVerificationPage = () => {
             '&:hover': {
               bgcolor: '#3a9504'
             },
-            fontFamily: 'Inter',
+            // fontFamily: 'Inter',
             fontWeight: 600,
             mb: 3
           }}
@@ -187,7 +191,12 @@ const OTPVerificationPage = () => {
         </Button>
 
         <Box sx={{ textAlign: 'center' }}>
-          <Typography variant="body2" sx={{ fontFamily: 'Inter', color: 'text.secondary', mb: 1 }}>
+          <Typography variant="body2" sx={{ 
+            // fontFamily: 'Inter', 
+            color: 'text.secondary', mb: 1 
+            }}
+            >
+
             Didn&apos;t receive the code?{' '}
             <Link 
               href="#" 
@@ -205,7 +214,11 @@ const OTPVerificationPage = () => {
               )}
             </Link>
           </Typography>
-          <Typography variant="body2" sx={{ fontFamily: 'Inter', color: 'text.secondary' }}>
+          <Typography variant="body2" sx={{
+            //  fontFamily: 'Inter',
+              color: 'text.secondary' 
+              }}
+              >
             Wrong email address?{' '}
             <Link 
               href="/auth/verify-email" 

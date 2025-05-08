@@ -57,6 +57,9 @@ const TransactionsPage = () => {
   const statusFilter = useSelector(selectStatusFilter);
   const planFilter = useSelector(selectPlanFilter);
   
+
+   const [viewMode, setViewMode] = useState("list"); // 'list', 'detail', 
+
   // Local state for selected transaction and notifications
   const [selectedTransaction, setSelectedTransaction] = useState(null);
   const [notification, setNotification] = useState({

@@ -1,3 +1,4 @@
+// components/dashboard/settings/Teams/RolesAndPermissions.js
 import { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { 
@@ -107,6 +108,18 @@ const RolesAndPermissions = ({ onBack, showNotification }) => {
     page * rowsPerPage
   );
 
+  /**
+   * Safely format permissions for display
+   * Handles cases where permissions might be undefined or not an array
+   * @param {Array|undefined} permissions - The permissions to format
+   * @returns {string} Formatted permissions string
+   */
+  const formatPermissions = (permissions) => {
+    if (!permissions) return 'No permissions';
+    if (!Array.isArray(permissions)) return permissions.toString();
+    return permissions.length > 0 ? permissions.join(', ') : 'No permissions';
+  };
+
   // Handlers
   const handleMenuOpen = (event, role) => {
     setAnchorEl(event.currentTarget);
@@ -130,11 +143,17 @@ const RolesAndPermissions = ({ onBack, showNotification }) => {
 
   const handleEditClick = () => {
     if (!selectedRole) return;
+    
+    // Ensure permissions is always an array when setting form state
+    const permissions = Array.isArray(selectedRole.permissions) 
+      ? [...selectedRole.permissions] 
+      : [];
+      
     setRoleForm({
       id: selectedRole.id,
       name: selectedRole.name,
       description: selectedRole.description,
-      permissions: [...selectedRole.permissions]
+      permissions
     });
     setOpenEditDialog(true);
     handleMenuClose();
@@ -154,9 +173,11 @@ const RolesAndPermissions = ({ onBack, showNotification }) => {
 
   const handlePermissionToggle = (permission) => {
     setRoleForm(prev => {
-      const newPermissions = prev.permissions.includes(permission)
-        ? prev.permissions.filter(p => p !== permission)
-        : [...prev.permissions, permission];
+      // Ensure permissions is always treated as an array
+      const currentPermissions = Array.isArray(prev.permissions) ? prev.permissions : [];
+      const newPermissions = currentPermissions.includes(permission)
+        ? currentPermissions.filter(p => p !== permission)
+        : [...currentPermissions, permission];
       
       return { ...prev, permissions: newPermissions };
     });
@@ -164,13 +185,18 @@ const RolesAndPermissions = ({ onBack, showNotification }) => {
 
   const handleSaveRole = async (isEdit = false) => {
     try {
+      // Ensure permissions is always an array before saving
+      const permissionsToSave = Array.isArray(roleForm.permissions) 
+        ? roleForm.permissions 
+        : [];
+      
       if (isEdit) {
         await dispatch(updateRole({
           roleId: roleForm.id,
           roleData: {
             name: roleForm.name,
             description: roleForm.description,
-            permissions: roleForm.permissions
+            permissions: permissionsToSave
           }
         })).unwrap();
         showNotification('Role updated successfully!', 'success');
@@ -178,7 +204,7 @@ const RolesAndPermissions = ({ onBack, showNotification }) => {
         await dispatch(createRole({
           name: roleForm.name,
           description: roleForm.description,
-          permissions: roleForm.permissions
+          permissions: permissionsToSave
         })).unwrap();
         showNotification('Role created successfully!', 'success');
       }
@@ -193,20 +219,28 @@ const RolesAndPermissions = ({ onBack, showNotification }) => {
   return (
     <Box>
       {/* Header and Actions */}
+      <Box>
+
+      <Box
+        sx={{display:'flex', flexDirection:'row', gap: 0.5, alignItems: 'center', mb: 2 }}
+        >
       <Button 
         startIcon={<BackIcon />} 
         onClick={onBack}
-        sx={{ mb: 2 }}
+        variant='text'
       >
-        Back
       </Button>
 
-      <Typography variant="h5" sx={{ mb: 2 }}>
+      <Typography variant="h5" >
         Roles and Permissions
       </Typography>
+      </Box>
+
       <Typography variant="body1" sx={{ mb: 4 }}>
         Manage system roles and their permissions
       </Typography>
+
+      </Box>
 
       {/* Search and Add Role */}
       <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3 }}>
@@ -234,12 +268,6 @@ const RolesAndPermissions = ({ onBack, showNotification }) => {
         </Button>
       </Box>
 
-      {error && (
-        <Typography color="error" sx={{ mb: 2 }}>
-          {error.message || 'Error loading roles'}
-        </Typography>
-      )}
-
       {/* Roles Table */}
       <TableContainer component={Paper}>
         <Table>
@@ -266,7 +294,7 @@ const RolesAndPermissions = ({ onBack, showNotification }) => {
                   </TableCell>
                   <TableCell>{role.description}</TableCell>
                   <TableCell>
-                    {role.permissions.join(', ')}
+                    {formatPermissions(role.permissions)}
                   </TableCell>
                   <TableCell align="right">
                     <IconButton

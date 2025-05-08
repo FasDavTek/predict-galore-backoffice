@@ -229,11 +229,7 @@ const TeamsTab = ({ showNotification }) => {
                   Invite Members
                 </Button>
               </Box>
-              {error && (
-                <Typography color="error" variant="body2">
-                  {error.message || 'Error loading team members'}
-                </Typography>
-              )}
+              
             </Box>
             
             {/* Right Column - Search, Table, and Pagination */}

@@ -18,8 +18,8 @@ import {
  * NotificationsTab - Handles notification preferences
  * Features:
  * - Per-category notification toggles (in-app, push, email)
- * - Real-time saving of preferences
- * - Loading states
+ * - Save all changes with "Save Changes" button
+ * - Loading states and error handling
  */
 const NotificationsTab = ({ showNotification }) => {
   const dispatch = useDispatch();
@@ -41,10 +41,15 @@ const NotificationsTab = ({ showNotification }) => {
     securityAlerts: { inApp: true, push: true, email: true }
   });
 
+  // Track changes for save button
+  const [hasChanges, setHasChanges] = useState(false);
+  const [initialSettings, setInitialSettings] = useState(null);
+
   // Initialize with Redux data when loaded
   useEffect(() => {
     if (settings) {
       setNotificationSettings(settings);
+      setInitialSettings(settings);
     }
   }, [settings]);
 
@@ -53,8 +58,8 @@ const NotificationsTab = ({ showNotification }) => {
     dispatch(fetchNotificationSettings());
   }, [dispatch]);
 
-  // Handle toggle changes and save automatically
-  const handleToggleChange = (category, type) => async (event) => {
+  // Handle toggle changes
+  const handleToggleChange = (category, type) => (event) => {
     const newSettings = {
       ...notificationSettings,
       [category]: {
@@ -64,14 +69,21 @@ const NotificationsTab = ({ showNotification }) => {
     };
     
     setNotificationSettings(newSettings);
-    
+    setHasChanges(true);
+  };
+
+  // Save all changes
+  const handleSaveChanges = async () => {
     try {
-      await dispatch(updateNotificationSettings(newSettings)).unwrap();
+      await dispatch(updateNotificationSettings(notificationSettings)).unwrap();
       showNotification('Notification settings updated!');
+      setInitialSettings(notificationSettings);
+      setHasChanges(false);
     } catch (error) {
       showNotification('Failed to update notifications', 'error');
-      // Revert to previous settings on error
-      setNotificationSettings(notificationSettings);
+      // Revert to last saved settings on error
+      setNotificationSettings(initialSettings);
+      setHasChanges(false);
     }
   };
 
@@ -107,11 +119,21 @@ const NotificationsTab = ({ showNotification }) => {
             Get notifications to find out what&apos;s going on when you&apos;re
             not online. You can turn them off anytime.
           </Typography>
-          {error && (
-            <Typography color="error" variant="body2">
-              {error.message || 'Failed to load notifications'}
-            </Typography>
-          )}
+            {/* Save Changes Button (Sticky at top-right) */}
+            
+            <Button
+              variant="contained"
+              onClick={handleSaveChanges}
+              disabled={!hasChanges || loading}
+              sx={{
+                minWidth: 120,
+                opacity: hasChanges ? 1 : 0,
+                transition: 'opacity 0.3s ease'
+              }}
+            >
+              {loading ? 'Saving...' : 'Save Changes'}
+            </Button>
+      
         </Box>
 
         {/* Right Column */}

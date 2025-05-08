@@ -1,17 +1,17 @@
 // pages/predictions.js
-import React, { useEffect, useState } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
-import { ErrorBoundary } from 'react-error-boundary';
-import { Box, Snackbar, Alert } from '@mui/material';
-import { SportsSoccer as PredictionsIcon } from '@mui/icons-material';
+import React, { useEffect, useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import { ErrorBoundary } from "react-error-boundary";
+import { Box, Snackbar, Alert } from "@mui/material";
+import { SportsSoccer as PredictionsIcon } from "@mui/icons-material";
 
 // Component imports
-import DashboardLayout from '@/layouts/DashboardLayout';
-import { Header } from '@/components/predictions/Header';
-import PredictionStat from '@/components/predictions/PredictionStat';
-import PredictionsTable from '@/components/predictions/PredictionsTable';
-import PredictionDetail from '@/components/predictions/PredictionDetail';
-import NewPredictionForm from '@/components/predictions/NewPredictionForm';
+import DashboardLayout from "@/layouts/DashboardLayout";
+import { Header } from "@/components/predictions/Header";
+import PredictionStat from "@/components/predictions/PredictionStat";
+import PredictionsTable from "@/components/predictions/PredictionsTable";
+import PredictionDetail from "@/components/predictions/PredictionDetail";
+import NewPredictionForm from "@/components/predictions/NewPredictionForm";
 
 // Redux imports
 import {
@@ -34,7 +34,7 @@ import {
   selectSearchQuery,
   selectSportFilter,
   selectStatusFilter,
-} from '@/store/slices/predictionSlice';
+} from "@/store/slices/predictionSlice";
 
 /**
  * Error boundary fallback component
@@ -53,7 +53,7 @@ function ErrorFallback({ error }) {
  */
 const PredictionsPage = () => {
   const dispatch = useDispatch();
-  
+
   // Select data from Redux store
   const stats = useSelector(selectPredictionsStats);
   const predictions = useSelector(selectPredictionsList);
@@ -62,15 +62,15 @@ const PredictionsPage = () => {
   const searchQuery = useSelector(selectSearchQuery);
   const sportFilter = useSelector(selectSportFilter);
   const statusFilter = useSelector(selectStatusFilter);
-  
+
   // Local state for selected prediction and notifications
-  const [viewMode, setViewMode] = useState('list'); // 'list', 'detail', or 'create'
+  const [viewMode, setViewMode] = useState("list"); // 'list', 'detail', or 'create'
   const [selectedPrediction, setSelectedPrediction] = useState(null);
   const [isCreatingNew, setIsCreatingNew] = useState(false);
   const [notification, setNotification] = useState({
     open: false,
-    message: '',
-    severity: 'success'
+    message: "",
+    severity: "success",
   });
 
   // Fetch data on mount and when filters change
@@ -101,47 +101,45 @@ const PredictionsPage = () => {
   const handleExportCSV = async () => {
     try {
       await dispatch(exportPredictionsCSV());
-      showNotification('Export started successfully', 'success');
+      showNotification("Export started successfully", "success");
     } catch (error) {
-      showNotification('Export failed', 'error');
+      showNotification("Export failed", "error");
     }
   };
-
 
   // Handler for creating new prediction
   const handleCreateNew = async (newPrediction) => {
     try {
       await dispatch(createPrediction(newPrediction));
-      showNotification('Prediction created successfully', 'success');
-      setViewMode('list');
+      showNotification("Prediction created successfully", "success");
+      setViewMode("list");
     } catch (error) {
-      showNotification('Failed to create prediction', 'error');
+      showNotification("Failed to create prediction", "error");
     }
   };
 
   const handlePredictionSelect = (prediction) => {
     setSelectedPrediction(prediction);
-    setViewMode('detail');
+    setViewMode("detail");
   };
 
   const handleBackToList = () => {
-    setViewMode('list');
+    setViewMode("list");
   };
 
   const handleNewPredictionClick = () => {
-    setViewMode('create');
+    setViewMode("create");
   };
 
   // Handler for closing notifications
   const handleNotificationClose = () => {
-    setNotification(prev => ({ ...prev, open: false }));
+    setNotification((prev) => ({ ...prev, open: false }));
   };
 
   // Helper to show notifications
   const showNotification = (message, severity) => {
     setNotification({ open: true, message, severity });
   };
-
 
   return (
     <DashboardLayout>
@@ -154,9 +152,20 @@ const PredictionsPage = () => {
           onTimeRangeChange={handleTimeRangeChange}
         />
 
-     {/* Stats cards section - only shown when viewing list */}
-     {viewMode === 'list' && (
-          <Box sx={{ mb: 4, display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: 'repeat(4, 1fr)' }, gap: 3 }}>
+        {/* Stats cards section - only shown when viewing list */}
+        {viewMode === "list" && (
+          <Box
+            sx={{
+              mb: 4,
+              display: "grid",
+              gridTemplateColumns: {
+                xs: "1fr",
+                sm: "repeat(2, 1fr)",
+                md: "repeat(4, 1fr)",
+              },
+              gap: 3,
+            }}
+          >
             {stats.map((card, index) => (
               <PredictionStat
                 key={index}
@@ -168,10 +177,9 @@ const PredictionsPage = () => {
           </Box>
         )}
 
-
         {/* Main predictions table */}
-        <Box sx={{ width: '100%' }}>
-           {viewMode === 'list' && (
+        <Box sx={{ width: "100%" }}>
+          {viewMode === "list" && (
             <PredictionsTable
               predictions={predictions}
               loading={loading.predictions}
@@ -188,16 +196,15 @@ const PredictionsPage = () => {
             />
           )}
 
-
-{viewMode === 'detail' && selectedPrediction && (
-            <PredictionDetail 
-              prediction={selectedPrediction} 
+          {viewMode === "detail" && selectedPrediction && (
+            <PredictionDetail
+              prediction={selectedPrediction}
               onBack={handleBackToList}
             />
           )}
 
-          {viewMode === 'create' && (
-            <NewPredictionForm 
+          {viewMode === "create" && (
+            <NewPredictionForm
               onBack={handleBackToList}
               onSubmit={handleCreateNew}
             />
@@ -210,10 +217,10 @@ const PredictionsPage = () => {
           autoHideDuration={6000}
           onClose={handleNotificationClose}
         >
-          <Alert 
-            onClose={handleNotificationClose} 
+          <Alert
+            onClose={handleNotificationClose}
             severity={notification.severity}
-            sx={{ width: '100%' }}
+            sx={{ width: "100%" }}
           >
             {notification.message}
           </Alert>

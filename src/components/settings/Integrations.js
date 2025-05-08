@@ -33,13 +33,22 @@ import {
   selectNotificationsEnabled
 } from "@/store/slices/settingsSlice";
 
+/**
+ * IntegrationsTab - Component for managing third-party integrations
+ * Features:
+ * - View and toggle integration status
+ * - Configure integration credentials
+ * - Save all changes at once
+ */
 const IntegrationsTab = ({ showNotification }) => {
+  // Redux state management
   const dispatch = useDispatch();
   const integrations = useSelector(selectIntegrations);
   const loading = useSelector(selectIntegrationsLoading);
   const error = useSelector(selectIntegrationsError);
   const notificationsEnabled = useSelector(selectNotificationsEnabled);
   
+  // Dialog state management
   const [openDialog, setOpenDialog] = useState(false);
   const [selectedIntegration, setSelectedIntegration] = useState(null);
   const [formData, setFormData] = useState({
@@ -47,13 +56,24 @@ const IntegrationsTab = ({ showNotification }) => {
     secretKey: "",
     enabled: false
   });
+  
+  // UI state for sensitive data visibility
   const [showPublicKey, setShowPublicKey] = useState(false);
   const [showSecretKey, setShowSecretKey] = useState(false);
+  
+  // Track pending changes for bulk save
+  const [pendingChanges, setPendingChanges] = useState([]);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
+  // Fetch integrations on component mount
   useEffect(() => {
     dispatch(fetchIntegrations());
   }, [dispatch]);
 
+  /**
+   * Handle notifications toggle
+   * Updates global notification setting and shows status message
+   */
   const handleNotificationsToggle = () => {
     dispatch(toggleNotifications(!notificationsEnabled))
       .unwrap()
@@ -69,27 +89,56 @@ const IntegrationsTab = ({ showNotification }) => {
       });
   };
 
+  /**
+   * Handle integration toggle changes
+   * Tracks changes for bulk save rather than saving immediately
+   * @param {string} integrationId - ID of the integration being toggled
+   * @param {boolean} newValue - New enabled state
+   */
   const handleIntegrationToggle = (integrationId, newValue) => {
     const integration = integrations.find(i => i.id === integrationId);
     if (integration) {
-      dispatch(updateIntegration({
-        id: integrationId,
-        integrationData: { ...integration, enabled: newValue }
-      }))
-        .unwrap()
-        .then(() => {
-          showNotification(
-            newValue 
-              ? "Integration enabled" 
-              : "Integration disabled"
-          );
-        })
-        .catch((error) => {
-          showNotification(error.message || "Failed to update integration", "error");
-        });
+      // Add to pending changes or update existing change
+      setPendingChanges(prev => {
+        const existingChangeIndex = prev.findIndex(c => c.id === integrationId);
+        if (existingChangeIndex >= 0) {
+          const updated = [...prev];
+          updated[existingChangeIndex] = { ...integration, enabled: newValue };
+          return updated;
+        }
+        return [...prev, { ...integration, enabled: newValue }];
+      });
+      setHasUnsavedChanges(true);
     }
   };
 
+  /**
+   * Save all pending integration changes at once
+   */
+  const handleSaveAllChanges = async () => {
+    if (pendingChanges.length === 0) return;
+    
+    try {
+      // Process all pending changes sequentially
+      for (const change of pendingChanges) {
+        await dispatch(updateIntegration({
+          id: change.id,
+          integrationData: change
+        })).unwrap();
+      }
+      
+      showNotification(`${pendingChanges.length} integration(s) updated successfully!`);
+      setPendingChanges([]);
+      setHasUnsavedChanges(false);
+    } catch (error) {
+      showNotification(error.message || "Failed to update integrations", "error");
+    }
+  };
+
+  /**
+   * Open integration configuration dialog
+   * @param {Object} integration - Integration to configure
+   */
   const handleViewIntegration = (integration) => {
     setSelectedIntegration(integration);
     setFormData({
@@ -100,6 +149,7 @@ const IntegrationsTab = ({ showNotification }) => {
     setOpenDialog(true);
   };
 
+  // Close dialog and reset related states
   const handleCloseDialog = () => {
     setOpenDialog(false);
     setSelectedIntegration(null);
@@ -107,6 +157,7 @@ const IntegrationsTab = ({ showNotification }) => {
     setShowSecretKey(false);
   };
 
+  // Handle form input changes for integration configuration
   const handleInputChange = (field) => (event) => {
     setFormData((prev) => ({
       ...prev,
@@ -114,6 +165,10 @@ const IntegrationsTab = ({ showNotification }) => {
     }));
   };
 
+  /**
+   * Save integration configuration
+   * Updates single integration with form data
+   */
   const handleSave = () => {
     if (!selectedIntegration) return;
     
@@ -138,7 +193,7 @@ const IntegrationsTab = ({ showNotification }) => {
 
   return (
     <Box>
-      {/* Notifications Section */}
+      {/* Main content grid with two columns */}
       <div className="grid grid-cols-1 md:grid-cols-12 gap-8">
         {/* Left Column - Header and Description */}
         <Box className="md:col-span-4">
@@ -146,40 +201,43 @@ const IntegrationsTab = ({ showNotification }) => {
             Integrations
           </Typography>
           <Typography variant="body2" sx={{ mb: 3 }}>
-            Get notifications to find out what&apos;s going on when you&apos;re not online. 
-            You can turn them off anytime.
+            Connect and manage third-party services. Configure credentials and 
+            enable/disable integrations as needed.
           </Typography>
-          
-          {/* <Button 
-            variant="contained" 
-            onClick={handleNotificationsToggle}
-            disabled={loading}
-            sx={{ mb: 4 }}
-          >
-            {notificationsEnabled ? 'Disable Notifications' : 'Enable Notifications'}
-          </Button> */}
-          
-          {error && (
-            <Typography color="error" variant="body2">
-              {error.message || "Error loading integrations"}
-            </Typography>
-          )}
+
+          {/* Save Changes Button - Only shows when there are pending changes */}
+       
+            <Button
+              variant="contained"
+              onClick={handleSaveAllChanges}
+              disabled={loading || !hasUnsavedChanges}
+            >
+              {loading ? 'Saving...' : `Save Changes `}
+            </Button>
+     
         </Box>
 
-        {/* Right Column - Integration Cards */}
+        {/* Right Column - Integration Cards and Save Button */}
         <Box className="md:col-span-8">
+
+          {/* Integration Cards Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {integrations.map((integration) => (
               <Card key={integration.id} sx={{ mb: 2 }}>
                 <CardContent>
-                  <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 2 }}>
+                  {/* Integration Header with Toggle */}
+                  <Box sx={{ 
+                    display: "flex", 
+                    justifyContent: "space-between", 
+                    alignItems: "center", 
+                    mb: 2 
+                  }}>
                     <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
                       <Image
                         src="/paystack-logo.svg"
                         alt={integration.name}
                         width={20}
                         height={20}
-                        
                       />
                       <Typography variant="subtitle1" fontWeight="medium">
                         {integration.name}
@@ -193,17 +251,19 @@ const IntegrationsTab = ({ showNotification }) => {
                     />
                   </Box>
                   
+                  {/* Integration Description */}
                   <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
                     {integration.description}
                   </Typography>
                   
+                  {/* Configuration Button */}
                   <Button
                     variant="outlined"
                     fullWidth
                     onClick={() => handleViewIntegration(integration)}
                     disabled={loading}
                   >
-                    View Integration
+                    Configure Integration
                   </Button>
                 </CardContent>
               </Card>
@@ -212,48 +272,50 @@ const IntegrationsTab = ({ showNotification }) => {
         </Box>
       </div>
 
-      {/* Integration Details Dialog */}
+      {/* Integration Configuration Dialog */}
       <Dialog
         open={openDialog}
         onClose={handleCloseDialog}
         maxWidth="sm"
         fullWidth
       >
-          <IconButton onClick={handleCloseDialog}>
+        {/* Dialog Header with Close Button */}
+        <DialogTitle sx={{ 
+          display: "flex",  
+          flexDirection: "column",
+          justifyContent: "center", 
+          alignItems: "center",
+          position: 'relative'
+        }}>
+          <IconButton 
+            onClick={handleCloseDialog}
+            sx={{ position: 'absolute', right: 8, top: 8 }}
+          >
             <CloseIcon />
           </IconButton>
 
-        <DialogTitle sx={{ display: "flex",  flexDirection: "column",justifyContent: "center", alignItems: "center" }}>
-
-          {/* <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 2}}> */}
-            <Image
-              src="/paystack-logo.svg"
-              alt={selectedIntegration?.name}
-              width={20}
-              height={20}
-            />
-            <Typography variant="h6">
-              {selectedIntegration?.name} Integration
-            </Typography>
-
-            <Typography variant="body1" sx={{ mb: 3 }}>
-            {selectedIntegration?.description}
+          {/* Integration Logo and Title */}
+          <Image
+            src="/paystack-logo.svg"
+            alt={selectedIntegration?.name}
+            width={20}
+            height={20}
+          />
+          <Typography variant="h6">
+            {selectedIntegration?.name} Integration
           </Typography>
 
-          {/* </Box> */}
-        
+          <Typography variant="body1" sx={{ mb: 3 }}>
+            {selectedIntegration?.description}
+          </Typography>
         </DialogTitle>
         
+        {/* Dialog Content - Configuration Form */}
         <DialogContent className="flex flex-col gap-3">
-          {/* <Divider sx={{ my: 2 }} /> */}
-
-          {/* <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: "medium" }}>
-            Public Key
-          </Typography> */}
-
+          {/* Public Key Input */}
           <TextField
             fullWidth
-            label="public key"
+            label="Public Key"
             value={formData.publicKey}
             onChange={handleInputChange("publicKey")}
             sx={{ mb: 3 }}
@@ -273,12 +335,10 @@ const IntegrationsTab = ({ showNotification }) => {
             }}
           />
 
-          {/* <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: "medium" }}>
-            Secret Key
-          </Typography> */}
+          {/* Secret Key Input */}
           <TextField
             fullWidth
-            label="secret key"
+            label="Secret Key"
             value={formData.secretKey}
             onChange={handleInputChange("secretKey")}
             sx={{ mb: 3 }}
@@ -298,8 +358,8 @@ const IntegrationsTab = ({ showNotification }) => {
             }}
           />
 
-             {/* integration toggle  */}
-             <FormControlLabel
+          {/* Integration Toggle */}
+          <FormControlLabel
             control={
               <Switch
                 checked={formData.enabled}
@@ -312,6 +372,7 @@ const IntegrationsTab = ({ showNotification }) => {
           />
         </DialogContent>
         
+        {/* Dialog Actions - Save/Cancel Buttons */}
         <DialogActions sx={{ p: 3 }}>
           <Button 
             onClick={handleCloseDialog}

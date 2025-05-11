@@ -32,12 +32,15 @@ const AskHuddle = () => {
   const [open, setOpen] = useState(false);
   const [prompt, setPrompt] = useState("");
   const [chatHistory, setChatHistory] = useState([]);
+  const [chatStarted, setChatStarted] = useState(false); // Track chat start
 
   const handleOpen = () => setOpen(true);
+
   const handleClose = () => {
     setOpen(false);
     setPrompt("");
     setChatHistory([]);
+    setChatStarted(false); // Reset when closed
   };
 
   const handlePromptClick = (value) => {
@@ -47,56 +50,18 @@ const AskHuddle = () => {
 
   const handlePromptChange = (e) => setPrompt(e.target.value);
 
-  //   const handleSend = async (message) => {
-  //   const userMessage = message || prompt.trim();
-  //   if (!userMessage) return;
-
-  //   // Show user's message immediately
-  //   setChatHistory((prev) => [...prev, { sender: "user", message: userMessage }]);
-  //   setPrompt("");
-
-  //   try {
-  //     const res = await fetch("/api/huddle", {
-  //       method: "POST",
-  //       headers: {
-  //         "Content-Type": "application/json",
-  //       },
-  //       body: JSON.stringify({ message: userMessage }),
-  //     });
-
-  //     const data = await res.json();
-
-  //     if (!res.ok) throw new Error(data.message || "Something went wrong.");
-
-  //     setChatHistory((prev) => [...prev, { sender: "bot", message: data.reply }]);
-  //   } catch (error) {
-  //     setChatHistory((prev) => [
-  //       ...prev,
-  //       {
-  //         sender: "bot",
-  //         message: "❌ Failed to fetch response. Please try again later.",
-  //       },
-  //     ]);
-  //     console.error("Error sending message:", error);
-  //   }
-  // };
-
-  // simulate logic for chat temporarily
-
   const handleSend = (message) => {
     const userMessage = message || prompt.trim();
     if (!userMessage) return;
 
-    // Simulate sending and receiving a reply
-    setChatHistory((prev) => [
-      ...prev,
-      { sender: "user", message: userMessage },
-    ]);
+    setChatHistory((prev) => [...prev, { sender: "user", message: userMessage }]);
     setPrompt("");
+    setChatStarted(true); // Mark chat as started
+
+    // Simulated bot response
     setTimeout(() => {
       setChatHistory((prev) => [
         ...prev,
-        { sender: "user", message: userMessage },
         {
           sender: "bot",
           message: `Here are some insights based on "${userMessage}". (Simulated Response)`,
@@ -107,7 +72,6 @@ const AskHuddle = () => {
 
   return (
     <>
-      {/* Floating Button */}
       <Button
         onClick={handleOpen}
         sx={{
@@ -144,7 +108,6 @@ const AskHuddle = () => {
         >
           Ask Huddle
         </Typography>
-
         <Box
           sx={{
             width: 24,
@@ -161,7 +124,6 @@ const AskHuddle = () => {
         </Box>
       </Button>
 
-      {/* Dialog */}
       <Dialog
         open={open}
         onClose={handleClose}
@@ -197,59 +159,77 @@ const AskHuddle = () => {
         </DialogTitle>
 
         <DialogContent>
-          {/* Prompt Buttons */}
-          <Typography fontWeight={600} mb={1}>
-            Select a Prompt to Fetch Insights
-          </Typography>
-          <Grid container spacing={1} mb={2}>
-            {promptOptions.map((option) => (
-              <Grid item xs={6} sm={4} key={option}>
-                <Button
-                  fullWidth
-                  variant="contained"
-                  sx={{
-                    backgroundColor: "#a9dfbf",
-                    color: "#000",
-                    textTransform: "none",
-                    "&:hover": { backgroundColor: "#82c99f" },
-                    fontWeight: 500,
-                  }}
-                  onClick={() => handlePromptClick(option)}
-                >
-                  {option}
-                </Button>
+          {!chatStarted && (
+            <>
+              <Typography fontWeight={600} mb={1}>
+                Select a Prompt to Fetch Insights
+              </Typography>
+              <Grid container spacing={1} mb={2}>
+                {promptOptions.map((option) => (
+                  <Grid item xs={6} sm={4} key={option}>
+                    <Button
+                      fullWidth
+                      variant="contained"
+                      sx={{
+                        backgroundColor: "#a9dfbf",
+                        color: "#000",
+                        textTransform: "none",
+                        "&:hover": { backgroundColor: "#82c99f" },
+                        fontWeight: 500,
+                      }}
+                      onClick={() => handlePromptClick(option)}
+                    >
+                      {option}
+                    </Button>
+                  </Grid>
+                ))}
               </Grid>
-            ))}
-          </Grid>
+            </>
+          )}
 
-          {/* Chat Messages */}
           <Box
             sx={{
-              maxHeight: "200px",
+              maxHeight: 240,
               overflowY: "auto",
+              display: "flex",
+              flexDirection: "column",
+              gap: 1,
               mb: 2,
               px: 1,
             }}
           >
+            {/* chat history */}
             {chatHistory.map((chat, index) => (
-              <Typography
+              <Box
                 key={index}
                 sx={{
-                  mb: 1,
-                  color: chat.sender === "user" ? "#333" : "#4caf50",
-                  fontWeight: chat.sender === "bot" ? 500 : 400,
+                  alignSelf: chat.sender === "user" ? "flex-end" : "flex-start",
+                  bgcolor: chat.sender === "user" ? "#e0f7fa" : "#dcedc8",
+                  px: 2,
+                  py: 1,
+                  borderRadius: 2,
+                  maxWidth: "80%",
+                  boxShadow: 1,
+                  mb: 2,
                 }}
               >
-                <strong>{chat.sender === "user" ? "You" : "Huddle"}:</strong>{" "}
-                {chat.message}
-              </Typography>
+                <Typography
+                  variant="body2"
+                  sx={{ fontWeight: 500, color: "#333" }}
+                >
+                  {/* <strong>
+                  {chat.sender === "user" ? "You" : "Huddle"}:
+                  </strong>{" "} */}
+                  
+                  {chat.message}
+                </Typography>
+              </Box>
             ))}
           </Box>
 
-          {/* Chat Input */}
           <TextField
             fullWidth
-            placeholder="Select a prompt to get started..."
+            placeholder="Type your message or select a prompt..."
             value={prompt}
             onChange={handlePromptChange}
             onKeyDown={(e) => e.key === "Enter" && handleSend()}

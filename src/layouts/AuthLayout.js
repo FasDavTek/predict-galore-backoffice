@@ -39,14 +39,14 @@ export const AuthLayout = ({ children, title, subtitle }) => {
     error: quoteError,
   } = useSelector((state) => state.quote);
 
-  useEffect(() => {
-    dispatch(fetchQuote());
-    const interval = setInterval(() => {
-      dispatch(fetchQuote());
-    }, 10000);
+  // useEffect(() => {
+  //   dispatch(fetchQuote());
+  //   const interval = setInterval(() => {
+  //     dispatch(fetchQuote());
+  //   }, 10000);
 
-    return () => clearInterval(interval);
-  }, [dispatch]);
+  //   return () => clearInterval(interval);
+  // }, [dispatch]);
 
   // Use fallback quote if there's an error
   const displayQuote = quoteError ? fallbackQuote : quote;

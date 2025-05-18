@@ -72,6 +72,8 @@ import { DateTimePicker } from "@mui/x-date-pickers/DateTimePicker";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 
+import AskHuddle from "@/components/common/AskHuddle";
+
 // Define the steps for the prediction form
 const steps = ["Match Selection", "Prediction Details", "Preview"];
 
@@ -1815,7 +1817,13 @@ const NewPredictionForm = ({ onBack, onSubmit }) => {
         </Box>
 
         {/* Form content */}
+         <Box sx={{ position: 'relative' }}>
         {renderStepContent(activeStep)}
+
+        {/* AskHuddle chat */}
+          <AskHuddle />
+       
+        </Box>
 
         {/* Navigation buttons */}
         <Box

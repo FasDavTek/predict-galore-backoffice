@@ -11,11 +11,7 @@ import {
   Typography,
   Link,
   Alert,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogContentText,
-  DialogActions,
+  Snackbar
 } from "@mui/material";
 import {
   Mail as MailIcon,
@@ -25,14 +21,13 @@ import {
 } from "@mui/icons-material";
 import { AuthLayout } from "@/layouts/AuthLayout";
 import { useDispatch, useSelector } from "react-redux";
-import { loginUser, clearAuthError } from "@/store/slices/authSlice";
+import { adminSignin, clearAuthError } from "@/store/slices/authSlice";
 import { useRouter } from "next/router";
 import { useFormik } from "formik";
 import * as yup from "yup";
-import toast from "react-hot-toast";
 
 const validationSchema = yup.object({
-  email: yup.string().email("Invalid email").required("Email is required"),
+  email: yup.string().required("Email is required"),
   password: yup.string().required("Password is required"),
 });
 
@@ -41,8 +36,11 @@ const LoginPage = () => {
   const router = useRouter();
   const { loading, error } = useSelector((state) => state.auth);
   const [showPassword, setShowPassword] = React.useState(false);
-  const [verificationDialogOpen, setVerificationDialogOpen] = React.useState(false);
-  const [unverifiedUser, setUnverifiedUser] = React.useState(null);
+  const [snackbar, setSnackbar] = React.useState({
+    open: false,
+    message: "",
+    severity: "success",
+  });
 
   const formik = useFormik({
     initialValues: {
@@ -53,8 +51,8 @@ const LoginPage = () => {
     validationSchema,
     onSubmit: async (values) => {
       try {
-        const result = await dispatch(
-          loginUser({ 
+        await dispatch(
+          adminSignin({ 
             email: values.email, 
             password: values.password 
           })
@@ -64,36 +62,26 @@ const LoginPage = () => {
           localStorage.setItem("rememberMe", "true");
         }
         
-        toast.success("Login successful!");
+        setSnackbar({
+          open: true,
+          message: "Login successful! Redirecting...",
+          severity: "success"
+        });
+        
         router.push("/dashboard");
       } catch (err) {
-         // Handle email not verified case
-         if (err.payload?.isEmailVerified === false) {
-          setUnverifiedUser(err.payload.user);
-          setVerificationDialogOpen(true);
-        } else {
-          toast.error(err.message || "Login failed. Please try again.");
-        }
-      
+        setSnackbar({
+          open: true,
+          message: err.message || "Invalid credentials. Please try again.",
+          severity: "error"
+        });
       }
     },
   });
 
-  const handleResendVerification = async () => {
-    try {
-      await dispatch(resendVerificationEmail(unverifiedUser.email));
-      toast.success("Verification email sent successfully!");
-      setVerificationDialogOpen(false);
-    } catch (error) {
-      toast.error("Failed to resend verification email. Please try again.");
-    }
+  const handleCloseSnackbar = () => {
+    setSnackbar(prev => ({ ...prev, open: false }));
   };
-
-  const handleNavigateToVerify = () => {
-    router.push(`/auth/verify-email?email=${encodeURIComponent(unverifiedUser.email)}`);
-    setVerificationDialogOpen(false);
-  };
-
 
   React.useEffect(() => {
     return () => {
@@ -106,17 +94,27 @@ const LoginPage = () => {
       title="Log In"
       subtitle="Enter your credentials to access your account"
     >
-   {error && error.isEmailVerified !== false && (
-        <Alert severity="error" sx={{ mb: 3 }}>
-          {error.message}
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={6000}
+        onClose={handleCloseSnackbar}
+        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+      >
+        <Alert 
+          onClose={handleCloseSnackbar} 
+          severity={snackbar.severity}
+          sx={{ width: '100%' }}
+        >
+          {snackbar.message}
         </Alert>
-      )}
+      </Snackbar>
 
       <Box component="form" onSubmit={formik.handleSubmit} sx={{ width: "100%" }}>
         <TextField
           fullWidth
           label="Email address"
           name="email"
+          autoComplete="username"
           value={formik.values.email}
           onChange={formik.handleChange}
           onBlur={formik.handleBlur}
@@ -137,6 +135,7 @@ const LoginPage = () => {
           label="Password"
           name="password"
           type={showPassword ? "text" : "password"}
+          autoComplete="current-password"
           value={formik.values.password}
           onChange={formik.handleChange}
           onBlur={formik.handleBlur}
@@ -177,15 +176,11 @@ const LoginPage = () => {
               />
             }
             label="Remember me"
-            sx={{ "& .MuiTypography-root": { fontFamily: "Inter" } }}
           />
           <Link
             href="/auth/reset-password"
             sx={{
-              textTransform: "none",
-              fontFamily: "Inter",
-              fontWeight: 500,
-              color: "#D72638",
+              color: "primary.main",
               textDecoration: "none",
               "&:hover": {
                 textDecoration: "underline",
@@ -202,12 +197,7 @@ const LoginPage = () => {
           variant="contained"
           disabled={loading}
           sx={{
-            bgcolor: "#42A605",
             height: 56,
-            "&:hover": {
-              bgcolor: "#3a9504",
-            },
-            
             mb: 3,
           }}
         >
@@ -217,8 +207,6 @@ const LoginPage = () => {
             "Log into Account"
           )}
         </Button>
-
-
       </Box>
     </AuthLayout>
   );

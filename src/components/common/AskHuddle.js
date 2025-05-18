@@ -72,7 +72,7 @@ const AskHuddle = () => {
 
   return (
     <>
-      <Button
+      {/* <Button
         onClick={handleOpen}
         sx={{
           position: "fixed",
@@ -122,8 +122,71 @@ const AskHuddle = () => {
         >
           <ChatBubbleOutlineIcon sx={{ fontSize: "16px", color: "#444" }} />
         </Box>
-      </Button>
+      </Button> */}
 
+
+<svg 
+  viewBox="0 0 56 262" 
+  preserveAspectRatio="none" 
+  onClick={handleOpen}
+  style={{  
+    width: "48px",
+    height: "180px",
+    position: "fixed",
+    right: 0,
+    top: "40%",
+    zIndex: 1300,
+    cursor: "pointer",
+  }}
+>
+  {/* Background path */}
+ <path
+  d="M56,0
+     Q56,20 46,30
+     L10,30
+     Q0,40 0,131
+     Q0,222 10,232
+     L46,232
+     Q56,232 56,254  
+     L56,262
+     L48,262         
+     Q56,262 56,254
+     Z"
+  fill="#4CAF50"
+/>
+  
+  {/* Container for icon and text */}
+  <foreignObject 
+    x="0" 
+    y="0" 
+    width="56" 
+    height="262"
+  >
+    <Box sx={{
+      display: "flex",
+      flexDirection: "column",
+      alignItems: "center",
+      justifyContent: "center",
+      height: "100%",
+      gap: "12px",
+      textOrientation: "mixed"
+    }}>
+      {/* Icon */}
+      <ChatBubbleOutlineIcon />
+      
+      {/* Vertical text */}
+      <Typography>
+        Ask Huddle
+      </Typography>
+    </Box>
+  </foreignObject>
+</svg>
+
+
+
+
+
+    
       <Dialog
         open={open}
         onClose={handleClose}

@@ -1,70 +1,83 @@
-// components/dashboard/predictions/PredictionsTable.js
 import React, { useState } from "react";
 import {
   Box,
-  Paper,
   TableContainer,
   Table,
   TableHead,
   TableRow,
   TableCell,
   TableBody,
-  Checkbox,
   Typography,
   Pagination,
-  Stack,
   Button,
   TextField,
-  InputAdornment,
   Skeleton,
   Chip,
   Menu,
   MenuItem,
   FormControl,
-  Select,
   InputLabel,
-  Avatar,
+  Select,
+  InputAdornment,
 } from "@mui/material";
 import {
   Search as SearchIcon,
-  FilterList as FilterListIcon,
-  Download as DownloadIcon,
-  NavigateBefore as NavigateBeforeIcon,
-  NavigateNext as NavigateNextIcon,
   Add as AddIcon,
   SportsSoccer as FootballIcon,
-  SportsBasketball as BasketballIcon,
-  SportsTennis as TennisIcon,
+  Download as DownloadIcon,
+  FilterList as FilterIcon,
+  Close as CloseIcon,
 } from "@mui/icons-material";
-
 import PredictionActions from "./PredictionActions";
+import { useCallback } from "react";
 
 const PredictionsTable = ({
   predictions = [],
   loading = false,
-  searchQuery = "",
-  onSearchChange,
-  sportFilter = "all",
-  statusFilter = "all",
-  onSportFilterChange = () => {},
-  onStatusFilterChange = () => {},
-  onExportCSV,
-  exportLoading = false,
-  onPredictionSelect,
-  onNewPredictionClick,
-  page = 1,
-  setPage = () => {},
+  pagination = {},
+  filters = {},
+  onFilterChange = () => {},
+  onPageChange = () => {},
+  onPredictionSelect = () => {},
+  onNewPredictionClick = () => {},
+  teams = [],
 }) => {
-  const PAGE_SIZE = 10;
-  const pageCount = Math.ceil(predictions.length / PAGE_SIZE);
-  const paginatedPredictions = predictions.slice(
-    (page - 1) * PAGE_SIZE,
-    page * PAGE_SIZE
-  );
-
+  const [exportLoading, setExportLoading] = useState(false);
   const [filterAnchorEl, setFilterAnchorEl] = useState(null);
-  const [selectedRows, setSelectedRows] = useState([]);
+  const [activeFilters, setActiveFilters] = useState({
+    status: null,
+    team: null,
+  });
 
+  // Handle search input changes
+  const handleSearchChange = (e) => {
+    onFilterChange({ ...filters, search: e.target.value });
+  };
+
+  // Handle status filter changes
+  const handleStatusFilterChange = (status) => {
+    const newFilters = { ...filters, status: status === 'all' ? null : status };
+    onFilterChange(newFilters);
+    setActiveFilters(prev => ({ ...prev, status }));
+    handleFilterMenuClose();
+  };
+
+  // Handle team filter changes
+  const handleTeamFilterChange = (teamId) => {
+    const newFilters = { ...filters, teamId: teamId === 'all' ? null : teamId };
+    onFilterChange(newFilters);
+    setActiveFilters(prev => ({ ...prev, team: teamId }));
+    handleFilterMenuClose();
+  };
+
+  // Clear all filters
+  const handleClearFilters = () => {
+    onFilterChange({ ...filters, status: null, teamId: null });
+    setActiveFilters({ status: null, team: null });
+    handleFilterMenuClose();
+  };
+
+  // Filter menu handlers
   const handleFilterMenuOpen = (event) => {
     setFilterAnchorEl(event.currentTarget);
   };
@@ -73,377 +86,240 @@ const PredictionsTable = ({
     setFilterAnchorEl(null);
   };
 
-  const handleSelectAllRows = (event) => {
-    if (event.target.checked) {
-      const newSelected = paginatedPredictions.map(
-        (prediction) => prediction.id
-      );
-      setSelectedRows(newSelected);
-    } else {
-      setSelectedRows([]);
-    }
-  };
+  // Export to CSV functionality
+  const handleExportCSV = useCallback(() => {
+    setExportLoading(true);
+    
+    // Prepare CSV content
+    const headers = ['Match', 'League', 'Prediction', 'Status', 'Team'];
+    const csvRows = predictions.map(prediction => [
+      `"${prediction.title}"`,
+      `"${teams.find(t => t.id === prediction.teamId)?.name || 'N/A'}"`,
+      `"${prediction.description}"`,
+      `"${prediction.status}"`,
+      `"${teams.find(t => t.id === prediction.teamId)?.name || 'N/A'}"`
+    ].join(','));
 
-  const handleSelectRow = (event, id, prediction) => {
-    if (event.target.checked) {
-      setSelectedRows([...selectedRows, id]);
-      // Show details when checkbox is checked
-      onPredictionSelect(prediction);
-    } else {
-      setSelectedRows(selectedRows.filter((rowId) => rowId !== id));
-    }
-  };
+    // Create CSV string
+    const csvContent = [
+      headers.join(','),
+      ...csvRows
+    ].join('\n');
 
-  const getStatusChipStyles = (status) => {
-    switch (status?.toLowerCase()) {
-      case "won":
-        return {
-          bgcolor: "#ECFDF3",
-          color: "#027A48",
-        };
-      case "lost":
-        return {
-          bgcolor: "#FEF3F2",
-          color: "#B42318",
-        };
-      case "pending":
-        return {
-          bgcolor: "#FFFAEB",
-          color: "#B54708",
-        };
-      default:
-        return {};
-    }
-  };
+    // Create download link
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `predictions_${new Date().toISOString().slice(0, 10)}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    setExportLoading(false);
+  }, [predictions, teams]);
 
-  const getLeagueIcon = (league) => {
-    // This is a simplified example - you would replace with actual league icons
-    if (
-      league.includes("Premier League") ||
-      league.includes("LaLiga") ||
-      league.includes("Serie A")
-    ) {
-      return <FootballIcon sx={{ width: 24, height: 24 }} />;
-    } else if (league.includes("NBA") || league.includes("EuroLeague")) {
-      return <BasketballIcon sx={{ width: 24, height: 24 }} />;
-    } else {
-      return <TennisIcon sx={{ width: 24, height: 24 }} />;
-    }
-  };
-
-  const formatDate = (dateString) => {
-    const date = new Date(dateString);
-    return `${date.getDate().toString().padStart(2, "0")}/${(
-      date.getMonth() + 1
-    )
-      .toString()
-      .padStart(2, "0")}/${date.getFullYear()}`;
-  };
-
-  const formatTime = (dateString) => {
-    const date = new Date(dateString);
-    return `${date.getHours().toString().padStart(2, "0")}:${date
-      .getMinutes()
-      .toString()
-      .padStart(2, "0")}`;
-  };
-
+  // Render loading skeleton placeholders
   const renderLoadingSkeletons = () => {
-    return Array(PAGE_SIZE)
+    return Array(pagination.limit)
       .fill(0)
       .map((_, index) => (
         <TableRow key={`skeleton-${index}`}>
-          <TableCell>
-            <Skeleton variant="rectangular" width={20} height={20} />
-          </TableCell>
-          <TableCell>
-            <Skeleton variant="text" />
-          </TableCell>
-          <TableCell>
-            <Skeleton variant="text" />
-          </TableCell>
-          <TableCell>
-            <Skeleton variant="text" />
-          </TableCell>
-          <TableCell>
-            <Skeleton variant="text" />
-          </TableCell>
-          <TableCell>
-            <Skeleton variant="text" />
-          </TableCell>
-          <TableCell>
-            <Skeleton variant="text" />
-          </TableCell>
+          <TableCell><Skeleton variant="text" /></TableCell>
+          <TableCell><Skeleton variant="text" /></TableCell>
+          <TableCell><Skeleton variant="text" /></TableCell>
+          <TableCell><Skeleton variant="text" /></TableCell>
+          <TableCell><Skeleton variant="text" /></TableCell>
         </TableRow>
       ));
   };
 
+  // Render empty state message
   const renderEmptyState = () => (
     <TableRow>
-      <TableCell colSpan={7} sx={{ border: "none" }}>
-        <Box
-          sx={{
-            py: 8,
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            gap: 3,
-          }}
-        >
-          <Typography variant="h6" sx={{ color: "#101012", mb: 1 }}>
-            {loading ? "Loading predictions..." : "No Predictions Found"}
-          </Typography>
-          <Typography sx={{ color: "#8B8D97" }}>
-            {loading
-              ? "Please wait while we load prediction data"
-              : "Predictions will appear here once created."}
-          </Typography>
-        </Box>
+      <TableCell colSpan={5} sx={{ textAlign: 'center', py: 4 }}>
+        <Typography variant="body1">
+          {loading ? "Loading predictions..." : "No predictions found"}
+        </Typography>
       </TableCell>
     </TableRow>
   );
 
   return (
     <Box>
-      {/* Table toolbar with search and actions */}
-      <Box
-        sx={{
-          mb: 3,
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-        }}
-      >
-        <Box sx={{ display: "flex", gap: 2, alignItems: "center" }}>
-          <TextField
-            placeholder="Search predictions..."
-            variant="outlined"
-            size="small"
-            sx={{ width: 300 }}
-            value={searchQuery}
-            onChange={onSearchChange}
-            InputProps={{
-              startAdornment: (
-                <InputAdornment position="start">
-                  <SearchIcon sx={{ color: "text.secondary" }} />
-                </InputAdornment>
-              ),
-            }}
-          />
+      {/* Search and action toolbar */}
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
+         <Box sx={{ display: "flex", gap: 2 }}>
+        <TextField
+          placeholder="Search predictions..."
+          size="small"
+          value={filters.search || ''}
+          onChange={handleSearchChange}
+          InputProps={{
+            startAdornment: (
+              <InputAdornment position="start">
+                <SearchIcon />
+              </InputAdornment>
+            ),
+          }}
+          sx={{ width: 300 }}
+        />
 
           <Button
             variant="outlined"
-            startIcon={<FilterListIcon />}
+            startIcon={<FilterIcon />}
             onClick={handleFilterMenuOpen}
           >
-            Filter
+            Filters
+            {activeFilters.status || activeFilters.team ? (
+              <Chip
+                label="Active"
+                size="small"
+                color="primary"
+                sx={{ ml: 1 }}
+              />
+            ) : null}
           </Button>
-          <Menu
-            anchorEl={filterAnchorEl}
-            open={Boolean(filterAnchorEl)}
-            onClose={handleFilterMenuClose}
-          >
-            <MenuItem>
-              <FormControl fullWidth size="small">
-                <InputLabel>Sport</InputLabel>
-                <Select
-                  value={sportFilter}
-                  label="Sport"
-                  onChange={(e) => {
-                    onSportFilterChange(e.target.value);
-                    handleFilterMenuClose();
-                  }}
-                >
-                  <MenuItem value="all">All Sports</MenuItem>
-                  <MenuItem value="football">Football</MenuItem>
-                  <MenuItem value="basketball">Basketball</MenuItem>
-                  <MenuItem value="tennis">Tennis</MenuItem>
-                </Select>
-              </FormControl>
-            </MenuItem>
-            <MenuItem>
-              <FormControl fullWidth size="small">
-                <InputLabel>Status</InputLabel>
-                <Select
-                  value={statusFilter}
-                  label="Status"
-                  onChange={(e) => {
-                    onStatusFilterChange(e.target.value);
-                    handleFilterMenuClose();
-                  }}
-                >
-                  <MenuItem value="all">All Statuses</MenuItem>
-                  <MenuItem value="won">Won</MenuItem>
-                  <MenuItem value="lost">Lost</MenuItem>
-                  <MenuItem value="pending">Pending</MenuItem>
-                </Select>
-              </FormControl>
-            </MenuItem>
-          </Menu>
-        </Box>
-
+          </Box>
+        
         <Box sx={{ display: "flex", gap: 2 }}>
-          <Button
-            variant="contained"
+          <Button 
+            variant="contained" 
             startIcon={<AddIcon />}
             onClick={onNewPredictionClick}
-            sx={{
-              bgcolor: "primary.main",
-              "&:hover": { bgcolor: "primary.dark" },
-            }}
           >
             New Prediction
           </Button>
+
+        
+
           <Button
             variant="outlined"
             startIcon={<DownloadIcon />}
-            onClick={onExportCSV}
+            onClick={handleExportCSV}
             disabled={exportLoading || predictions.length === 0}
           >
             {exportLoading ? "Exporting..." : "Export CSV"}
           </Button>
         </Box>
+
+        {/* Filter menu */}
+        <Menu
+          anchorEl={filterAnchorEl}
+          open={Boolean(filterAnchorEl)}
+          onClose={handleFilterMenuClose}
+        >
+          <MenuItem dense>
+            <FormControl fullWidth size="small">
+              <InputLabel>Status</InputLabel>
+              <Select
+                value={activeFilters.status || 'all'}
+                label="Status"
+                onChange={(e) => handleStatusFilterChange(e.target.value)}
+              >
+                <MenuItem value="all">All Statuses</MenuItem>
+                <MenuItem value="won">Won</MenuItem>
+                <MenuItem value="lost">Lost</MenuItem>
+                <MenuItem value="pending">Pending</MenuItem>
+              </Select>
+            </FormControl>
+          </MenuItem>
+          
+          <MenuItem dense>
+            <FormControl fullWidth size="small">
+              <InputLabel>Team</InputLabel>
+              <Select
+                value={activeFilters.team || 'all'}
+                label="Team"
+                onChange={(e) => handleTeamFilterChange(e.target.value)}
+              >
+                <MenuItem value="all">All Teams</MenuItem>
+                {teams.map(team => (
+                  <MenuItem key={team.id} value={team.id}>
+                    {team.name}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </MenuItem>
+          
+          {(activeFilters.status || activeFilters.team) && (
+            <MenuItem onClick={handleClearFilters}>
+              <Box sx={{ display: 'flex', alignItems: 'center', color: 'error.main' }}>
+                <CloseIcon fontSize="small" sx={{ mr: 1 }} />
+                Clear Filters
+              </Box>
+            </MenuItem>
+          )}
+        </Menu>
       </Box>
 
-      {/* Main table content */}
-      <TableContainer component={Paper} sx={{ boxShadow: 3, borderRadius: 2 }}>
-        <Table sx={{ minWidth: 650 }}>
-          <TableHead sx={{ bgcolor: "grey.50" }}>
+      {/* Main predictions table */}
+      <TableContainer>
+        <Table>
+          <TableHead>
             <TableRow>
-              <TableCell padding="checkbox"></TableCell>
               <TableCell>Match</TableCell>
               <TableCell>League</TableCell>
               <TableCell>Prediction</TableCell>
               <TableCell>Status</TableCell>
-              <TableCell>Date</TableCell>
-              <TableCell align="right">Actions</TableCell>
+              <TableCell>Actions</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
-            {loading
-              ? renderLoadingSkeletons()
-              : predictions.length > 0
-              ? paginatedPredictions.map((prediction) => (
-                  <TableRow
-                    key={prediction.id}
-                    hover
-                    sx={{ "&:hover": { bgcolor: "action.hover" } }}
-                  >
-                    <TableCell padding="checkbox">
-                      <Checkbox
-                        checked={selectedRows.includes(prediction.id)}
-                        onChange={(event) =>
-                          handleSelectRow(event, prediction.id, prediction)
-                        }
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <Typography fontWeight={500}>
-                        {prediction.match}
-                      </Typography>
-                      {prediction.score && (
-                        <Typography variant="body2">
-                          <strong>{prediction.score.home}</strong> -{" "}
-                          <strong>{prediction.score.away}</strong>
-                        </Typography>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <Box
-                        sx={{ display: "flex", alignItems: "center", gap: 1 }}
-                      >
-                        <Avatar sx={{ width: 24, height: 24 }}>
-                          {getLeagueIcon(prediction.league)}
-                        </Avatar>
-                        <Typography>{prediction.league}</Typography>
-                      </Box>
-                    </TableCell>
-                    <TableCell>
-                      <Typography fontSize={14}>
-                        {prediction.prediction}
-                        {prediction.predictedScore && (
-                          <span>
-                            {" "}
-                            ({prediction.predictedScore.home}-
-                            {prediction.predictedScore.away})
-                          </span>
-                        )}
-                      </Typography>
-                    </TableCell>
-                    <TableCell>
-                      <Chip
-                        label={prediction.status}
-                        size="small"
-                        sx={getStatusChipStyles(prediction.status)}
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <Typography>
-                        {formatDate(prediction.datePosted)}
-                      </Typography>
-                      <Typography variant="body2">
-                        {formatTime(prediction.datePosted)}
-                      </Typography>
-                    </TableCell>
-                    <TableCell align="right">
-                      <PredictionActions
-                        prediction={prediction}
-                        onViewDetails={() => onPredictionSelect(prediction)}
-                      />
-                    </TableCell>
-                  </TableRow>
-                ))
-              : renderEmptyState()}
+            {/* Conditional rendering based on loading state */}
+            {loading ? renderLoadingSkeletons() : 
+             predictions.length === 0 ? renderEmptyState() :
+             predictions.map((prediction) => (
+              <TableRow key={prediction.id} hover>
+                <TableCell>
+                  <Typography fontWeight={500}>
+                    {prediction.title}
+                  </Typography>
+                </TableCell>
+                <TableCell>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <FootballIcon fontSize="small" />
+                    <Typography>
+                      {teams.find(t => t.id === prediction.teamId)?.name || 'N/A'}
+                    </Typography>
+                  </Box>
+                </TableCell>
+                <TableCell>
+                  <Typography>{prediction.description}</Typography>
+                </TableCell>
+                <TableCell>
+                  {/* Status chip with color coding */}
+                  <Chip 
+                    label={prediction.status} 
+                    color={
+                      prediction.status === 'won' ? 'success' : 
+                      prediction.status === 'lost' ? 'error' : 'warning'
+                    }
+                  />
+                </TableCell>
+                <TableCell>
+                  <PredictionActions
+                    prediction={prediction}
+                    onViewDetails={() => onPredictionSelect(prediction.id)}
+                  />
+                </TableCell>
+              </TableRow>
+            ))}
           </TableBody>
         </Table>
       </TableContainer>
 
       {/* Pagination controls */}
-      {predictions.length > 0 && (
-        <Box
-          sx={{
-            mt: 3,
-            p: 2,
-            bgcolor: "background.paper",
-            borderRadius: 2,
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-          }}
-        >
-          <Typography variant="body2" color="text.secondary">
-            Showing {(page - 1) * PAGE_SIZE + 1}-
-            {Math.min(page * PAGE_SIZE, predictions.length)} of{" "}
-            {predictions.length} predictions
-          </Typography>
-          <Stack direction="row" spacing={2} alignItems="center">
-            <Button
-              variant="outlined"
-              startIcon={<NavigateBeforeIcon />}
-              disabled={page === 1}
-              onClick={() => setPage((p) => p - 1)}
-              sx={{ whiteSpace: "nowrap" }}
-            >
-              Previous
-            </Button>
-            <Pagination
-              count={pageCount}
-              page={page}
-              onChange={(_, newPage) => setPage(newPage)}
-              color="primary"
-              shape="rounded"
-              sx={{ display: { xs: "none", sm: "block" } }}
-            />
-            <Button
-              variant="outlined"
-              endIcon={<NavigateNextIcon />}
-              disabled={page === pageCount}
-              onClick={() => setPage((p) => p + 1)}
-              sx={{ whiteSpace: "nowrap" }}
-            >
-              Next
-            </Button>
-          </Stack>
+      {pagination.total > 0 && (
+        <Box sx={{ display: 'flex', justifyContent: 'center', mt: 3 }}>
+          <Pagination
+            count={Math.ceil(pagination.total / pagination.limit)}
+            page={pagination.page}
+            onChange={(_, page) => onPageChange(page)}
+            color="primary"
+          />
         </Box>
       )}
     </Box>

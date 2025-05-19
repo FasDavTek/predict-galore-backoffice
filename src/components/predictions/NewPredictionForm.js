@@ -169,7 +169,7 @@ const matchesByLeague = {
   "Fed Cup": [],
 };
 
-const NewPredictionForm = ({ onBack, onSubmit }) => {
+const NewPredictionForm = ({ teams = [], onBack, onSubmit }) => {
   const [activeStep, setActiveStep] = useState(0);
   const [selectedMatch, setSelectedMatch] = useState(null);
   const [selectedTags, setSelectedTags] = useState([]);

@@ -3,6 +3,8 @@ import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import { HYDRATE } from "next-redux-wrapper";
 import axios from "axios";
 
+const BASE_URL = 'https://apidev.predictgalore.com';
+
 // Helper function for consistent error logging
 const logApiError = (operation, error, payload = null) => {
   console.groupCollapsed(
@@ -54,10 +56,15 @@ export const adminSignin = createAsyncThunk(
   async ({ username, password }, { rejectWithValue }) => {
     try {
       console.debug("Admin signin attempt for username:", username);
-      const response = await axios.post("/api/v1/Admin/auth/signin", {
-        username,
-        password,
-      });
+      const response = await axios.post(
+        `${BASE_URL}/api/v1/Admin/auth/signin`,
+        { username, password },
+        {
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        }
+      );
       
       logApiSuccess("adminSignin", response.data);
 

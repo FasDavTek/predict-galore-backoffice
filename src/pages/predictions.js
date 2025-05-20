@@ -3,7 +3,6 @@ import React, { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { ErrorBoundary } from "react-error-boundary";
 import { Box, Snackbar, Alert } from "@mui/material";
-import { SportsSoccer as PredictionsIcon } from "@mui/icons-material";
 
 // Component imports
 import DashboardLayout from "@/layouts/DashboardLayout";
@@ -14,103 +13,147 @@ import PredictionDetail from "@/components/predictions/PredictionDetail";
 import NewPredictionForm from "@/components/predictions/NewPredictionForm";
 
 // Redux imports
-import {
-  fetchPredictionsStats,
-  fetchPredictionsList,
-  exportPredictionsCSV,
-  createPrediction,
+// import {
+//   createPrediction,
+//   fetchPrediction,
+//   fetchPredictions,
+//   updatePrediction,
+//   deletePrediction,
+//   fetchTeams,
+//   selectPredictions,
+//   selectCurrentPrediction,
+//   selectTeams,
+//   selectLoading,
+//   selectError,
+//   selectPagination,
+//   selectPredictionStats,
+//   clearError,
+//   clearCurrentPrediction
+// } from "@/store/slices/predictionsSlice";
+
+import { 
+  createPrediction, 
+  fetchPrediction,
+  fetchPredictions,
   updatePrediction,
-  cancelPrediction,
-  resolvePrediction,
-  setTimeRange,
-  setSearchQuery,
-  setSportFilter,
-  setStatusFilter,
-  selectPredictionsStats,
-  selectPredictionsList,
-  selectFilteredPredictions,
-  selectPredictionsLoading,
-  selectTimeRange,
-  selectSearchQuery,
-  selectSportFilter,
-  selectStatusFilter,
+  deletePrediction,
+  fetchTeams,
+  selectPredictions,
+  selectCurrentPrediction,
+  selectTeams,
+  selectLoading,
+  selectError,
+  selectPagination,
+  selectPredictionStats,
+  clearError,
+  clearCurrentPrediction 
 } from "@/store/slices/predictionSlice";
 
 /**
  * Error boundary fallback component
+ * Displays error message when component tree fails
  */
-function ErrorFallback({ error }) {
+const ErrorFallback = ({ error }) => {
   return (
     <div className="p-4 bg-red-50 text-red-600">
       <p>Something went wrong:</p>
       <pre>{error.message}</pre>
     </div>
   );
-}
+};
 
 /**
- * PredictionsPage - Main component for predictions dashboard
+ * Main Predictions Page Component
+ * Handles displaying and managing sports predictions
  */
 const PredictionsPage = () => {
+  // Redux state management
   const dispatch = useDispatch();
+  const predictions = useSelector(selectPredictions);
+  const currentPrediction = useSelector(selectCurrentPrediction);
+  const teams = useSelector(selectTeams);
+  const loading = useSelector(selectLoading);
+  const error = useSelector(selectError);
+  const pagination = useSelector(selectPagination);
+  const statsData = useSelector(selectPredictionStats);
 
-  // Select data from Redux store
-  const stats = useSelector(selectPredictionsStats);
-  const predictions = useSelector(selectPredictionsList);
-  const loading = useSelector(selectPredictionsLoading);
-  const timeRange = useSelector(selectTimeRange);
-  const searchQuery = useSelector(selectSearchQuery);
-  const sportFilter = useSelector(selectSportFilter);
-  const statusFilter = useSelector(selectStatusFilter);
-
-  // Local state for selected prediction and notifications
+  // Local component state
   const [viewMode, setViewMode] = useState("list"); // 'list', 'detail', or 'create'
-  const [selectedPrediction, setSelectedPrediction] = useState(null);
-  const [isCreatingNew, setIsCreatingNew] = useState(false);
   const [notification, setNotification] = useState({
     open: false,
     message: "",
     severity: "success",
   });
+  const [filters, setFilters] = useState({
+    search: "",
+    team: "",
+    startDate: null,
+    endDate: null
+  });
 
-  // Fetch data on mount and when filters change
+  /**
+   * Fetch predictions data on mount and when filters or pagination changes
+   */
   useEffect(() => {
-    dispatch(fetchPredictionsStats());
-    dispatch(fetchPredictionsList({ searchQuery, timeRange }));
-  }, [dispatch, searchQuery, timeRange]);
+    const fetchData = async () => {
+      try {
+        const params = {
+          page: pagination.page,
+          limit: pagination.limit,
+          ...filters
+        };
+        
+        await dispatch(fetchPredictions(params));
+      } catch (error) {
+        showNotification("Failed to load predictions", "error");
+      }
+    };
 
-  // Handler for time range filter change
-  const handleTimeRangeChange = (range) => {
-    dispatch(setTimeRange(range));
-  };
+    fetchData();
+  }, [dispatch, pagination.page, pagination.limit, filters]);
 
-  // Handler for search input changes
-  const handleSearchChange = (e) => {
-    dispatch(setSearchQuery(e.target.value));
-  };
+  /**
+   * Fetch teams data if not already loaded
+   */
+  useEffect(() => {
+    if (teams.length === 0) {
+      dispatch(fetchTeams());
+    }
+  }, [dispatch, teams]);
 
-  const handleSportFilterChange = (sport) => {
-    dispatch(setSportFilter(sport));
-  };
+  /**
+   * Handle API error notifications
+   */
+  useEffect(() => {
+    if (error) {
+      showNotification(error.message || "An error occurred", "error");
+      dispatch(clearError());
+    }
+  }, [error, dispatch]);
 
-  const handleStatusFilterChange = (status) => {
-    dispatch(setStatusFilter(status));
-  };
 
-  // Handler for CSV export with loading state
-  const handleExportCSV = async () => {
+  // Event handlers
+
+  /**
+   * Handle selecting a prediction to view details
+   * @param {string} id - Prediction ID
+   */
+  const handlePredictionSelect = async (id) => {
     try {
-      await dispatch(exportPredictionsCSV());
-      showNotification("Export started successfully", "success");
+      await dispatch(fetchPrediction(id)).unwrap();
+      setViewMode("detail");
     } catch (error) {
-      showNotification("Export failed", "error");
+      showNotification("Failed to load prediction details", "error");
     }
   };
 
-  // Handler for creating new prediction
-  const handleCreateNew = async (newPrediction) => {
+  /**
+   * Handle creating a new prediction
+   * @param {object} predictionData - New prediction data
+   */
+  const handleCreateNew = async (predictionData) => {
     try {
-      await dispatch(createPrediction(newPrediction));
+      await dispatch(createPrediction(predictionData)).unwrap();
       showNotification("Prediction created successfully", "success");
       setViewMode("list");
     } catch (error) {
@@ -118,109 +161,164 @@ const PredictionsPage = () => {
     }
   };
 
-  const handlePredictionSelect = (prediction) => {
-    setSelectedPrediction(prediction);
-    setViewMode("detail");
+  /**
+   * Handle updating an existing prediction
+   * @param {object} data - Updated prediction data with ID
+   */
+  const handleUpdatePrediction = async ({ id, ...data }) => {
+    try {
+      await dispatch(updatePrediction({ id, ...data })).unwrap();
+      showNotification("Prediction updated successfully", "success");
+      setViewMode("list");
+    } catch (error) {
+      showNotification("Failed to update prediction", "error");
+    }
   };
 
+  /**
+   * Handle deleting a prediction
+   * @param {string} id - Prediction ID to delete
+   */
+  const handleDeletePrediction = async (id) => {
+    try {
+      await dispatch(deletePrediction(id)).unwrap();
+      showNotification("Prediction deleted successfully", "success");
+      setViewMode("list");
+    } catch (error) {
+      showNotification("Failed to delete prediction", "error");
+    }
+  };
+
+  /**
+   * Navigate back to predictions list view
+   */
   const handleBackToList = () => {
+    dispatch(clearCurrentPrediction());
     setViewMode("list");
   };
 
+  /**
+   * Navigate to create new prediction form
+   */
   const handleNewPredictionClick = () => {
     setViewMode("create");
   };
 
-  // Handler for closing notifications
-  const handleNotificationClose = () => {
-    setNotification((prev) => ({ ...prev, open: false }));
+  /**
+   * Handle filter changes for predictions list
+   * @param {object} newFilters - Updated filter values
+   */
+  const handleFilterChange = (newFilters) => {
+    setFilters(newFilters);
+    // Reset to first page when filters change
+    dispatch(setPagination({ ...pagination, page: 1 }));
   };
 
-  // Helper to show notifications
+  /**
+   * Handle page changes for pagination
+   * @param {number} newPage - New page number
+   */
+  const handlePageChange = (newPage) => {
+    dispatch(setPagination({ ...pagination, page: newPage }));
+  };
+
+  /**
+   * Show notification toast
+   * @param {string} message - Notification message
+   * @param {'success'|'error'|'warning'|'info'} severity - Alert severity
+   */
   const showNotification = (message, severity) => {
     setNotification({ open: true, message, severity });
   };
 
+  /**
+   * Close notification toast
+   */
+  const handleNotificationClose = () => {
+    setNotification(prev => ({ ...prev, open: false }));
+  };
+
+  // Prediction stats data
+  const stats = [
+    { title: "Total Predictions", value: statsData.total.toString(), change: "+24.5" },
+    { title: "Active Predictions", value: statsData.active.toString(), change: "+8.3" },
+    { title: "Winning Predictions", value: "1,284", change: "+15.2" },
+    { title: "Accuracy Rate", value: "72.4%", change: "+3.8" }
+  ];
+
   return (
     <DashboardLayout>
       <ErrorBoundary FallbackComponent={ErrorFallback}>
-        {/* Page Header with title and time range selector */}
+        {/* Page header with title and action button */}
         <Header
           title="Predictions"
           subtitle="Manage and analyze sports predictions"
-          timeRange={timeRange}
-          onTimeRangeChange={handleTimeRangeChange}
+          onNewPrediction={handleNewPredictionClick}
         />
 
-        {/* Stats cards section - only shown when viewing list */}
+        {/* Main content area with conditional rendering based on view mode */}
         {viewMode === "list" && (
-          <Box
-            sx={{
-              mb: 4,
-              display: "grid",
-              gridTemplateColumns: {
-                xs: "1fr",
-                sm: "repeat(2, 1fr)",
-                md: "repeat(4, 1fr)",
-              },
-              gap: 3,
-            }}
-          >
-            {stats.map((card, index) => (
-              <PredictionStat
-                key={index}
-                title={card.title}
-                value={card.value}
-                change={card.change}
-              />
-            ))}
-          </Box>
-        )}
+          <>
+            {/* Stats cards row */}
+            <Box sx={{ 
+              mb: 4, 
+              display: "grid", 
+              gridTemplateColumns: { 
+                xs: "1fr", 
+                sm: "repeat(2, 1fr)", 
+                md: "repeat(4, 1fr)" 
+              }, 
+              gap: 3 
+            }}>
+              {stats.map((stat, index) => (
+                <PredictionStat key={index} {...stat} />
+              ))}
+            </Box>
 
-        {/* Main predictions table */}
-        <Box sx={{ width: "100%" }}>
-          {viewMode === "list" && (
+            {/* Predictions table with filtering and pagination */}
             <PredictionsTable
               predictions={predictions}
-              loading={loading.predictions}
-              searchQuery={searchQuery}
-              onSearchChange={handleSearchChange}
-              sportFilter={sportFilter}
-              statusFilter={statusFilter}
-              onSportFilterChange={handleSportFilterChange}
-              onStatusFilterChange={handleStatusFilterChange}
-              onExportCSV={handleExportCSV}
-              exportLoading={loading.export}
+              loading={loading}
+              pagination={pagination}
+              filters={filters}
+              onFilterChange={handleFilterChange}
+              onPageChange={handlePageChange}
               onPredictionSelect={handlePredictionSelect}
               onNewPredictionClick={handleNewPredictionClick}
             />
-          )}
+          </>
+        )}
 
-          {viewMode === "detail" && selectedPrediction && (
-            <PredictionDetail
-              prediction={selectedPrediction}
-              onBack={handleBackToList}
-            />
-          )}
+        {/* Prediction detail view */}
+        {viewMode === "detail" && currentPrediction && (
+          <PredictionDetail
+            prediction={currentPrediction}
+            onBack={handleBackToList}
+            onUpdate={handleUpdatePrediction}
+            onDelete={handleDeletePrediction}
+          />
+        )}
 
-          {viewMode === "create" && (
-            <NewPredictionForm
-              onBack={handleBackToList}
-              onSubmit={handleCreateNew}
-            />
-          )}
-        </Box>
+        {/* New prediction form view */}
+        {viewMode === "create" && (
+          <NewPredictionForm
+            teams={teams}
+            onBack={handleBackToList}
+            onSubmit={handleCreateNew}
+          />
+        )}
 
-        {/* Global notification system */}
+        {/* Global notification snackbar */}
         <Snackbar
           open={notification.open}
           autoHideDuration={6000}
           onClose={handleNotificationClose}
+          anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
         >
-          <Alert
-            onClose={handleNotificationClose}
+          <Alert 
+            onClose={handleNotificationClose} 
             severity={notification.severity}
-            sx={{ width: "100%" }}
+            sx={{ width: '100%' }}
           >
             {notification.message}
           </Alert>

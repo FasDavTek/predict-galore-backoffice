@@ -41,51 +41,71 @@ const LoginPage = () => {
     severity: "success",
   });
 
-  const formik = useFormik({
-    initialValues: {
-      username: "",
-      password: "",
-      rememberMe: false,
-    },
-    validationSchema,
-    onSubmit: async (values, { setSubmitting }) => {
-      try {
-        const loginData = {
-          username: values.username,
-          password: values.password,
-        };
-        await dispatch(adminSignin(loginData)).unwrap();
+ const formik = useFormik({
+  initialValues: {
+    username: "",
+    password: "",
+    rememberMe: false,
+  },
+  validationSchema,
+  onSubmit: async (values, { setSubmitting }) => {
+    try {
+      const loginData = {
+        username: values.username,
+        password: values.password,
+      };
+      
+      console.log("Login attempt with:", { username: values.username }); // Log attempt without password
+      
+      await dispatch(adminSignin(loginData)).unwrap();
 
-        if (values.rememberMe) {
-          localStorage.setItem("rememberMe", "true");
-        }
-
-        setSnackbar({
-          open: true,
-          message: "Login successful! Redirecting...",
-          severity: "success",
-        });
-
-        router.push("/dashboard");
-      } catch (err) {
-        console.error("Login error:", err);
-
-        // Handle the error properly
-        const errorMessage =
-          err.payload?.message ||
-          err.message ||
-          "Login failed. Please try again.";
-
-        setSnackbar({
-          open: true,
-          message: errorMessage,
-          severity: "error",
-        });
-      } finally {
-        setSubmitting(false);
+      if (values.rememberMe) {
+        localStorage.setItem("rememberMe", "true");
       }
-    },
-  });
+
+      setSnackbar({
+        open: true,
+        message: "Login successful! Redirecting...",
+        severity: "success",
+      });
+
+      router.push("/dashboard");
+    } catch (err) {
+      // Detailed error logging for debugging
+      console.error("Login Error Details:", {
+        fullError: err, // Complete error object
+        statusCode: err?.status,
+        serverMessage: err?.message,
+        timestamp: new Date().toISOString()
+      });
+
+      // User-friendly error messages based on different error cases
+      let errorMessage = "Login failed. Please try again.";
+      
+       if (err?.status === 400) {
+        errorMessage = "Invalid request. Please check your input and try again.";
+      } else if (err?.status === 401) {
+        errorMessage = "Invalid username or password";
+      } else if (err?.status === 403) {
+        errorMessage = "Account not authorized";
+      } else if (err?.status === 429) {
+        errorMessage = "Too many attempts. Please wait before trying again";
+      } else if (err?.status >= 500) {
+        errorMessage = "Server error. Please try again later";
+      } else if (err.message.includes("Network Error")) {
+        errorMessage = "Network connection failed. Please check your internet";
+      }
+
+      setSnackbar({
+        open: true,
+        message: errorMessage,
+        severity: "error",
+      });
+    } finally {
+      setSubmitting(false);
+    }
+  },
+});
 
   const handleCloseSnackbar = () => {
     setSnackbar((prev) => ({ ...prev, open: false }));

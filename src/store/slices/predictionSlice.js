@@ -1,5 +1,5 @@
 // store/slices/predictionsSlice.js
-import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
+import { createSlice, createAsyncThunk, createSelector } from '@reduxjs/toolkit';
 import { HYDRATE } from 'next-redux-wrapper';
 import axios from 'axios';
 
@@ -287,11 +287,20 @@ export const selectTeams = (state) => state.predictions.teams;
 export const selectLoading = (state) => state.predictions.loading;
 export const selectError = (state) => state.predictions.error;
 export const selectPagination = (state) => state.predictions.pagination;
-export const selectPredictionStats = (state) => ({
-  total: state.predictions.pagination.total,
-  active: state.predictions.predictions.filter(p => p.status === 'active').length,
-  // Add other stats as needed
-});
+export const selectPredictionStats = createSelector(
+  [selectPredictions, selectPagination],
+  (predictions, pagination) => ({
+    total: pagination.total,
+    active: predictions.filter(p => p.status === 'active').length,
+    // Add other stats as needed
+  })
+);
 
-export const { clearCurrentPrediction, clearError, setPagination } = predictionsSlice.actions;
+// Actions
+export const { 
+  clearCurrentPrediction, 
+  clearError, 
+  setPagination 
+} = predictionsSlice.actions;
+
 export default predictionsSlice.reducer;

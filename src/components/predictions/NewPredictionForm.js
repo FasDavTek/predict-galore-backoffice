@@ -98,7 +98,7 @@ const leaguesBySport = {
   tennis: ["ATP Tour", "WTA Tour", "Grand Slams", "Davis Cup", "Fed Cup"],
 };
 
-// Matches by league
+
 // Initialize matchesByLeague with all leagues
 const matchesByLeague = {
   // Football leagues
@@ -1821,7 +1821,7 @@ const NewPredictionForm = ({ teams = [], onBack, onSubmit }) => {
         {renderStepContent(activeStep)}
 
         {/* AskHuddle chat */}
-          <AskHuddle />
+          {/* <AskHuddle /> */}
        
         </Box>
 

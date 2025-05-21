@@ -1,7 +1,8 @@
 // pages/dashboard.js
 import React, { useState, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { Box, Typography } from "@mui/material";
+import { useRouter } from "next/router";
+import { Box, Typography, Button, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle } from "@mui/material";
 import { ChevronLeft as BackIcon } from "@mui/icons-material";
 
 // Layout and components
@@ -16,7 +17,6 @@ import { useAuth } from "@/context/AuthContext";
 
 // Redux actions and selectors
 import { selectIsAuthenticated } from "@/store/slices/authSlice";
-// import { selectCurrentUser} from "@/store/slices/authSlice";
 
 import {
   fetchDashboardStats,
@@ -36,19 +36,33 @@ import {
 
 const DashboardPage = () => {
   const dispatch = useDispatch();
+  const router = useRouter();
   const user = useAuth();
-  // const user = useSelector(selectCurrentUser) || {};
 
-  // Safe user name with fallback
-  const userName = user?.firstName || "User";
+  console.log("Logged in User details:", user);
 
-  // const isAuthenticated = useSelector(selectIsAuthenticated);
+  const isAuthenticated = useSelector(selectIsAuthenticated);
+  const [showAuthDialog, setShowAuthDialog] = useState(false);
+  const [hasMounted, setHasMounted] = useState(false);
 
-  // useEffect(() => {
-  //   if (!isAuthenticated) {
-  //     router.push(`/auth/login?returnUrl=${encodeURIComponent(router.pathname)}`);
-  //   }
-  // }, [isAuthenticated]);
+  // Track when component has mounted
+  useEffect(() => {
+    setHasMounted(true);
+  }, []);
+
+  // Check authentication status and show dialog if not authenticated
+  useEffect(() => {
+    if (hasMounted && !isAuthenticated) {
+      setShowAuthDialog(true);
+      
+      // Redirect to login page after 3 seconds
+      const timer = setTimeout(() => {
+        router.push(`/auth/login?returnUrl=${encodeURIComponent(router.pathname)}`);
+      }, 3000);
+
+      return () => clearTimeout(timer);
+    }
+  }, [isAuthenticated, router, hasMounted]);
 
   // State for controlling full-screen activity log view
   const [showFullActivityLog, setShowFullActivityLog] = useState(false);
@@ -64,11 +78,13 @@ const DashboardPage = () => {
 
   // Fetch data when component mounts or filters change
   useEffect(() => {
-    dispatch(fetchDashboardStats());
-    dispatch(fetchUserEngagement(filters.timeRange));
-    dispatch(fetchTrafficData(filters.trafficFilter));
-    dispatch(fetchActivityLog());
-  }, [dispatch, filters.timeRange, filters.trafficFilter]);
+    if (hasMounted && isAuthenticated) {
+      dispatch(fetchDashboardStats());
+      dispatch(fetchUserEngagement(filters.timeRange));
+      dispatch(fetchTrafficData(filters.trafficFilter));
+      dispatch(fetchActivityLog());
+    }
+  }, [dispatch, filters.timeRange, filters.trafficFilter, isAuthenticated, hasMounted]);
 
   // Handler for time range filter change
   const handleTimeRangeChange = (range) => {
@@ -93,11 +109,41 @@ const DashboardPage = () => {
     setShowFullActivityLog(false);
   };
 
+  // Handle immediate navigation to login page
+  const handleNavigateToLogin = () => {
+    router.push(`/auth/login?returnUrl=${encodeURIComponent(router.pathname)}`);
+  };
+
+  // Don't render anything until component has mounted
+  if (!hasMounted) {
+    return null;
+  }
+
+  // If not authenticated, show the auth dialog instead of dashboard content
+  if (!isAuthenticated) {
+    return (
+      <Dialog open={showAuthDialog} onClose={() => setShowAuthDialog(false)}>
+        <DialogTitle>Authentication Required</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            You need to be logged in to access the dashboard. You will be redirected to the login page shortly.
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleNavigateToLogin} color="primary" variant="contained">
+            Go to Login Page
+          </Button>
+        </DialogActions>
+      </Dialog>
+    );
+  }
+
+  // Render dashboard content if authenticated
   return (
     <DashboardLayout user={user}>
       {/* Always show the header at the top */}
       <DashboardHeader
-        title={`Welcome, ${userName}`}
+        title={`Welcome, ${user?.fullName}`}
         subtitle="Here's what's happening with your platform today"
         timeRange={filters.timeRange}
         onTimeRangeChange={handleTimeRangeChange}

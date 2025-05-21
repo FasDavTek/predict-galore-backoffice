@@ -24,8 +24,10 @@ import {
 import { useRouter } from 'next/router';
 import { useSelector, useDispatch } from 'react-redux';
 import { logout } from '@/store/slices/authSlice';
+import { useAuth } from "@/context/AuthContext";
 
-const Header = ({user}) => {
+const Header = () => {
+    const user = useAuth();
   
   const router = useRouter();
   const dispatch = useDispatch();

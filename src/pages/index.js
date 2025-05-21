@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react";
 import {
   TextField,
   Button,
@@ -8,13 +8,12 @@ import {
   InputAdornment,
   IconButton,
   CircularProgress,
-  Typography,
   Link,
   Alert,
-  Snackbar
+  Snackbar,
 } from "@mui/material";
 import {
-  Mail as MailIcon,
+  Person as PersonIcon,
   Lock as LockIcon,
   Visibility as VisibilityIcon,
   VisibilityOff as VisibilityOffIcon,
@@ -27,7 +26,7 @@ import { useFormik } from "formik";
 import * as yup from "yup";
 
 const validationSchema = yup.object({
-  email: yup.string().required("Email is required"),
+  username: yup.string().required("Username is required"),
   password: yup.string().required("Password is required"),
 });
 
@@ -42,48 +41,77 @@ const LoginPage = () => {
     severity: "success",
   });
 
-  const formik = useFormik({
-    initialValues: {
-      email: "",
-      password: "",
-      rememberMe: false,
-    },
-    validationSchema,
-    onSubmit: async (values) => {
-      try {
-        await dispatch(
-          adminSignin({ 
-            email: values.email, 
-            password: values.password 
-          })
-        ).unwrap();
-        
-        if (values.rememberMe) {
-          localStorage.setItem("rememberMe", "true");
-        }
-        
-        setSnackbar({
-          open: true,
-          message: "Login successful! Redirecting...",
-          severity: "success"
-        });
-        
-        router.push("/dashboard");
-      } catch (err) {
-        setSnackbar({
-          open: true,
-          message: err.message || "Invalid credentials. Please try again.",
-          severity: "error"
-        });
+ const formik = useFormik({
+  initialValues: {
+    username: "",
+    password: "",
+    rememberMe: false,
+  },
+  validationSchema,
+  onSubmit: async (values, { setSubmitting }) => {
+    try {
+      const loginData = {
+        username: values.username,
+        password: values.password,
+      };
+      
+      console.log("Login attempt with:", { username: values.username }); // Log attempt without password
+      
+      await dispatch(adminSignin(loginData)).unwrap();
+
+      if (values.rememberMe) {
+        localStorage.setItem("rememberMe", "true");
       }
-    },
-  });
+
+      setSnackbar({
+        open: true,
+        message: "Login successful! Redirecting...",
+        severity: "success",
+      });
+
+      router.push("/dashboard");
+    } catch (err) {
+      // Detailed error logging for debugging
+      console.error("Login Error Details:", {
+        fullError: err, // Complete error object
+        statusCode: err?.status,
+        serverMessage: err?.message,
+        timestamp: new Date().toISOString()
+      });
+
+      // User-friendly error messages based on different error cases
+      let errorMessage = "Login failed. Please try again.";
+      
+       if (err?.status === 400) {
+        errorMessage = "Invalid request. Please check your input and try again.";
+      } else if (err?.status === 401) {
+        errorMessage = "Invalid username or password";
+      } else if (err?.status === 403) {
+        errorMessage = "Account not authorized";
+      } else if (err?.status === 429) {
+        errorMessage = "Too many attempts. Please wait before trying again";
+      } else if (err?.status >= 500) {
+        errorMessage = "Server error. Please try again later";
+      } else if (err.message.includes("Network Error")) {
+        errorMessage = "Network connection failed. Please check your internet";
+      }
+
+      setSnackbar({
+        open: true,
+        message: errorMessage,
+        severity: "error",
+      });
+    } finally {
+      setSubmitting(false);
+    }
+  },
+});
 
   const handleCloseSnackbar = () => {
-    setSnackbar(prev => ({ ...prev, open: false }));
+    setSnackbar((prev) => ({ ...prev, open: false }));
   };
 
-  React.useEffect(() => {
+  useEffect(() => {
     return () => {
       dispatch(clearAuthError());
     };
@@ -98,33 +126,40 @@ const LoginPage = () => {
         open={snackbar.open}
         autoHideDuration={6000}
         onClose={handleCloseSnackbar}
-        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+        anchorOrigin={{ vertical: "top", horizontal: "center" }}
       >
-        <Alert 
-          onClose={handleCloseSnackbar} 
+        <Alert
+          onClose={handleCloseSnackbar}
           severity={snackbar.severity}
-          sx={{ width: '100%' }}
+          sx={{ width: "100%" }}
         >
           {snackbar.message}
         </Alert>
       </Snackbar>
 
-      <Box component="form" onSubmit={formik.handleSubmit} sx={{ width: "100%" }}>
+      <Box
+        component="form"
+        onSubmit={(e) => {
+          e.preventDefault();
+          formik.handleSubmit(e);
+        }}
+        sx={{ width: "100%" }}
+      >
         <TextField
           fullWidth
-          label="Email address"
-          name="email"
+          label="Username"
+          name="username"
           autoComplete="username"
-          value={formik.values.email}
+          value={formik.values.username}
           onChange={formik.handleChange}
           onBlur={formik.handleBlur}
-          error={formik.touched.email && Boolean(formik.errors.email)}
-          helperText={formik.touched.email && formik.errors.email}
+          error={formik.touched.username && Boolean(formik.errors.username)} // Changed from email to username
+          helperText={formik.touched.username && formik.errors.username} // Changed from email to username
           sx={{ mb: 3 }}
           InputProps={{
             startAdornment: (
               <InputAdornment position="start">
-                <MailIcon sx={{ color: "text.disabled" }} />
+                <PersonIcon sx={{ color: "text.disabled" }} />
               </InputAdornment>
             ),
           }}
@@ -161,12 +196,14 @@ const LoginPage = () => {
           }}
         />
 
-        <Box sx={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          mb: 3
-        }}>
+        <Box
+          sx={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            mb: 3,
+          }}
+        >
           <FormControlLabel
             control={
               <Checkbox

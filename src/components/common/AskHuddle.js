@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import Image from "next/image";
 import {
   Box,
   Button,
@@ -54,7 +55,10 @@ const AskHuddle = () => {
     const userMessage = message || prompt.trim();
     if (!userMessage) return;
 
-    setChatHistory((prev) => [...prev, { sender: "user", message: userMessage }]);
+    setChatHistory((prev) => [
+      ...prev,
+      { sender: "user", message: userMessage },
+    ]);
     setPrompt("");
     setChatStarted(true); // Mark chat as started
 
@@ -72,121 +76,43 @@ const AskHuddle = () => {
 
   return (
     <>
-      {/* <Button
+      <Button
         onClick={handleOpen}
+        variant="text"
         sx={{
           position: "fixed",
           right: 0,
           top: "40%",
           transform: "translateY(-50%)",
           zIndex: 1300,
-          backgroundColor: "#6bc330",
-          borderRadius: "32px 0 0 32px",
-          padding: "12px 8px",
-          width: "48px",
-          height: "180px",
+          padding: 0,
+          margin: 0,
           minWidth: "auto",
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          justifyContent: "center",
-          gap: 1,
-          textTransform: "none",
+          // width: "48px",
+          // height: "48px",
+          // backgroundColor: "transparent",
           "&:hover": {
-            backgroundColor: "#5aa52a",
+            transform: "translateY(-50%) translateX(-4px)",
+            backgroundColor: "transparent",
+          },
+          "&:active": {
+            transform: "translateY(-50%) translateX(-2px)",
           },
         }}
       >
-        <Typography
-          sx={{
-            writingMode: "vertical-rl",
-            transform: "rotate(180deg)",
-            color: "white",
-            fontWeight: 600,
-            fontSize: "14px",
+        <Image
+          src="/Docker.png"
+          alt="Chat button"
+          width={36}
+          height={36}
+          style={{
+            objectFit: "contain",
+            filter: "drop-shadow(0 2px 4px rgba(0,0,0,0.2))",
           }}
-        >
-          Ask Huddle
-        </Typography>
-        <Box
-          sx={{
-            width: 24,
-            height: 24,
-            backgroundColor: "#f5f589",
-            borderRadius: "6px",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            mt: 1,
-          }}
-        >
-          <ChatBubbleOutlineIcon sx={{ fontSize: "16px", color: "#444" }} />
-        </Box>
-      </Button> */}
+          priority
+        />
+      </Button>
 
-
-<svg 
-  viewBox="0 0 56 262" 
-  preserveAspectRatio="none" 
-  onClick={handleOpen}
-  style={{  
-    width: "48px",
-    height: "180px",
-    position: "fixed",
-    right: 0,
-    top: "40%",
-    zIndex: 1300,
-    cursor: "pointer",
-  }}
->
-  {/* Background path */}
- <path
-  d="M56,0
-     Q56,20 46,30
-     L10,30
-     Q0,40 0,131
-     Q0,222 10,232
-     L46,232
-     Q56,232 56,254  
-     L56,262
-     L48,262         
-     Q56,262 56,254
-     Z"
-  fill="#4CAF50"
-/>
-  
-  {/* Container for icon and text */}
-  <foreignObject 
-    x="0" 
-    y="0" 
-    width="56" 
-    height="262"
-  >
-    <Box sx={{
-      display: "flex",
-      flexDirection: "column",
-      alignItems: "center",
-      justifyContent: "center",
-      height: "100%",
-      gap: "12px",
-      textOrientation: "mixed"
-    }}>
-      {/* Icon */}
-      <ChatBubbleOutlineIcon />
-      
-      {/* Vertical text */}
-      <Typography>
-        Ask Huddle
-      </Typography>
-    </Box>
-  </foreignObject>
-</svg>
-
-
-
-
-
-    
       <Dialog
         open={open}
         onClose={handleClose}
@@ -283,7 +209,7 @@ const AskHuddle = () => {
                   {/* <strong>
                   {chat.sender === "user" ? "You" : "Huddle"}:
                   </strong>{" "} */}
-                  
+
                   {chat.message}
                 </Typography>
               </Box>

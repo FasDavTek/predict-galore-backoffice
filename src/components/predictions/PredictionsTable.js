@@ -19,6 +19,7 @@ import {
   InputLabel,
   Select,
   InputAdornment,
+  CircularProgress,
 } from "@mui/material";
 import {
   Search as SearchIcon,
@@ -30,6 +31,7 @@ import {
 } from "@mui/icons-material";
 import PredictionActions from "./PredictionActions";
 import { useCallback } from "react";
+import Image from "next/image";
 
 const PredictionsTable = ({
   predictions = [],
@@ -138,12 +140,35 @@ const PredictionsTable = ({
   // Render empty state message
   const renderEmptyState = () => (
     <TableRow>
-      <TableCell colSpan={5} sx={{ textAlign: 'center', py: 4 }}>
-        <Typography variant="body1">
-          {loading ? "Loading predictions..." : "No predictions found"}
-        </Typography>
-      </TableCell>
-    </TableRow>
+    <TableCell colSpan={5}>
+      <Box
+        display="flex"
+        flexDirection="column"
+        alignItems="center"
+        justifyContent="center"
+        py={8}
+      >
+        {loading ? (
+          <>
+            <CircularProgress size={40} />
+            <Typography variant="body1" mt={2}>
+              Loading predictions...
+            </Typography>
+          </>
+        ) : (
+          <>
+            <Image src='/empty.png' alt="No Predictions" width={80} height={80} />
+            <Typography variant="h6" fontWeight="medium" mt={3}>
+              No Predictions Created Yet
+            </Typography>
+            <Typography variant="body2" color="textSecondary" mt={1}>
+              Start making expert predictions to keep users engaged
+            </Typography>
+          </>
+        )}
+      </Box>
+    </TableCell>
+  </TableRow>
   );
 
   return (
@@ -151,6 +176,7 @@ const PredictionsTable = ({
       {/* Search and action toolbar */}
       <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
          <Box sx={{ display: "flex", gap: 2 }}>
+
         <TextField
           placeholder="Search predictions..."
           size="small"
@@ -166,6 +192,7 @@ const PredictionsTable = ({
           sx={{ width: 300 }}
         />
 
+        {/* filter button */}
           <Button
             variant="outlined"
             startIcon={<FilterIcon />}

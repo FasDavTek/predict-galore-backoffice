@@ -3,20 +3,41 @@ import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import { HYDRATE } from "next-redux-wrapper";
 import axios from "axios";
 
-const BASE_URL = 'https://apidev.predictgalore.com';
+const BASE_URL = "https://apidev.predictgalore.com";
 
 // Helper function for consistent error logging
-const logApiError = (operation, error, payload = null) => {
-  console.groupCollapsed(
-    `%cAPI Error: ${operation}`,
-    "color: red; font-weight: bold;"
-  );
-  console.error("Operation:", operation);
-  console.error("Error:", error);
-  if (payload) console.log("Payload:", payload);
-  console.error("Response:", error.response);
+const logApiError = (operation, endpoint = null, payload = null, error,  ) => {
+  // Construct a clean, copy-friendly error message
+  const errorMessage = [
+    `-------------------------`,
+    `API Error: ${operation}`,
+    `-------------------------`,
+    endpoint && `Endpoint: ${endpoint}`,
+    `\n`,
+     payload && `Payload: ${JSON.stringify(payload, null, 2)}`,
+    `\n`,
+    `Error: ${error.message}`,
+    `\n`,
+    error.response?.status && `Status: ${error.response.status}`,
+    `\n`,
+    error.response?.data?.message && `Server Message: ${error.response.data.message}`,
+    `\n`,
+    error.response?.data?.errors && `Validation Errors: ${JSON.stringify(error.response.data.errors, null, 2)}`,
+
+  ]
+    .filter(Boolean) // Remove empty lines
+    .join('\n'); // Join with newlines
+
+  // Log to console (grouped for better visualization)
+  console.groupCollapsed(`%cAPI Error: ${operation}`, 'color: red; font-weight: bold;');
+  console.log(errorMessage);
   console.groupEnd();
+
+  // Return the formatted message for potential copying
+  return errorMessage;
 };
+
+
 
 // Helper function for successful operation logging
 const logApiSuccess = (operation, response) => {
@@ -33,15 +54,17 @@ const logApiSuccess = (operation, response) => {
 export const checkEmail = createAsyncThunk(
   "auth/checkEmail",
   async (email, { rejectWithValue }) => {
+    const endpoint = `${BASE_URL}/api/v1/auth/user/check-email`;
+    
     try {
       console.debug(`Checking email availability for: ${email}`);
-      const response = await axios.get("/api/v1/auth/user/check-email", {
+      const response = await axios.get(endpoint, {
         params: { email },
       });
       logApiSuccess("checkEmail", response.data);
       return response.data;
     } catch (error) {
-      logApiError("checkEmail", error, { email });
+      logApiError("checkEmail", endpoint, { email }, error);
       return rejectWithValue({
         message: error.response?.data?.message || "Email check failed",
         statusCode: error.response?.status || 500,
@@ -54,18 +77,20 @@ export const checkEmail = createAsyncThunk(
 export const adminSignin = createAsyncThunk(
   "auth/adminSignin",
   async ({ username, password }, { rejectWithValue }) => {
+    const endpoint = `${BASE_URL}/api/v1/Admin/auth/signin`;
+    
     try {
       console.debug("Admin signin attempt for username:", username);
       const response = await axios.post(
-        `${BASE_URL}/api/v1/Admin/auth/signin`,
+        endpoint,
         { username, password },
         {
           headers: {
-            'Content-Type': 'application/json'
-          }
+            "Content-Type": "application/json",
+          },
         }
       );
-      
+
       logApiSuccess("adminSignin", response.data);
 
       if (response.data.token) {
@@ -74,14 +99,11 @@ export const adminSignin = createAsyncThunk(
 
       return response.data;
     } catch (error) {
-      logApiError("adminSignin", error, { username });
-      
-      // Return a consistent error structure
+      logApiError("adminSignin", endpoint, { username }, error);
       return rejectWithValue({
-        message: error.response?.data?.message || 
-               error.message || 
-               "Authentication failed. Please try again.",
-        status: error.response?.status || 500
+        message: error.response?.data?.message || "Authentication failed",
+        statusCode: error.response?.status || 500,
+        errorDetails: error.response?.data?.errors || null,
       });
     }
   }
@@ -89,17 +111,16 @@ export const adminSignin = createAsyncThunk(
 
 export const registerUser = createAsyncThunk(
   "auth/register",
-  async (registrationData, { rejectWithValue }) => {
+  async (userData, { rejectWithValue }) => {
+    const endpoint = `${BASE_URL}/api/v1/auth/user/register`;
+    
     try {
-      console.debug(
-        "Registering user with data:",
-        JSON.stringify(registrationData, null, 2)
-      );
-      const response = await axios.post("/api/v1/auth/user/register", userData);
+      console.debug("Registering user with data:", JSON.stringify(userData, null, 2));
+      const response = await axios.post(endpoint, userData);
       logApiSuccess("registerUser", response.data);
       return response.data;
     } catch (error) {
-      logApiError("registerUser", error, userData);
+      logApiError("registerUser", endpoint, userData, error);
       return rejectWithValue({
         message: error.response?.data?.message || "Registration failed",
         statusCode: error.response?.status || 500,
@@ -112,15 +133,17 @@ export const registerUser = createAsyncThunk(
 export const confirmEmail = createAsyncThunk(
   "auth/confirmEmail",
   async ({ userId, token }, { rejectWithValue }) => {
+    const endpoint = `${BASE_URL}/api/v1/auth/user/confirmemail`;
+    
     try {
       console.debug(`Confirming email for userId: ${userId}`);
-      const response = await axios.get("/api/v1/auth/user/confirmemail", {
+      const response = await axios.get(endpoint, {
         params: { userId, token },
       });
       logApiSuccess("confirmEmail", response.data);
       return response.data;
     } catch (error) {
-      logApiError("confirmEmail", error, { userId });
+      logApiError("confirmEmail", endpoint, { userId }, error);
       return rejectWithValue({
         message: error.response?.data?.message || "Email confirmation failed",
         statusCode: error.response?.status || 500,
@@ -133,10 +156,12 @@ export const confirmEmail = createAsyncThunk(
 export const fetchUserProfile = createAsyncThunk(
   "auth/fetchUserProfile",
   async (_, { rejectWithValue, getState }) => {
+    const endpoint = `${BASE_URL}/api/v1/auth/user/me`;
+    
     try {
       console.debug("Fetching user profile");
       const token = getState().auth.token;
-      const response = await axios.get("/api/v1/auth/user/me", {
+      const response = await axios.get(endpoint, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -144,7 +169,7 @@ export const fetchUserProfile = createAsyncThunk(
       logApiSuccess("fetchUserProfile", response.data);
       return response.data;
     } catch (error) {
-      logApiError("fetchUserProfile", error);
+      logApiError("fetchUserProfile", endpoint, null, error);
       return rejectWithValue({
         message: error.response?.data?.message || "Failed to fetch profile",
         statusCode: error.response?.status || 500,
@@ -157,14 +182,13 @@ export const fetchUserProfile = createAsyncThunk(
 export const updateUserProfile = createAsyncThunk(
   "auth/updateUserProfile",
   async (profileData, { rejectWithValue, getState }) => {
+    const endpoint = `${BASE_URL}/api/v1/auth/user/profile/update`;
+    
     try {
-      console.debug(
-        "Updating user profile with data:",
-        JSON.stringify(profileData, null, 2)
-      );
+      console.debug("Updating user profile with data:", JSON.stringify(profileData, null, 2));
       const token = getState().auth.token;
       const response = await axios.post(
-        "/api/v1/auth/user/profile/update",
+        endpoint,
         profileData,
         {
           headers: {
@@ -175,7 +199,7 @@ export const updateUserProfile = createAsyncThunk(
       logApiSuccess("updateUserProfile", response.data);
       return response.data;
     } catch (error) {
-      logApiError("updateUserProfile", error, profileData);
+      logApiError("updateUserProfile", endpoint, profileData, error);
       return rejectWithValue({
         message: error.response?.data?.message || "Profile update failed",
         statusCode: error.response?.status || 500,
@@ -188,20 +212,17 @@ export const updateUserProfile = createAsyncThunk(
 export const generatePasswordResetToken = createAsyncThunk(
   "auth/generatePasswordResetToken",
   async (username, { rejectWithValue }) => {
+    const endpoint = `${BASE_URL}/api/v1/auth/forgot_password/generate_token`;
+    
     try {
       console.debug(`Generating password reset token for: ${username}`);
-      const response = await axios.post(
-        "/api/v1/auth/forgot_password/generate_token",
-        { username }
-      );
+      const response = await axios.post(endpoint, { username });
       logApiSuccess("generatePasswordResetToken", response.data);
-      return response.data;
+      return { ...response.data, username };
     } catch (error) {
-      logApiError("generatePasswordResetToken", error, { username });
+      logApiError("generatePasswordResetToken", endpoint, { username }, error);
       return rejectWithValue({
-        message:
-          error.response?.data?.message ||
-          "Password reset token generation failed",
+        message: error.response?.data?.message || "Password reset token generation failed",
         statusCode: error.response?.status || 500,
         errorDetails: error.response?.data?.errors || null,
       });
@@ -211,17 +232,16 @@ export const generatePasswordResetToken = createAsyncThunk(
 
 export const confirmPasswordResetToken = createAsyncThunk(
   "auth/confirmPasswordResetToken",
-  async (token, { rejectWithValue }) => {
+  async ({ token, username }, { rejectWithValue }) => {
+    const endpoint = `${BASE_URL}/api/v1/auth/forgot_password/confirm_token`;
+    
     try {
-      console.debug("Confirming password reset token");
-      const response = await axios.post(
-        "/api/v1/auth/forgot_password/confirm_token",
-        { token }
-      );
+      console.debug("Confirming password reset token for user:", username);
+      const response = await axios.post(endpoint, { token });
       logApiSuccess("confirmPasswordResetToken", response.data);
-      return response.data;
+      return { ...response.data, username };
     } catch (error) {
-      logApiError("confirmPasswordResetToken", error, { token });
+      logApiError("confirmPasswordResetToken", endpoint, { token, username }, error);
       return rejectWithValue({
         message: error.response?.data?.message || "Token confirmation failed",
         statusCode: error.response?.status || 500,
@@ -234,20 +254,18 @@ export const confirmPasswordResetToken = createAsyncThunk(
 export const resetPassword = createAsyncThunk(
   "auth/resetPassword",
   async ({ username, password, confirmPassword }, { rejectWithValue }) => {
+    const endpoint = `${BASE_URL}/api/v1/auth/forgot_password/reset_password`;
+    
     try {
       console.debug("Resetting password for user:", username);
       const response = await axios.post(
-        "/api/v1/auth/forgot_password/reset_password",
-        {
-          username,
-          password,
-          confirmPassword,
-        }
+        endpoint,
+        { username, password, confirmPassword }
       );
       logApiSuccess("resetPassword", response.data);
       return response.data;
     } catch (error) {
-      logApiError("resetPassword", error, { username });
+      logApiError("resetPassword", endpoint, { username }, error);
       return rejectWithValue({
         message: error.response?.data?.message || "Password reset failed",
         statusCode: error.response?.status || 500,
@@ -263,11 +281,13 @@ export const changePassword = createAsyncThunk(
     { currentPassword, newPassword, confirmPassword },
     { rejectWithValue, getState }
   ) => {
+    const endpoint = `${BASE_URL}/api/v1/auth/change_password`;
+    
     try {
       console.debug("Changing password");
       const token = getState().auth.token;
       const response = await axios.post(
-        "/api/v1/auth/change_password",
+        endpoint,
         {
           currentPassword,
           newPassword,
@@ -282,7 +302,7 @@ export const changePassword = createAsyncThunk(
       logApiSuccess("changePassword", response.data);
       return response.data;
     } catch (error) {
-      logApiError("changePassword", error);
+      logApiError("changePassword", endpoint, null, error);
       return rejectWithValue({
         message: error.response?.data?.message || "Password change failed",
         statusCode: error.response?.status || 500,
@@ -295,11 +315,13 @@ export const changePassword = createAsyncThunk(
 export const validateTwoFAToken = createAsyncThunk(
   "auth/validateTwoFAToken",
   async (token, { rejectWithValue, getState }) => {
+    const endpoint = `${BASE_URL}/api/v1/auth/2FA/ValidateToken`;
+    
     try {
       console.debug("Validating 2FA token");
       const authToken = getState().auth.token;
       const response = await axios.post(
-        "/api/v1/auth/2FA/ValidateToken",
+        endpoint,
         { token },
         {
           headers: {
@@ -310,7 +332,7 @@ export const validateTwoFAToken = createAsyncThunk(
       logApiSuccess("validateTwoFAToken", response.data);
       return response.data;
     } catch (error) {
-      logApiError("validateTwoFAToken", error, { token });
+      logApiError("validateTwoFAToken", endpoint, { token }, error);
       return rejectWithValue({
         message: error.response?.data?.message || "2FA token validation failed",
         statusCode: error.response?.status || 500,
@@ -323,10 +345,12 @@ export const validateTwoFAToken = createAsyncThunk(
 export const resendTwoFAToken = createAsyncThunk(
   "auth/resendTwoFAToken",
   async (phoneEmail, { rejectWithValue, getState }) => {
+    const endpoint = `${BASE_URL}/api/v1/auth/resend/2FA`;
+    
     try {
       console.debug(`Resending 2FA token to: ${phoneEmail}`);
       const token = getState().auth.token;
-      const response = await axios.post("/api/v1/auth/resend/2FA", null, {
+      const response = await axios.post(endpoint, null, {
         params: { phoneemail: phoneEmail },
         headers: {
           Authorization: `Bearer ${token}`,
@@ -335,7 +359,7 @@ export const resendTwoFAToken = createAsyncThunk(
       logApiSuccess("resendTwoFAToken", response.data);
       return response.data;
     } catch (error) {
-      logApiError("resendTwoFAToken", error, { phoneEmail });
+      logApiError("resendTwoFAToken", endpoint, { phoneEmail }, error);
       return rejectWithValue({
         message: error.response?.data?.message || "Failed to resend 2FA token",
         statusCode: error.response?.status || 500,

@@ -129,14 +129,17 @@ const ResetPasswordPage = () => {
   // Formik for token confirmation step
   const tokenFormik = useFormik({
     initialValues: {
-      token: generatedToken || "",
+      token: "",
     },
     validationSchema: yup.object({
       token: yup.string().required("Token is required"),
     }),
     onSubmit: async (values) => {
       try {
-        const result = await dispatch(confirmPasswordResetToken(values.token));
+       const result = await dispatch(confirmPasswordResetToken({
+        token: values.token,
+        username: initialFormik.values.username 
+      }));
         if (confirmPasswordResetToken.fulfilled.match(result)) {
           setCurrentStep(STEPS.TOKEN_CONFIRMED);
         }

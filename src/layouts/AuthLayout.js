@@ -60,8 +60,13 @@ export const AuthLayout = ({ children, title, subtitle }) => {
       sx={{
         display: "flex",
         width: "100vw",
-        // height: "100vh",
+        height: "100vh",
         overflowY: "auto",
+        overflowX: "hidden",
+        scrollbarWidth: "none", // Firefox
+          "&::-webkit-scrollbar": {
+            display: "none", // Chrome, Safari, Opera
+               },
         bgcolor: "background.paper",
       }}
     >
@@ -72,7 +77,6 @@ export const AuthLayout = ({ children, title, subtitle }) => {
           height: "100%",
           bgcolor: "#162E08",
           padding: 4,
-          // overflowY: "auto",
           display: "flex",
           flexDirection: "column",
         }}

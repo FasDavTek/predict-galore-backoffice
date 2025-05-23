@@ -1,10 +1,13 @@
 // pages/predictions.js
 import React, { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
+import { useRouter } from "next/router";
+
 import { ErrorBoundary } from "react-error-boundary";
 import { Box, Snackbar, Alert } from "@mui/material";
 
 // Component imports
+import DashboardSkeleton from "@/components/common/DashboardSkeleton";
 import DashboardLayout from "@/layouts/DashboardLayout";
 import { Header } from "@/components/predictions/Header";
 import PredictionStat from "@/components/predictions/PredictionStat";
@@ -13,26 +16,8 @@ import PredictionDetail from "@/components/predictions/PredictionDetail";
 import NewPredictionForm from "@/components/predictions/NewPredictionForm";
 
 // Redux imports
-// import {
-//   createPrediction,
-//   fetchPrediction,
-//   fetchPredictions,
-//   updatePrediction,
-//   deletePrediction,
-//   fetchTeams,
-//   selectPredictions,
-//   selectCurrentPrediction,
-//   selectTeams,
-//   selectLoading,
-//   selectError,
-//   selectPagination,
-//   selectPredictionStats,
-//   clearError,
-//   clearCurrentPrediction
-// } from "@/store/slices/predictionsSlice";
-
-import { 
-  createPrediction, 
+import {
+  createPrediction,
   fetchPrediction,
   fetchPredictions,
   updatePrediction,
@@ -46,8 +31,16 @@ import {
   selectPagination,
   selectPredictionStats,
   clearError,
-  clearCurrentPrediction 
+  clearCurrentPrediction,
+  setPagination,
 } from "@/store/slices/predictionSlice";
+
+import {
+  selectIsAuthenticated,
+  selectAuthStatus,
+} from "@/store/slices/authSlice";
+
+import ProtectedRoute from "@/components/auth/ProtectedRoute";
 
 /**
  * Error boundary fallback component
@@ -67,8 +60,15 @@ const ErrorFallback = ({ error }) => {
  * Handles displaying and managing sports predictions
  */
 const PredictionsPage = () => {
-  // Redux state management
   const dispatch = useDispatch();
+  const router = useRouter();
+
+  const isAuthenticated = useSelector(selectIsAuthenticated);
+  // console.log("Is Authenticated?", isAuthenticated);
+
+  const authStatus = useSelector(selectAuthStatus);
+  // console.log("Authentication status", authStatus);
+
   const predictions = useSelector(selectPredictions);
   const currentPrediction = useSelector(selectCurrentPrediction);
   const teams = useSelector(selectTeams);
@@ -78,7 +78,7 @@ const PredictionsPage = () => {
   const statsData = useSelector(selectPredictionStats);
 
   // Local component state
-  const [viewMode, setViewMode] = useState("list"); // 'list', 'detail', or 'create'
+  const [viewMode, setViewMode] = useState("list");
   const [notification, setNotification] = useState({
     open: false,
     message: "",
@@ -88,8 +88,13 @@ const PredictionsPage = () => {
     search: "",
     team: "",
     startDate: null,
-    endDate: null
+    endDate: null,
   });
+
+  const showNotification = (message, severity) => {
+    setNotification({ open: true, message, severity });
+  };
+
 
   /**
    * Fetch predictions data on mount and when filters or pagination changes
@@ -100,9 +105,9 @@ const PredictionsPage = () => {
         const params = {
           page: pagination.page,
           limit: pagination.limit,
-          ...filters
+          ...filters,
         };
-        
+
         await dispatch(fetchPredictions(params));
       } catch (error) {
         showNotification("Failed to load predictions", "error");
@@ -133,11 +138,6 @@ const PredictionsPage = () => {
 
 
   // Event handlers
-
-  /**
-   * Handle selecting a prediction to view details
-   * @param {string} id - Prediction ID
-   */
   const handlePredictionSelect = async (id) => {
     try {
       await dispatch(fetchPrediction(id)).unwrap();
@@ -147,10 +147,6 @@ const PredictionsPage = () => {
     }
   };
 
-  /**
-   * Handle creating a new prediction
-   * @param {object} predictionData - New prediction data
-   */
   const handleCreateNew = async (predictionData) => {
     try {
       await dispatch(createPrediction(predictionData)).unwrap();
@@ -161,10 +157,6 @@ const PredictionsPage = () => {
     }
   };
 
-  /**
-   * Handle updating an existing prediction
-   * @param {object} data - Updated prediction data with ID
-   */
   const handleUpdatePrediction = async ({ id, ...data }) => {
     try {
       await dispatch(updatePrediction({ id, ...data })).unwrap();
@@ -175,10 +167,6 @@ const PredictionsPage = () => {
     }
   };
 
-  /**
-   * Handle deleting a prediction
-   * @param {string} id - Prediction ID to delete
-   */
   const handleDeletePrediction = async (id) => {
     try {
       await dispatch(deletePrediction(id)).unwrap();
@@ -189,142 +177,134 @@ const PredictionsPage = () => {
     }
   };
 
-  /**
-   * Navigate back to predictions list view
-   */
   const handleBackToList = () => {
     dispatch(clearCurrentPrediction());
     setViewMode("list");
   };
 
-  /**
-   * Navigate to create new prediction form
-   */
   const handleNewPredictionClick = () => {
     setViewMode("create");
   };
 
-  /**
-   * Handle filter changes for predictions list
-   * @param {object} newFilters - Updated filter values
-   */
   const handleFilterChange = (newFilters) => {
     setFilters(newFilters);
-    // Reset to first page when filters change
     dispatch(setPagination({ ...pagination, page: 1 }));
   };
 
-  /**
-   * Handle page changes for pagination
-   * @param {number} newPage - New page number
-   */
   const handlePageChange = (newPage) => {
     dispatch(setPagination({ ...pagination, page: newPage }));
   };
 
-  /**
-   * Show notification toast
-   * @param {string} message - Notification message
-   * @param {'success'|'error'|'warning'|'info'} severity - Alert severity
-   */
-  const showNotification = (message, severity) => {
-    setNotification({ open: true, message, severity });
-  };
-
-  /**
-   * Close notification toast
-   */
   const handleNotificationClose = () => {
-    setNotification(prev => ({ ...prev, open: false }));
+    setNotification((prev) => ({ ...prev, open: false }));
   };
 
   // Prediction stats data
   const stats = [
-    { title: "Total Predictions", value: statsData.total.toString(), change: "+24.5" },
-    { title: "Active Predictions", value: statsData.active.toString(), change: "+8.3" },
+    {
+      title: "Total Predictions",
+      value: statsData?.total?.toString() || "0",
+      change: "+24.5",
+    },
+    {
+      title: "Active Predictions",
+      value: statsData?.active?.toString() || "0",
+      change: "+8.3",
+    },
     { title: "Winning Predictions", value: "1,284", change: "+15.2" },
-    { title: "Accuracy Rate", value: "72.4%", change: "+3.8" }
+    { title: "Accuracy Rate", value: "72.4%", change: "+3.8" },
   ];
 
-  return (
-    <DashboardLayout>
-      <ErrorBoundary FallbackComponent={ErrorFallback}>
-        {/* Page header with title and action button */}
-        <Header
-          title="Predictions"
-          subtitle="Manage and analyze sports predictions"
-          onNewPrediction={handleNewPredictionClick}
-        />
+  // Only render the actual page content if authenticated
 
-        {/* Main content area with conditional rendering based on view mode */}
-        {viewMode === "list" && (
+    return (
+       <ProtectedRoute>
+      <DashboardLayout>
+        {isAuthenticated && (
           <>
-            {/* Stats cards row */}
-            <Box sx={{ 
-              mb: 4, 
-              display: "grid", 
-              gridTemplateColumns: { 
-                xs: "1fr", 
-                sm: "repeat(2, 1fr)", 
-                md: "repeat(4, 1fr)" 
-              }, 
-              gap: 3 
-            }}>
-              {stats.map((stat, index) => (
-                <PredictionStat key={index} {...stat} />
-              ))}
-            </Box>
+        <ErrorBoundary FallbackComponent={ErrorFallback}>
+          {/* Page header with title and action button */}
+          <Header
+            title="Predictions"
+            subtitle="Manage and analyze sports predictions"
+            onNewPrediction={handleNewPredictionClick}
+          />
 
-            {/* Predictions table with filtering and pagination */}
-            <PredictionsTable
-              predictions={predictions}
-              loading={loading}
-              pagination={pagination}
-              filters={filters}
-              onFilterChange={handleFilterChange}
-              onPageChange={handlePageChange}
-              onPredictionSelect={handlePredictionSelect}
-              onNewPredictionClick={handleNewPredictionClick}
+          {/* Main content area with conditional rendering based on view mode */}
+          {viewMode === "list" && (
+            <>
+              {/* Stats cards row */}
+              <Box
+                sx={{
+                  mb: 4,
+                  display: "grid",
+                  gridTemplateColumns: {
+                    xs: "1fr",
+                    sm: "repeat(2, 1fr)",
+                    md: "repeat(4, 1fr)",
+                  },
+                  gap: 3,
+                }}
+              >
+                {stats.map((stat, index) => (
+                  <PredictionStat key={index} {...stat} />
+                ))}
+              </Box>
+
+              {/* Predictions table with filtering and pagination */}
+              <PredictionsTable
+                predictions={predictions}
+                loading={loading}
+                pagination={pagination}
+                filters={filters}
+                onFilterChange={handleFilterChange}
+                onPageChange={handlePageChange}
+                onPredictionSelect={handlePredictionSelect}
+                onNewPredictionClick={handleNewPredictionClick}
+              />
+            </>
+          )}
+
+          {/* Prediction detail view */}
+          {viewMode === "detail" && currentPrediction && (
+            <PredictionDetail
+              prediction={currentPrediction}
+              onBack={handleBackToList}
+              onUpdate={handleUpdatePrediction}
+              onDelete={handleDeletePrediction}
             />
-          </>
-        )}
+          )}
 
-        {/* Prediction detail view */}
-        {viewMode === "detail" && currentPrediction && (
-          <PredictionDetail
-            prediction={currentPrediction}
-            onBack={handleBackToList}
-            onUpdate={handleUpdatePrediction}
-            onDelete={handleDeletePrediction}
-          />
-        )}
+          {/* New prediction form view */}
+          {viewMode === "create" && (
+            <NewPredictionForm
+              teams={teams}
+              onBack={handleBackToList}
+              onSubmit={handleCreateNew}
+            />
+          )}
 
-        {/* New prediction form view */}
-        {viewMode === "create" && (
-          <NewPredictionForm
-            teams={teams}
-            onBack={handleBackToList}
-            onSubmit={handleCreateNew}
-          />
-        )}
-
-        {/* Global notification snackbar */}
-        <Snackbar
-          open={notification.open}
-          autoHideDuration={6000}
-          onClose={handleNotificationClose}
-          anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
-        >
-          <Alert 
-            onClose={handleNotificationClose} 
-            severity={notification.severity}
-            sx={{ width: '100%' }}
+          {/* Global notification snackbar */}
+          <Snackbar
+            open={notification.open}
+            autoHideDuration={6000}
+            onClose={handleNotificationClose}
+            anchorOrigin={{ vertical: "top", horizontal: "center" }}
           >
-            {notification.message}
-          </Alert>
-        </Snackbar>
-      </ErrorBoundary>
-    </DashboardLayout>
+            <Alert
+              onClose={handleNotificationClose}
+              severity={notification.severity}
+              sx={{ width: "100%" }}
+            >
+              {notification.message}
+            </Alert>
+          </Snackbar>
+        </ErrorBoundary>
+         </>
+        )}
+      </DashboardLayout>
+
+</ProtectedRoute>
   );
 };
 

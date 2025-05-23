@@ -143,7 +143,7 @@ const DashboardPage = () => {
     <DashboardLayout user={user}>
       {/* Always show the header at the top */}
       <DashboardHeader
-        title={`Welcome, ${user?.fullName}`}
+        title={`Welcome, ${user?.firstName}`}
         subtitle="Here's what's happening with your platform today"
         timeRange={filters.timeRange}
         onTimeRangeChange={handleTimeRangeChange}

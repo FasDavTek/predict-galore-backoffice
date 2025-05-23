@@ -5,8 +5,16 @@ import axios from "axios";
 
 const BASE_URL = "https://apidev.predictgalore.com";
 
+// Authentication Status Constants
+export const AuthStatus = {
+  IDLE: "idle", // Initial state, no action taken
+  CHECKING: "checking",
+  AUTHENTICATED: "authenticated",
+  UNAUTHENTICATED: "unauthenticated",
+};
+
 // Helper function for consistent error logging
-const logApiError = (operation, endpoint = null, payload = null, error,  ) => {
+const logApiError = (operation, endpoint = null, payload = null, error) => {
   // Construct a clean, copy-friendly error message
   const errorMessage = [
     `-------------------------`,
@@ -14,30 +22,36 @@ const logApiError = (operation, endpoint = null, payload = null, error,  ) => {
     `-------------------------`,
     endpoint && `Endpoint: ${endpoint}`,
     `\n`,
-     payload && `Payload: ${JSON.stringify(payload, null, 2)}`,
+    payload && `Payload: ${JSON.stringify(payload, null, 2)}`,
     `\n`,
     `Error: ${error.message}`,
     `\n`,
     error.response?.status && `Status: ${error.response.status}`,
     `\n`,
-    error.response?.data?.message && `Server Message: ${error.response.data.message}`,
+    error.response?.data?.message &&
+      `Server Message: ${error.response.data.message}`,
     `\n`,
-    error.response?.data?.errors && `Validation Errors: ${JSON.stringify(error.response.data.errors, null, 2)}`,
-
+    error.response?.data?.errors &&
+      `Validation Errors: ${JSON.stringify(
+        error.response.data.errors,
+        null,
+        2
+      )}`,
   ]
     .filter(Boolean) // Remove empty lines
-    .join('\n'); // Join with newlines
+    .join("\n"); // Join with newlines
 
   // Log to console (grouped for better visualization)
-  console.groupCollapsed(`%cAPI Error: ${operation}`, 'color: red; font-weight: bold;');
+  console.groupCollapsed(
+    `%cAPI Error: ${operation}`,
+    "color: red; font-weight: bold;"
+  );
   console.log(errorMessage);
   console.groupEnd();
 
   // Return the formatted message for potential copying
   return errorMessage;
 };
-
-
 
 // Helper function for successful operation logging
 const logApiSuccess = (operation, response) => {
@@ -55,7 +69,7 @@ export const checkEmail = createAsyncThunk(
   "auth/checkEmail",
   async (email, { rejectWithValue }) => {
     const endpoint = `${BASE_URL}/api/v1/auth/user/check-email`;
-    
+
     try {
       console.debug(`Checking email availability for: ${email}`);
       const response = await axios.get(endpoint, {
@@ -78,7 +92,7 @@ export const adminSignin = createAsyncThunk(
   "auth/adminSignin",
   async ({ username, password }, { rejectWithValue }) => {
     const endpoint = `${BASE_URL}/api/v1/Admin/auth/signin`;
-    
+
     try {
       console.debug("Admin signin attempt for username:", username);
       const response = await axios.post(
@@ -113,9 +127,12 @@ export const registerUser = createAsyncThunk(
   "auth/register",
   async (userData, { rejectWithValue }) => {
     const endpoint = `${BASE_URL}/api/v1/auth/user/register`;
-    
+
     try {
-      console.debug("Registering user with data:", JSON.stringify(userData, null, 2));
+      console.debug(
+        "Registering user with data:",
+        JSON.stringify(userData, null, 2)
+      );
       const response = await axios.post(endpoint, userData);
       logApiSuccess("registerUser", response.data);
       return response.data;
@@ -134,7 +151,7 @@ export const confirmEmail = createAsyncThunk(
   "auth/confirmEmail",
   async ({ userId, token }, { rejectWithValue }) => {
     const endpoint = `${BASE_URL}/api/v1/auth/user/confirmemail`;
-    
+
     try {
       console.debug(`Confirming email for userId: ${userId}`);
       const response = await axios.get(endpoint, {
@@ -157,7 +174,7 @@ export const fetchUserProfile = createAsyncThunk(
   "auth/fetchUserProfile",
   async (_, { rejectWithValue, getState }) => {
     const endpoint = `${BASE_URL}/api/v1/auth/user/me`;
-    
+
     try {
       console.debug("Fetching user profile");
       const token = getState().auth.token;
@@ -183,19 +200,18 @@ export const updateUserProfile = createAsyncThunk(
   "auth/updateUserProfile",
   async (profileData, { rejectWithValue, getState }) => {
     const endpoint = `${BASE_URL}/api/v1/auth/user/profile/update`;
-    
+
     try {
-      console.debug("Updating user profile with data:", JSON.stringify(profileData, null, 2));
-      const token = getState().auth.token;
-      const response = await axios.post(
-        endpoint,
-        profileData,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
+      console.debug(
+        "Updating user profile with data:",
+        JSON.stringify(profileData, null, 2)
       );
+      const token = getState().auth.token;
+      const response = await axios.post(endpoint, profileData, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
       logApiSuccess("updateUserProfile", response.data);
       return response.data;
     } catch (error) {
@@ -213,7 +229,7 @@ export const generatePasswordResetToken = createAsyncThunk(
   "auth/generatePasswordResetToken",
   async (username, { rejectWithValue }) => {
     const endpoint = `${BASE_URL}/api/v1/auth/forgot_password/generate_token`;
-    
+
     try {
       console.debug(`Generating password reset token for: ${username}`);
       const response = await axios.post(endpoint, { username });
@@ -222,7 +238,9 @@ export const generatePasswordResetToken = createAsyncThunk(
     } catch (error) {
       logApiError("generatePasswordResetToken", endpoint, { username }, error);
       return rejectWithValue({
-        message: error.response?.data?.message || "Password reset token generation failed",
+        message:
+          error.response?.data?.message ||
+          "Password reset token generation failed",
         statusCode: error.response?.status || 500,
         errorDetails: error.response?.data?.errors || null,
       });
@@ -233,15 +251,26 @@ export const generatePasswordResetToken = createAsyncThunk(
 export const confirmPasswordResetToken = createAsyncThunk(
   "auth/confirmPasswordResetToken",
   async ({ token, username }, { rejectWithValue }) => {
+    console.log("token:", token);
+    console.log("username:", username);
+
     const endpoint = `${BASE_URL}/api/v1/auth/forgot_password/confirm_token`;
-    
+
     try {
       console.debug("Confirming password reset token for user:", username);
+
       const response = await axios.post(endpoint, { token });
+
       logApiSuccess("confirmPasswordResetToken", response.data);
+
       return { ...response.data, username };
     } catch (error) {
-      logApiError("confirmPasswordResetToken", endpoint, { token, username }, error);
+      logApiError(
+        "confirmPasswordResetToken",
+        endpoint,
+        { token, username },
+        error
+      );
       return rejectWithValue({
         message: error.response?.data?.message || "Token confirmation failed",
         statusCode: error.response?.status || 500,
@@ -255,13 +284,14 @@ export const resetPassword = createAsyncThunk(
   "auth/resetPassword",
   async ({ username, password, confirmPassword }, { rejectWithValue }) => {
     const endpoint = `${BASE_URL}/api/v1/auth/forgot_password/reset_password`;
-    
+
     try {
       console.debug("Resetting password for user:", username);
-      const response = await axios.post(
-        endpoint,
-        { username, password, confirmPassword }
-      );
+      const response = await axios.post(endpoint, {
+        username,
+        password,
+        confirmPassword,
+      });
       logApiSuccess("resetPassword", response.data);
       return response.data;
     } catch (error) {
@@ -282,7 +312,7 @@ export const changePassword = createAsyncThunk(
     { rejectWithValue, getState }
   ) => {
     const endpoint = `${BASE_URL}/api/v1/auth/change_password`;
-    
+
     try {
       console.debug("Changing password");
       const token = getState().auth.token;
@@ -316,7 +346,7 @@ export const validateTwoFAToken = createAsyncThunk(
   "auth/validateTwoFAToken",
   async (token, { rejectWithValue, getState }) => {
     const endpoint = `${BASE_URL}/api/v1/auth/2FA/ValidateToken`;
-    
+
     try {
       console.debug("Validating 2FA token");
       const authToken = getState().auth.token;
@@ -346,7 +376,7 @@ export const resendTwoFAToken = createAsyncThunk(
   "auth/resendTwoFAToken",
   async (phoneEmail, { rejectWithValue, getState }) => {
     const endpoint = `${BASE_URL}/api/v1/auth/resend/2FA`;
-    
+
     try {
       console.debug(`Resending 2FA token to: ${phoneEmail}`);
       const token = getState().auth.token;
@@ -369,51 +399,32 @@ export const resendTwoFAToken = createAsyncThunk(
   }
 );
 
-// Check if user is authenticated (for initial state)
-const getInitialAuthState = () => {
-  if (typeof window !== "undefined") {
-    const token = localStorage.getItem("authToken");
-    return {
-      user: null,
-      token: token || null,
-      isAuthenticated: !!token,
-      loading: false,
-      status: "idle",
-      error: null,
-      otpLoading: false,
-      resendLoading: false,
-      otpError: null,
-      resendSuccess: false,
-      twoFALoading: false,
-      twoFAError: null,
-    };
-  }
-  return {
-    user: null,
-    token: null,
-    isAuthenticated: false,
-    loading: false,
-    status: "idle",
-    error: null,
-    otpLoading: false,
-    resendLoading: false,
-    otpError: null,
-    resendSuccess: false,
-    twoFALoading: false,
-    twoFAError: null,
-  };
+// Initial state
+const initialState = {
+  loading: false,
+  status: "idle",
+  error: null,
+  authStatus: AuthStatus.IDLE,
+  user: null,
+  token:
+    typeof window !== "undefined" ? localStorage.getItem("authToken") : null,
 };
 
 const authSlice = createSlice({
   name: "auth",
-  initialState: getInitialAuthState(),
+  initialState,
   reducers: {
     logout: (state) => {
       console.debug("Logging out user");
       state.user = null;
       state.token = null;
       state.isAuthenticated = false;
+      state.authStatus = AuthStatus.UNAUTHENTICATED;
       localStorage.removeItem("authToken");
+    },
+    checkAuthStatus: (state) => {
+      console.debug("Checking authentication status");
+      state.authStatus = AuthStatus.CHECKING;
     },
     setAuthUser: (state, action) => {
       console.debug("Setting auth user manually:", action.payload);
@@ -424,18 +435,6 @@ const authSlice = createSlice({
       console.debug("Clearing auth errors");
       state.error = null;
       state.status = "idle";
-    },
-    clearOtpError: (state) => {
-      console.debug("Clearing OTP errors");
-      state.otpError = null;
-    },
-    resetResendSuccess: (state) => {
-      console.debug("Resetting resend success flag");
-      state.resendSuccess = false;
-    },
-    clearTwoFAError: (state) => {
-      console.debug("Clearing 2FA errors");
-      state.twoFAError = null;
     },
   },
   extraReducers: (builder) => {
@@ -455,15 +454,18 @@ const authSlice = createSlice({
       .addCase(adminSignin.pending, (state) => {
         state.loading = true;
         state.status = "loading";
+        state.authStatus = AuthStatus.CHECKING;
       })
       .addCase(adminSignin.fulfilled, (state, action) => {
         state.loading = false;
         state.status = "succeeded";
+        state.authStatus = AuthStatus.AUTHENTICATED;
         state.user = action.payload.user;
       })
       .addCase(adminSignin.rejected, (state, action) => {
         state.loading = false;
         state.status = "failed";
+        state.authStatus = AuthStatus.FAILED;
         state.error = action.payload;
       })
 
@@ -492,7 +494,6 @@ const authSlice = createSlice({
         state.status = "succeeded";
         state.user = action.payload.user;
         state.token = action.payload.token;
-        state.isAuthenticated = true;
         localStorage.setItem("authToken", action.payload.token);
       })
       .addCase(registerUser.rejected, (state, action) => {
@@ -610,29 +611,31 @@ const authSlice = createSlice({
 
       // Validate 2FA Token cases
       .addCase(validateTwoFAToken.pending, (state) => {
-        state.twoFALoading = true;
-        state.twoFAError = null;
+        state.loading = true;
+        state.error = null;
       })
       .addCase(validateTwoFAToken.fulfilled, (state) => {
-        state.twoFALoading = false;
+        state.loading = false;
+        state.status = "succeeded";
       })
       .addCase(validateTwoFAToken.rejected, (state, action) => {
-        state.twoFALoading = false;
-        state.twoFAError = action.payload;
+        state.loading = false;
+        state.error = action.payload;
       })
 
       // Resend 2FA Token cases
       .addCase(resendTwoFAToken.pending, (state) => {
-        state.resendLoading = true;
-        state.resendSuccess = false;
+        state.loading = true;
+        state.status = "loading";
+        state.error = null;
       })
       .addCase(resendTwoFAToken.fulfilled, (state) => {
-        state.resendLoading = false;
-        state.resendSuccess = true;
+        state.loading = false;
+        state.status = "succeeded";
       })
       .addCase(resendTwoFAToken.rejected, (state, action) => {
-        state.resendLoading = false;
-        state.twoFAError = action.payload;
+        state.loading = false;
+        state.error = action.payload;
       });
   },
 });
@@ -640,6 +643,7 @@ const authSlice = createSlice({
 // Export actions
 export const {
   logout,
+  checkAuthStatus,
   setAuthUser,
   clearAuthError,
   clearOtpError,
@@ -650,8 +654,9 @@ export const {
 // Selectors
 export const selectCurrentUser = (state) => state.auth.user;
 export const selectAuthToken = (state) => state.auth.token;
-export const selectIsAuthenticated = (state) => state.auth.isAuthenticated;
-export const selectAuthStatus = (state) => state.auth.status;
+export const selectAuthStatus = (state) => state.auth.authStatus;
+export const selectIsAuthenticated = (state) =>
+  state.auth.authStatus === AuthStatus.AUTHENTICATED;
 export const selectAuthError = (state) => state.auth.error;
 export const selectOtpLoading = (state) => state.auth.otpLoading;
 export const selectResendLoading = (state) => state.auth.resendLoading;

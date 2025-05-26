@@ -66,8 +66,7 @@ const PredictionsPage = () => {
   const isAuthenticated = useSelector(selectIsAuthenticated);
   // console.log("Is Authenticated?", isAuthenticated);
 
-  const authStatus = useSelector(selectAuthStatus);
-  // console.log("Authentication status", authStatus);
+
 
   const predictions = useSelector(selectPredictions);
   const currentPrediction = useSelector(selectCurrentPrediction);

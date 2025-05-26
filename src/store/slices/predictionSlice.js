@@ -7,7 +7,7 @@ const BASE_URL = "https://apidev.predictgalore.com";
 
 // Helper function for consistent error logging
 const logApiError = (operation, endpoint = null, payload = null, error) => {
-  // Construct a clean, copy-friendly error message
+  //  Error message
   const errorMessage = [
     `-------------------------`,
     `API Error: ${operation}`,

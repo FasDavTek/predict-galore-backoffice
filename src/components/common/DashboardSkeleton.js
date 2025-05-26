@@ -10,15 +10,45 @@ import {
   CssBaseline,
   AppBar,
   Toolbar,
-  useTheme
+  useTheme,
+  Snackbar,
+  Alert
 } from "@mui/material";
+import { useEffect, useState } from 'react';
 
-const DashboardSkeleton = () => {
+const DashboardSkeleton = ({ showAuthMessage }) => {
   const theme = useTheme();
-  
+  const [openSnackbar, setOpenSnackbar] = useState(false);
+
+  useEffect(() => {
+    if (showAuthMessage) {
+      setOpenSnackbar(true);
+    }
+  }, [showAuthMessage]);
+
+  const handleCloseSnackbar = () => {
+    setOpenSnackbar(false);
+  };
+
   return (
     <Box sx={{ display: 'flex' }}>
       <CssBaseline />
+      
+      {/* Snackbar for authentication message */}
+      <Snackbar
+        open={openSnackbar}
+        autoHideDuration={6000}
+        onClose={handleCloseSnackbar}
+        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+      >
+        <Alert 
+          onClose={handleCloseSnackbar} 
+          severity="info"
+          sx={{ width: '100%' }}
+        >
+          Authentication required. Redirecting to login page...
+        </Alert>
+      </Snackbar>
       
       {/* AppBar Skeleton */}
       <AppBar

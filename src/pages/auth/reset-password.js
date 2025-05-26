@@ -109,6 +109,9 @@ const ResetPasswordPage = () => {
   const [showSuccessDialog, setShowSuccessDialog] = React.useState(false);
   const [currentStep, setCurrentStep] = React.useState(STEPS.INITIAL);
 
+  // Add state to store the JWT token
+  const [authToken, setAuthToken] = useState(null);
+
   // Formik for initial username step
   const initialFormik = useFormik({
     initialValues: {
@@ -141,6 +144,9 @@ const ResetPasswordPage = () => {
         username: initialFormik.values.username 
       }));
         if (confirmPasswordResetToken.fulfilled.match(result)) {
+          // Store the JWT token from the response
+          setAuthToken(result.payload.token);
+
           setCurrentStep(STEPS.TOKEN_CONFIRMED);
         }
       } catch (error) {
@@ -168,7 +174,12 @@ const ResetPasswordPage = () => {
     }),
     onSubmit: async (values) => {
       try {
-        const result = await dispatch(resetPassword(values));
+        const result = await dispatch(resetPassword({
+        username: initialFormik.values.username,
+        password: values.password,
+        confirmPassword: values.confirmPassword,
+         token: authToken // Include the JWT token
+      }));
         if (resetPassword.fulfilled.match(result)) {
           setShowSuccessDialog(true);
           setCurrentStep(STEPS.COMPLETED);

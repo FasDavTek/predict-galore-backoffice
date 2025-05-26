@@ -33,6 +33,7 @@ const validationSchema = yup.object({
 const LoginPage = () => {
   const dispatch = useDispatch();
   const router = useRouter();
+  const { redirect } = router.query;
   const { loading, error } = useSelector((state) => state.auth);
   const [showPassword, setShowPassword] = React.useState(false);
   const [snackbar, setSnackbar] = React.useState({
@@ -69,7 +70,11 @@ const LoginPage = () => {
         severity: "success",
       });
 
-      router.push("/dashboard");
+     // Redirect to the original requested page or dashboard if no redirect specified
+        const destination = redirect && typeof redirect === 'string' 
+          ? decodeURIComponent(redirect) 
+          : "/dashboard";
+        router.push(destination);
     } catch (err) {
       // Detailed error logging for debugging
       console.error("Login Error Details:", {

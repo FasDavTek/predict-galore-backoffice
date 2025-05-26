@@ -282,7 +282,7 @@ export const confirmPasswordResetToken = createAsyncThunk(
 
 export const resetPassword = createAsyncThunk(
   "auth/resetPassword",
-  async ({ username, password, confirmPassword }, { rejectWithValue }) => {
+  async ({ username, password, confirmPassword, token }, { rejectWithValue }) => {
     const endpoint = `${BASE_URL}/api/v1/auth/forgot_password/reset_password`;
 
     try {
@@ -291,6 +291,11 @@ export const resetPassword = createAsyncThunk(
         username,
         password,
         confirmPassword,
+      },
+    {
+        headers: {
+          Authorization: `Bearer ${token}` 
+        }
       });
       logApiSuccess("resetPassword", response.data);
       return response.data;

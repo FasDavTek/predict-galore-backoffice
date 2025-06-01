@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import {
   TextField,
   Button,
@@ -12,6 +12,8 @@ import {
   Alert,
   CircularProgress,
   LinearProgress,
+  MenuItem,
+  Autocomplete,
 } from "@mui/material";
 import {
   Mail as MailIcon,
@@ -19,6 +21,8 @@ import {
   Visibility as VisibilityIcon,
   VisibilityOff as VisibilityOffIcon,
   Person as PersonIcon,
+  Phone as PhoneIcon,
+  ArrowDropDown as ArrowDropDownIcon,
 } from "@mui/icons-material";
 import { AuthLayout } from "@/layouts/AuthLayout";
 import { useDispatch, useSelector } from "react-redux";
@@ -26,10 +30,20 @@ import { registerUser, clearAuthError } from "@/store/slices/authSlice";
 import { useRouter } from "next/router";
 import { useFormik } from "formik";
 import * as yup from "yup";
+import PhoneInput from "react-phone-number-input";
+import "react-phone-number-input/style.css";
+
+
 
 const validationSchema = yup.object({
-  fullName: yup.string().required("Full name is required"),
+  firstName: yup.string().required("First name is required"),
+  lastName: yup.string().required("Last name is required"),
   email: yup.string().email("Invalid email").required("Email is required"),
+  countryCode: yup.string().required("Country code is required"),
+  phoneNumber: yup
+    .string()
+    .matches(/^[0-9]{7,15}$/, "Invalid phone number")
+    .required("Phone number is required"),
   password: yup
     .string()
     .min(8, "Password must be at least 8 characters")
@@ -38,6 +52,45 @@ const validationSchema = yup.object({
     .string()
     .oneOf([yup.ref("password"), null], "Passwords must match")
     .required("Confirm password is required"),
+});
+
+// Custom TextField component for PhoneInput to match MUI styling
+const PhoneNumberTextField = React.forwardRef(function PhoneNumberTextField(
+  props,
+  ref
+) {
+  return (
+    <TextField
+      {...props}
+      fullWidth
+      variant="outlined"
+      label="Phone number"
+      inputRef={ref}
+      sx={{
+        "& .MuiOutlinedInput-root": {
+          paddingLeft: "14px",
+          "& fieldset": {
+            borderColor: props.error ? "#f44336" : "rgba(0, 0, 0, 0.23)",
+          },
+          "&:hover fieldset": {
+            borderColor: props.error ? "#f44336" : "rgba(0, 0, 0, 0.87)",
+          },
+          "&.Mui-focused fieldset": {
+            borderColor: props.error ? "#f44336" : "#42A605",
+            borderWidth: "1px",
+          },
+        },
+      }}
+      InputProps={{
+        ...props.InputProps,
+        startAdornment: (
+          <InputAdornment position="start">
+            <PhoneIcon sx={{ color: "text.disabled" }} />
+          </InputAdornment>
+        ),
+      }}
+    />
+  );
 });
 
 const PasswordStrengthIndicator = ({ password }) => {
@@ -102,34 +155,68 @@ const RegisterPage = () => {
   const dispatch = useDispatch();
   const router = useRouter();
   const { loading, error } = useSelector((state) => state.auth);
-  const [showPassword, setShowPassword] = React.useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = React.useState(false);
-  const [agreeToTerms, setAgreeToTerms] = React.useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [agreeToTerms, setAgreeToTerms] = useState(false);
+  const [phoneValue, setPhoneValue] = useState();
 
   const formik = useFormik({
     initialValues: {
-      fullName: "",
+      firstName: "",
+      lastName: "",
       email: "",
+      countryCode: "+1", // Default to US
+      phoneNumber: "",
       password: "",
       confirmPassword: "",
+      userTypeId: 1, // Default user type
     },
     validationSchema,
-    onSubmit: async (values) => {
-      if (!agreeToTerms) return;
+    onSubmit: async (values, { setSubmitting }) => {
+      if (!agreeToTerms) {
+        setSubmitting(false);
+        return;
+      }
 
-      const result = await dispatch(
-        registerUser({
-          name: values.fullName,
+      try {
+        const registrationData = {
+          firstName: values.firstName,
+          lastName: values.lastName,
           email: values.email,
+          userTypeId: values.userTypeId,
+          countryCode: values.countryCode,
+          phoneNumber: `${values.countryCode}${values.phoneNumber}`,
           password: values.password,
-        })
-      );
+        };
 
-      if (registerUser.fulfilled.match(result)) {
-        router.push("/auth/verify-email");
+        const result = await dispatch(registerUser(registrationData));
+
+        if (registerUser.fulfilled.match(result)) {
+          router.push({
+            pathname: "/auth/verify-email",
+            query: { email: values.email },
+          });
+        }
+      } catch (err) {
+        console.error("Registration error:", err);
+      } finally {
+        setSubmitting(false);
       }
     },
   });
+
+  const handlePhoneChange = (value) => {
+    setPhoneValue(value);
+    if (value) {
+      const countryCode = value.match(/^\+\d+/)?.[0] || "+1";
+      const phoneNumber = value.replace(countryCode, "");
+      formik.setFieldValue("countryCode", countryCode);
+      formik.setFieldValue("phoneNumber", phoneNumber);
+    } else {
+      formik.setFieldValue("countryCode", "+1");
+      formik.setFieldValue("phoneNumber", "");
+    }
+  };
 
   useEffect(() => {
     return () => {
@@ -140,41 +227,56 @@ const RegisterPage = () => {
   return (
     <AuthLayout
       title="Create an Account"
-      subtitle="Sign up as an admin to get started"
+      subtitle="Join our platform to get started"
     >
       {error && (
         <Alert severity="error" sx={{ mb: 3 }}>
-          {error.message}
+          {error.message || "Registration failed. Please try again."}
         </Alert>
       )}
 
-      <Box
-        component="form"
-        onSubmit={formik.handleSubmit}
-        sx={{ width: "100%" }}
-      >
-        <TextField
-          fullWidth
-          label="Full Name"
-          name="fullName"
-          value={formik.values.fullName}
-          onChange={formik.handleChange}
-          onBlur={formik.handleBlur}
-          error={formik.touched.fullName && Boolean(formik.errors.fullName)}
-          helperText={formik.touched.fullName && formik.errors.fullName}
-          sx={{ mb: 4 }}
-          InputProps={{
-            startAdornment: (
-              <InputAdornment position="start">
-                <PersonIcon sx={{ color: "text.disabled" }} />
-              </InputAdornment>
-            ),
-          }}
-        />
+      <Box component="form" onSubmit={formik.handleSubmit} noValidate>
+        <Box sx={{ display: "flex", gap: 2, mb: 4 }}>
+          <TextField
+            fullWidth
+            label="First Name"
+            name="firstName"
+            value={formik.values.firstName}
+            onChange={formik.handleChange}
+            onBlur={formik.handleBlur}
+            error={formik.touched.firstName && Boolean(formik.errors.firstName)}
+            helperText={formik.touched.firstName && formik.errors.firstName}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <PersonIcon sx={{ color: "text.disabled" }} />
+                </InputAdornment>
+              ),
+            }}
+          />
+
+          <TextField
+            fullWidth
+            label="Last Name"
+            name="lastName"
+            value={formik.values.lastName}
+            onChange={formik.handleChange}
+            onBlur={formik.handleBlur}
+            error={formik.touched.lastName && Boolean(formik.errors.lastName)}
+            helperText={formik.touched.lastName && formik.errors.lastName}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <PersonIcon sx={{ color: "text.disabled" }} />
+                </InputAdornment>
+              ),
+            }}
+          />
+        </Box>
 
         <TextField
           fullWidth
-          label="Email address"
+          label="Email Address"
           name="email"
           type="email"
           value={formik.values.email}
@@ -192,7 +294,40 @@ const RegisterPage = () => {
           }}
         />
 
-        {/* password */}
+        <Box sx={{ mb: 4 }}>
+          <PhoneInput
+            international
+            defaultCountry="US"
+            value={phoneValue}
+            onChange={handlePhoneChange}
+            onBlur={() => {
+              formik.setFieldTouched("countryCode", true);
+              formik.setFieldTouched("phoneNumber", true);
+            }}
+            inputComponent={PhoneNumberTextField}
+            countrySelectProps={{
+              style: {
+                padding: "16.5px 14px",
+                borderRight: "1px solid rgba(0, 0, 0, 0.23)",
+                marginRight: "8px",
+              },
+            }}
+            style={{
+              "--PhoneInput-color--focus": "#42A605",
+              "--PhoneInputCountrySelectArrow-color": "#42A605",
+            }}
+          />
+          {formik.touched.phoneNumber && formik.errors.phoneNumber && (
+            <Typography
+              color="error"
+              variant="caption"
+              sx={{ mt: 1, display: "block" }}
+            >
+              {formik.errors.phoneNumber}
+            </Typography>
+          )}
+        </Box>
+
         <TextField
           fullWidth
           label="Password"
@@ -223,10 +358,8 @@ const RegisterPage = () => {
           }}
         />
 
-        {/* password strength indicator */}
         <PasswordStrengthIndicator password={formik.values.password} />
 
-        {/* confirm password */}
         <TextField
           fullWidth
           label="Confirm Password"
@@ -266,7 +399,6 @@ const RegisterPage = () => {
           }}
         />
 
-        {/* terms agreement  heckbox */}
         <FormControlLabel
           control={
             <Checkbox
@@ -301,12 +433,11 @@ const RegisterPage = () => {
           </Typography>
         )}
 
-        {/* submit button */}
         <Button
           type="submit"
           fullWidth
           variant="contained"
-          disabled={loading}
+          disabled={loading || !agreeToTerms}
           sx={{
             bgcolor: "#42A605",
             height: 56,
@@ -325,7 +456,6 @@ const RegisterPage = () => {
           )}
         </Button>
 
-        {/* login link */}
         <Box sx={{ textAlign: "center" }}>
           <Typography
             variant="body2"
@@ -344,7 +474,6 @@ const RegisterPage = () => {
             </Link>
           </Typography>
         </Box>
-
       </Box>
     </AuthLayout>
   );

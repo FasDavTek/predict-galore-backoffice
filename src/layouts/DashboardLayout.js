@@ -4,12 +4,9 @@ import { Box, useMediaQuery, useTheme } from '@mui/material';
 import Sidebar from '@/components/common/Sidebar';
 import Header from '@/components/common/Header';
 
-const drawerWidth = 260;
-const collapsedWidth = 72;
 
 const DashboardLayout = ({ children, user }) => {
   const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const [collapsed, setCollapsed] = useState(false);
 
 
@@ -18,7 +15,6 @@ const DashboardLayout = ({ children, user }) => {
       <Sidebar 
       collapsed={collapsed} 
       setCollapsed={setCollapsed} 
-      user={user} 
       />
 
       <Box
@@ -33,7 +29,6 @@ const DashboardLayout = ({ children, user }) => {
 
         {/* Header */}
         <Header 
-        user={user}
         />
 
         {/* main component */}

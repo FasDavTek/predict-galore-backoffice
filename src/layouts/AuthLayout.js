@@ -39,14 +39,14 @@ export const AuthLayout = ({ children, title, subtitle }) => {
     error: quoteError,
   } = useSelector((state) => state.quote);
 
-  useEffect(() => {
-    dispatch(fetchQuote());
-    const interval = setInterval(() => {
-      dispatch(fetchQuote());
-    }, 10000);
+  // useEffect(() => {
+  //   dispatch(fetchQuote());
+  //   const interval = setInterval(() => {
+  //     dispatch(fetchQuote());
+  //   }, 10000);
 
-    return () => clearInterval(interval);
-  }, [dispatch]);
+  //   return () => clearInterval(interval);
+  // }, [dispatch]);
 
   // Use fallback quote if there's an error
   const displayQuote = quoteError ? fallbackQuote : quote;
@@ -60,8 +60,13 @@ export const AuthLayout = ({ children, title, subtitle }) => {
       sx={{
         display: "flex",
         width: "100vw",
-        // height: "100vh",
+        height: "100vh",
         overflowY: "auto",
+        overflowX: "hidden",
+        scrollbarWidth: "none", // Firefox
+          "&::-webkit-scrollbar": {
+            display: "none", // Chrome, Safari, Opera
+               },
         bgcolor: "background.paper",
       }}
     >
@@ -72,7 +77,6 @@ export const AuthLayout = ({ children, title, subtitle }) => {
           height: "100%",
           bgcolor: "#162E08",
           padding: 4,
-          // overflowY: "auto",
           display: "flex",
           flexDirection: "column",
         }}

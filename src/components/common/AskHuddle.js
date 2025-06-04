@@ -15,7 +15,6 @@ import {
   InputAdornment,
 } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
-import ChatBubbleOutlineIcon from "@mui/icons-material/ChatBubbleOutline";
 import SendIcon from "@mui/icons-material/Send";
 
 const promptOptions = [
@@ -88,9 +87,6 @@ const AskHuddle = () => {
           padding: 0,
           margin: 0,
           minWidth: "auto",
-          // width: "48px",
-          // height: "48px",
-          // backgroundColor: "transparent",
           "&:hover": {
             transform: "translateY(-50%) translateX(-4px)",
             backgroundColor: "transparent",
@@ -122,10 +118,14 @@ const AskHuddle = () => {
           sx: {
             borderRadius: 3,
             background: "linear-gradient(to bottom right, #fff, #f0f4ec)",
+            scrollbarWidth: "none",
+            "&::-webkit-scrollbar": {
+              display: "none",
+            },
           },
         }}
       >
-        <DialogTitle sx={{ textAlign: "center", pb: 0 }}>
+        <DialogTitle sx={{ textAlign: "center", pb: 0, mb: 2,}}>
           <Box sx={{ display: "flex", justifyContent: "flex-end" }}>
             <IconButton onClick={handleClose}>
               <CloseIcon />
@@ -147,13 +147,20 @@ const AskHuddle = () => {
           </Typography>
         </DialogTitle>
 
-        <DialogContent>
+        <DialogContent
+          sx={{
+            "&.MuiDialogContent-root": {
+              overflowY: "hidden",
+              scrollbarWidth: "none",
+              "&::-webkit-scrollbar": {
+                display: "none",
+              },
+            },
+          }}
+        >
           {!chatStarted && (
             <>
-              <Typography fontWeight={600} mb={1}>
-                Select a Prompt to Fetch Insights
-              </Typography>
-              <Grid container spacing={1} mb={2}>
+              <Grid container spacing={2} mb={2} justifyContent="center">
                 {promptOptions.map((option) => (
                   <Grid item xs={6} sm={4} key={option}>
                     <Button
@@ -185,6 +192,10 @@ const AskHuddle = () => {
               gap: 1,
               mb: 2,
               px: 1,
+              scrollbarWidth: "none",
+              "&::-webkit-scrollbar": {
+                display: "none",
+              },
             }}
           >
             {/* chat history */}
@@ -206,10 +217,6 @@ const AskHuddle = () => {
                   variant="body2"
                   sx={{ fontWeight: 500, color: "#333" }}
                 >
-                  {/* <strong>
-                  {chat.sender === "user" ? "You" : "Huddle"}:
-                  </strong>{" "} */}
-
                   {chat.message}
                 </Typography>
               </Box>
@@ -229,7 +236,9 @@ const AskHuddle = () => {
                     onClick={() => handleSend()}
                     disabled={!prompt.trim()}
                   >
-                    <SendIcon />
+                    <SendIcon    
+                    onClick={() => handleSend()} 
+                    />
                   </IconButton>
                 </InputAdornment>
               ),
@@ -237,16 +246,7 @@ const AskHuddle = () => {
           />
         </DialogContent>
 
-        <DialogActions sx={{ justifyContent: "space-between", px: 3, pb: 2 }}>
-          <Button onClick={handleClose}>Close</Button>
-          <Button
-            variant="contained"
-            disabled={!prompt.trim()}
-            onClick={() => handleSend()}
-          >
-            Fetch
-          </Button>
-        </DialogActions>
+
       </Dialog>
     </>
   );

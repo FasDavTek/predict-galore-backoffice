@@ -1,5 +1,5 @@
 // store/slices/auth/authSlice.js
-import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
+import { createSlice, createAsyncThunk, createSelector } from "@reduxjs/toolkit";
 import { HYDRATE } from "next-redux-wrapper";
 import axios from "axios";
 
@@ -666,12 +666,15 @@ export const {
 } = authSlice.actions;
 
 // Selectors
-export const selectCurrentUser = (state) => ({
-  user: state.auth.user,
-  token: state.auth.token,
-  role: state.auth.role,
-  permissions: state.auth.permissions
-});
+export const selectCurrentUser = createSelector(
+  (state) => state.auth,
+  (auth) => ({
+    user: auth.user,
+    token: auth.token,
+    role: auth.role,
+    permissions: auth.permissions
+  })
+);
 
 export const selectAuthToken = (state) => state.auth.token;
 export const selectAuthStatus = (state) => state.auth.authStatus;

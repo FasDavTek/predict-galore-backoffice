@@ -67,6 +67,8 @@ import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 
 import { useAuth } from "@/context/AuthContext";
 
+import AskHuddle from "../common/AskHuddle";
+
 // Constants
 const STEPS = ["Match Selection", "Prediction Details", "Preview"];
 
@@ -943,59 +945,6 @@ const NewPredictionForm = ({ onBack }) => {
                 </CardContent>
               </Card>
 
-              {/* Scheduling preview */}
-              {formik.values.isScheduled && (
-                <Card
-                  sx={{
-                    borderLeft: "4px solid",
-                    borderLeftColor: "info.main",
-                    borderRadius: 2,
-                    mb: 4,
-                  }}
-                >
-                  <CardContent>
-                    <Box
-                      sx={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 1,
-                        mb: 2,
-                      }}
-                    >
-                      <ScheduleIcon color="action" />
-                      <Typography variant="subtitle1" fontWeight="bold">
-                        Scheduling
-                      </Typography>
-                    </Box>
-
-                    <Box
-                      sx={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 2,
-                        backgroundColor: "background.default",
-                        p: 2,
-                        borderRadius: 2,
-                      }}
-                    >
-                      <CalendarTodayIcon fontSize="small" color="primary" />
-                      <Box>
-                        <Typography variant="body2" color="text.secondary">
-                          Scheduled Post Time
-                        </Typography>
-                        <Typography variant="body1" fontWeight="medium">
-                          {formik.values.scheduledTime
-                            ? new Date(
-                                formik.values.scheduledTime
-                              ).toLocaleString()
-                            : "Not scheduled"}
-                        </Typography>
-                      </Box>
-                    </Box>
-                  </CardContent>
-                </Card>
-              )}
-
               {/* Predictions specifics */}
               {formik.values.values.map((value, index) => {
                 const predictionType = getPredictionTypeDetails(
@@ -1165,6 +1114,60 @@ const NewPredictionForm = ({ onBack }) => {
                   </Card>
                 );
               })}
+
+               {/* Scheduling preview */}
+              {formik.values.isScheduled && (
+                <Card
+                  sx={{
+                    borderLeft: "4px solid",
+                    borderLeftColor: "info.main",
+                    borderRadius: 2,
+                    mb: 4,
+                  }}
+                >
+                  <CardContent>
+                    <Box
+                      sx={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 1,
+                        mb: 2,
+                      }}
+                    >
+                      <ScheduleIcon color="action" />
+                      <Typography variant="subtitle1" fontWeight="bold">
+                        Scheduling
+                      </Typography>
+                    </Box>
+
+                    <Box
+                      sx={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 2,
+                        backgroundColor: "background.default",
+                        p: 2,
+                        borderRadius: 2,
+                      }}
+                    >
+                      <CalendarTodayIcon fontSize="small" color="primary" />
+                      <Box>
+                        <Typography variant="body2" color="text.secondary">
+                          Scheduled Post Time
+                        </Typography>
+                        <Typography variant="body1" fontWeight="medium">
+                          {formik.values.scheduledTime
+                            ? new Date(
+                                formik.values.scheduledTime
+                              ).toLocaleString()
+                            : "Not scheduled"}
+                        </Typography>
+                      </Box>
+                    </Box>
+                  </CardContent>
+                </Card>
+              )}
+              
             </Box>
           </Paper>
         );
@@ -1176,7 +1179,18 @@ const NewPredictionForm = ({ onBack }) => {
 
   return (
     <LocalizationProvider dateAdapter={AdapterDateFns}>
-      <Box component="form" onSubmit={formik.handleSubmit} noValidate>
+      <Box 
+      component="form" 
+      onSubmit={formik.handleSubmit} 
+      noValidate
+      sx={{
+         scrollbarWidth: "none",
+              "&::-webkit-scrollbar": {
+                display: "none",
+              },
+      }}
+      >
+
         {/* Breadcrumbs */}
         <Breadcrumbs sx={{ mb: 3 }}>
           <Link
@@ -1209,6 +1223,9 @@ const NewPredictionForm = ({ onBack }) => {
         {/* Current step content */}
         {renderStepContent(activeStep)}
 
+         {/* AskHuddle chat */}
+          <AskHuddle />
+
         {/* Navigation buttons */}
         <Box sx={{ display: "flex", justifyContent: "space-between", mt: 3 }}>
           <Button
@@ -1232,7 +1249,7 @@ const NewPredictionForm = ({ onBack }) => {
           </Button>
         </Box>
 
-        {/* Confirmation Dialog */}
+  
         {/* Confirmation Dialog */}
         <Dialog
           open={openConfirmDialog}

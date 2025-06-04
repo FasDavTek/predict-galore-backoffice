@@ -36,7 +36,6 @@ import {
 
 import {
   selectIsAuthenticated,
-  selectAuthStatus,
 } from "@/store/slices/authSlice";
 
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
@@ -219,7 +218,7 @@ const PredictionsPage = () => {
        <ProtectedRoute>
       <DashboardLayout>
         {isAuthenticated && (
-          <>
+          <Box>
         <ErrorBoundary FallbackComponent={ErrorFallback}>
           {/* Page header with title and action button */}
           <Header
@@ -298,7 +297,7 @@ const PredictionsPage = () => {
             </Alert>
           </Snackbar>
         </ErrorBoundary>
-         </>
+         </Box>
         )}
       </DashboardLayout>
 

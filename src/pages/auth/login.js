@@ -55,8 +55,11 @@ const LoginPage = () => {
         username: values.username,
         password: values.password,
       };
-      
+
       console.log("Login attempt with:", { username: values.username }); // Log attempt without password
+
+      // console.log("Login attempt with:", { username: values.username }); // Log attempt without password
+
       
       await dispatch(adminSignin(loginData)).unwrap();
 

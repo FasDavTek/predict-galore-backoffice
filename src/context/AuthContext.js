@@ -10,19 +10,27 @@ const AuthContext = createContext(null);
 export const AuthProvider = ({ children }) => {
     const router = useRouter();
     
-  const user = useSelector(selectCurrentUser);
+    const authData = useSelector(selectCurrentUser); // This should now include the token
   
-  if (isPublicRoute(router.pathname)) {
-    return <>{children}</>;
-  }
+    if (isPublicRoute(router.pathname)) {
+        return <>{children}</>;
+    }
   
-  return (
-    <AuthContext.Provider value={user}>
-      {children}
-    </AuthContext.Provider>
-  );
+    // Create the context value object
+    const contextValue = {
+        user: authData?.user || null,
+        token: authData?.token || null,
+        role: authData?.role || null,
+        permissions: authData?.user?.permissions || null
+    };
+  
+    return (
+        <AuthContext.Provider value={contextValue}>
+            {children}
+        </AuthContext.Provider>
+    );
 };
 
 export const useAuth = () => {
-  return useContext(AuthContext);
+    return useContext(AuthContext);
 };

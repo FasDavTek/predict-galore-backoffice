@@ -1,5 +1,8 @@
 // store/slices/auth/authSlice.js
-import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
+
+import { createSlice, createAsyncThunk, createSelector } from "@reduxjs/toolkit";
+
+
 import { HYDRATE } from "next-redux-wrapper";
 import axios from "axios";
 
@@ -282,21 +285,27 @@ export const confirmPasswordResetToken = createAsyncThunk(
 
 export const resetPassword = createAsyncThunk(
   "auth/resetPassword",
-  async ({ username, password, confirmPassword, token }, { rejectWithValue }) => {
+  async (
+    { username, password, confirmPassword, token },
+    { rejectWithValue }
+  ) => {
     const endpoint = `${BASE_URL}/api/v1/auth/forgot_password/reset_password`;
 
     try {
       console.debug("Resetting password for user:", username);
-      const response = await axios.post(endpoint, {
-        username,
-        password,
-        confirmPassword,
-      },
-    {
-        headers: {
-          Authorization: `Bearer ${token}` 
+      const response = await axios.post(
+        endpoint,
+        {
+          username,
+          password,
+          confirmPassword,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
         }
-      });
+      );
       logApiSuccess("resetPassword", response.data);
       return response.data;
     } catch (error) {
@@ -413,7 +422,14 @@ const initialState = {
   user: null,
   token:
     typeof window !== "undefined" ? localStorage.getItem("authToken") : null,
+  user: null,
+  token: null, // Initialize as null
+  role: null,
 };
+
+if (typeof window !== "undefined") {
+  initialState.token = localStorage.getItem("authToken");
+}
 
 const authSlice = createSlice({
   name: "auth",
@@ -461,12 +477,17 @@ const authSlice = createSlice({
         state.status = "loading";
         state.authStatus = AuthStatus.CHECKING;
       })
+      
       .addCase(adminSignin.fulfilled, (state, action) => {
         state.loading = false;
         state.status = "succeeded";
         state.authStatus = AuthStatus.AUTHENTICATED;
         state.user = action.payload.user;
+        state.token = action.payload.token;
+        state.role = action.payload.role;
+        state.permissions = action.payload.user?.permissions;
       })
+
       .addCase(adminSignin.rejected, (state, action) => {
         state.loading = false;
         state.status = "failed";
@@ -657,7 +678,16 @@ export const {
 } = authSlice.actions;
 
 // Selectors
-export const selectCurrentUser = (state) => state.auth.user;
+export const selectCurrentUser = createSelector(
+  (state) => state.auth,
+  (auth) => ({
+    user: auth.user,
+    token: auth.token,
+    role: auth.role,
+    permissions: auth.permissions,
+  })
+);
+
 export const selectAuthToken = (state) => state.auth.token;
 export const selectAuthStatus = (state) => state.auth.authStatus;
 export const selectIsAuthenticated = (state) =>

@@ -60,26 +60,36 @@ const theme = createTheme({
     },
   },
   components: {
-    MuiButton: {
+   MuiButton: {
       styleOverrides: {
         root: {
-         
           textTransform: 'none',
           borderRadius: '8px',
           padding: '8px 16px',
           fontWeight: 600,
           '&:hover': {
             boxShadow: 'none',
-            backgroundColor: '#5bbd1a', // Use light variant
+          },
+        },
+        // Add specific overrides for outlined variant
+        outlined: {
+          border: '1px solid',
+          borderColor: 'primary.main',
+          color: 'primary.main',
+          '&:hover': {
+            backgroundColor: 'primary.main',
+            color: 'primary.contrastText', // white text
+            borderColor: 'primary.main',
           },
           '&:active': {
-            backgroundColor: '#5bbd1a', // Same as hover
+            backgroundColor: 'primary.main',
+            color: 'primary.contrastText',
           },
         },
       },
       defaultProps: {
         variant: 'contained',
-        color: 'primary', 
+        color: 'primary',
         fontFamily: "Inter",
         fontWeight: 600,
       },

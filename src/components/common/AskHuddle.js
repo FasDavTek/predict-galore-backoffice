@@ -15,7 +15,6 @@ import {
   InputAdornment,
 } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
-import ChatBubbleOutlineIcon from "@mui/icons-material/ChatBubbleOutline";
 import SendIcon from "@mui/icons-material/Send";
 
 const promptOptions = [
@@ -26,14 +25,13 @@ const promptOptions = [
   "Top Scorers",
   "Player Stats",
   "League Standings",
-  "See More",
 ];
 
 const AskHuddle = () => {
   const [open, setOpen] = useState(false);
   const [prompt, setPrompt] = useState("");
   const [chatHistory, setChatHistory] = useState([]);
-  const [chatStarted, setChatStarted] = useState(false); // Track chat start
+  const [chatStarted, setChatStarted] = useState(false);
 
   const handleOpen = () => setOpen(true);
 
@@ -41,12 +39,18 @@ const AskHuddle = () => {
     setOpen(false);
     setPrompt("");
     setChatHistory([]);
-    setChatStarted(false); // Reset when closed
+    setChatStarted(false);
   };
 
+  // Updated to only set the prompt without sending
   const handlePromptClick = (value) => {
     setPrompt(value);
-    handleSend(value);
+    // Remove the handleSend call here
+    // Auto-focus the input field
+    setTimeout(() => {
+      const input = document.querySelector('#chat-input');
+      if (input) input.focus();
+    }, 0);
   };
 
   const handlePromptChange = (e) => setPrompt(e.target.value);
@@ -60,7 +64,7 @@ const AskHuddle = () => {
       { sender: "user", message: userMessage },
     ]);
     setPrompt("");
-    setChatStarted(true); // Mark chat as started
+    setChatStarted(true);
 
     // Simulated bot response
     setTimeout(() => {
@@ -88,9 +92,6 @@ const AskHuddle = () => {
           padding: 0,
           margin: 0,
           minWidth: "auto",
-          // width: "48px",
-          // height: "48px",
-          // backgroundColor: "transparent",
           "&:hover": {
             transform: "translateY(-50%) translateX(-4px)",
             backgroundColor: "transparent",
@@ -122,10 +123,14 @@ const AskHuddle = () => {
           sx: {
             borderRadius: 3,
             background: "linear-gradient(to bottom right, #fff, #f0f4ec)",
+            scrollbarWidth: "none",
+            "&::-webkit-scrollbar": {
+              display: "none",
+            },
           },
         }}
       >
-        <DialogTitle sx={{ textAlign: "center", pb: 0 }}>
+        <DialogTitle sx={{ textAlign: "center", pb: 0, mb: 2 }}>
           <Box sx={{ display: "flex", justifyContent: "flex-end" }}>
             <IconButton onClick={handleClose}>
               <CloseIcon />
@@ -147,13 +152,20 @@ const AskHuddle = () => {
           </Typography>
         </DialogTitle>
 
-        <DialogContent>
+        <DialogContent
+          sx={{
+            "&.MuiDialogContent-root": {
+              overflowY: "hidden",
+              scrollbarWidth: "none",
+              "&::-webkit-scrollbar": {
+                display: "none",
+              },
+            },
+          }}
+        >
           {!chatStarted && (
             <>
-              <Typography fontWeight={600} mb={1}>
-                Select a Prompt to Fetch Insights
-              </Typography>
-              <Grid container spacing={1} mb={2}>
+              <Grid container spacing={2} mb={2} justifyContent="center">
                 {promptOptions.map((option) => (
                   <Grid item xs={6} sm={4} key={option}>
                     <Button
@@ -185,9 +197,12 @@ const AskHuddle = () => {
               gap: 1,
               mb: 2,
               px: 1,
+              scrollbarWidth: "none",
+              "&::-webkit-scrollbar": {
+                display: "none",
+              },
             }}
           >
-            {/* chat history */}
             {chatHistory.map((chat, index) => (
               <Box
                 key={index}
@@ -206,10 +221,6 @@ const AskHuddle = () => {
                   variant="body2"
                   sx={{ fontWeight: 500, color: "#333" }}
                 >
-                  {/* <strong>
-                  {chat.sender === "user" ? "You" : "Huddle"}:
-                  </strong>{" "} */}
-
                   {chat.message}
                 </Typography>
               </Box>
@@ -217,6 +228,7 @@ const AskHuddle = () => {
           </Box>
 
           <TextField
+            id="chat-input"
             fullWidth
             placeholder="Type your message or select a prompt..."
             value={prompt}
@@ -236,17 +248,6 @@ const AskHuddle = () => {
             }}
           />
         </DialogContent>
-
-        <DialogActions sx={{ justifyContent: "space-between", px: 3, pb: 2 }}>
-          <Button onClick={handleClose}>Close</Button>
-          <Button
-            variant="contained"
-            disabled={!prompt.trim()}
-            onClick={() => handleSend()}
-          >
-            Fetch
-          </Button>
-        </DialogActions>
       </Dialog>
     </>
   );

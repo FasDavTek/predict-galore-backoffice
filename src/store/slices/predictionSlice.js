@@ -52,24 +52,56 @@ const logApiSuccess = (operation, response) => {
 // Create a new prediction
 export const createPrediction = createAsyncThunk(
   'predictions/create',
-  async ({ title, description, teamId }, { rejectWithValue }) => {
+  async ({ data: predictionData, token }, { rejectWithValue }) => {
     const endpoint = `${BASE_URL}/api/v1/prediction/create`;
     
     try {
-      console.debug("Creating new prediction");
-      const response = await axios.post(endpoint, {
-        title,
-        description,
-        teamId
+      console.log("Creating new prediction with data:", predictionData);
+      
+      // Transform data to match backend expectations
+      const requestData = {
+        matchId: predictionData.matchId,
+        isPremium: predictionData.isPremium,
+        isScheduled: predictionData.isScheduled,
+        scheduledTime: predictionData.scheduledTime,
+        competitionId: predictionData.competitionId,
+        expertAnalysis: predictionData.expertAnalysis,
+        confidencePercentage: predictionData.confidencePercentage,
+        values: predictionData.values.map(value => ({
+          predictionTypeId: value.predictionTypeId,
+          value: value.value,
+          label: value.label || null,
+          tip: value.tip || null,
+          odds: Number(value.odds),
+          confidence: Number(value.confidence)
+        }))
+      };
+
+      const response = await axios.post(endpoint, requestData, {
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        }
       });
+
       logApiSuccess("createPrediction", response.data);
       return response.data;
+      
     } catch (error) {
-      logApiError("createPrediction", endpoint, { title, teamId }, error);
+      logApiError(
+        "createPrediction", 
+        endpoint, 
+        {
+          matchId: predictionData.matchId,
+          competitionId: predictionData.competitionId
+        }, 
+        error
+      );
+      
       return rejectWithValue({
         message: error.response?.data?.message || "Prediction creation failed",
         statusCode: error.response?.status || 500,
-        errorDetails: error.response?.data?.errors || null,
+        errors: error.response?.data?.errors || null,
       });
     }
   }
@@ -229,7 +261,7 @@ export const deletePrediction = createAsyncThunk(
 export const fetchTeams = createAsyncThunk(
   'predictions/fetchTeams',
   async (_, { rejectWithValue }) => {
-    const endpoint = `${BASE_URL}/api/v1/prediction/teams`;
+    const endpoint = `${BASE_URL}/api/v1/teams`;
     
     try {
       console.debug("Fetching teams for predictions");

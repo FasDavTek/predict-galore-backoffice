@@ -41,6 +41,10 @@ const DashboardLayout = ({ children, user }) => {
             overflow: 'auto',
             maxHeight: 'calc(100vh - 72px)', 
             width: '100%',
+            scrollbarWidth: "none",
+              "&::-webkit-scrollbar": {
+                display: "none",
+              },
           }}
         >
           {children}

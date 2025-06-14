@@ -66,8 +66,6 @@ const PredictionsPage = () => {
   const isAuthenticated = useSelector(selectIsAuthenticated);
   // console.log("Is Authenticated?", isAuthenticated);
 
-
-
   const predictions = useSelector(selectPredictions);
   const currentPrediction = useSelector(selectCurrentPrediction);
   const teams = useSelector(selectTeams);
@@ -93,7 +91,6 @@ const PredictionsPage = () => {
   const showNotification = (message, severity) => {
     setNotification({ open: true, message, severity });
   };
-
 
   /**
    * Fetch predictions data on mount and when filters or pagination changes
@@ -134,7 +131,6 @@ const PredictionsPage = () => {
       dispatch(clearError());
     }
   }, [error, dispatch]);
-
 
   // Event handlers
   const handlePredictionSelect = async (id) => {
@@ -215,95 +211,93 @@ const PredictionsPage = () => {
   ];
 
   // Only render the actual page content if authenticated
-
-    return (
-       <ProtectedRoute>
+  return (
+    <ProtectedRoute>
       <DashboardLayout>
         {isAuthenticated && (
-          <>
-        <ErrorBoundary FallbackComponent={ErrorFallback}>
-          {/* Page header with title and action button */}
-          <Header
-            title="Predictions"
-            subtitle="Manage and analyze sports predictions"
-            onNewPrediction={handleNewPredictionClick}
-          />
-
-          {/* Main content area with conditional rendering based on view mode */}
-          {viewMode === "list" && (
-            <>
-              {/* Stats cards row */}
-              <Box
-                sx={{
-                  mb: 4,
-                  display: "grid",
-                  gridTemplateColumns: {
-                    xs: "1fr",
-                    sm: "repeat(2, 1fr)",
-                    md: "repeat(4, 1fr)",
-                  },
-                  gap: 3,
-                }}
-              >
-                {stats.map((stat, index) => (
-                  <PredictionStat key={index} {...stat} />
-                ))}
-              </Box>
-
-              {/* Predictions table with filtering and pagination */}
-              <PredictionsTable
-                predictions={predictions}
-                loading={loading}
-                pagination={pagination}
-                filters={filters}
-                onFilterChange={handleFilterChange}
-                onPageChange={handlePageChange}
-                onPredictionSelect={handlePredictionSelect}
-                onNewPredictionClick={handleNewPredictionClick}
+          <Box>
+            <ErrorBoundary FallbackComponent={ErrorFallback}>
+              {/* Page header with title and action button */}
+              <Header
+                title="Predictions"
+                subtitle="Manage and analyze sports predictions"
+                onNewPrediction={handleNewPredictionClick}
               />
-            </>
-          )}
 
-          {/* Prediction detail view */}
-          {viewMode === "detail" && currentPrediction && (
-            <PredictionDetail
-              prediction={currentPrediction}
-              onBack={handleBackToList}
-              onUpdate={handleUpdatePrediction}
-              onDelete={handleDeletePrediction}
-            />
-          )}
+              {/* Main content area with conditional rendering based on view mode */}
+              {viewMode === "list" && (
+                <>
+                  {/* Stats cards row */}
+                  <Box
+                    sx={{
+                      mb: 4,
+                      display: "grid",
+                      gridTemplateColumns: {
+                        xs: "1fr",
+                        sm: "repeat(2, 1fr)",
+                        md: "repeat(4, 1fr)",
+                      },
+                      gap: 3,
+                    }}
+                  >
+                    {stats.map((stat, index) => (
+                      <PredictionStat key={index} {...stat} />
+                    ))}
+                  </Box>
 
-          {/* New prediction form view */}
-          {viewMode === "create" && (
-            <NewPredictionForm
-              teams={teams}
-              onBack={handleBackToList}
-              onSubmit={handleCreateNew}
-            />
-          )}
+                  {/* Predictions table with filtering and pagination */}
+                  <PredictionsTable
+                    predictions={predictions}
+                    loading={loading}
+                    pagination={pagination}
+                    filters={filters}
+                    onFilterChange={handleFilterChange}
+                    onPageChange={handlePageChange}
+                    onPredictionSelect={handlePredictionSelect}
+                    onNewPredictionClick={handleNewPredictionClick}
+                  />
+                </>
+              )}
 
-          {/* Global notification snackbar */}
-          <Snackbar
-            open={notification.open}
-            autoHideDuration={6000}
-            onClose={handleNotificationClose}
-            anchorOrigin={{ vertical: "top", horizontal: "center" }}
-          >
-            <Alert
-              onClose={handleNotificationClose}
-              severity={notification.severity}
-              sx={{ width: "100%" }}
-            >
-              {notification.message}
-            </Alert>
-          </Snackbar>
-        </ErrorBoundary>
-         </>
+              {/* Prediction detail view */}
+              {viewMode === "detail" && currentPrediction && (
+                <PredictionDetail
+                  prediction={currentPrediction}
+                  onBack={handleBackToList}
+                  onUpdate={handleUpdatePrediction}
+                  onDelete={handleDeletePrediction}
+                />
+              )}
+
+              {/* New prediction form view */}
+              {viewMode === "create" && (
+                <NewPredictionForm
+                  teams={teams}
+                  onBack={handleBackToList}
+                  onSubmit={handleCreateNew}
+                />
+              )}
+
+              {/* Global notification snackbar */}
+              <Snackbar
+                open={notification.open}
+                autoHideDuration={6000}
+                onClose={handleNotificationClose}
+                anchorOrigin={{ vertical: "top", horizontal: "center" }}
+              >
+                <Alert
+                  onClose={handleNotificationClose}
+                  severity={notification.severity}
+                  sx={{ width: "100%" }}
+                >
+                  {notification.message}
+                </Alert>
+              </Snackbar>
+            </ErrorBoundary>
+          </Box>
         )}
       </DashboardLayout>
-
-</ProtectedRoute>
+    </ProtectedRoute>
   );
 };
 

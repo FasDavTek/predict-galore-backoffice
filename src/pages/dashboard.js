@@ -39,7 +39,7 @@ const DashboardPage = () => {
   const router = useRouter();
   const user = useAuth();
 
-  console.log("Logged in User details:", user);
+  // console.log("Logged in User details:", user);
 
   const isAuthenticated = useSelector(selectIsAuthenticated);
   const [showAuthDialog, setShowAuthDialog] = useState(false);

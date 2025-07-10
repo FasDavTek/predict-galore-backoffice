@@ -175,12 +175,13 @@ export const confirmEmail = createAsyncThunk(
 
 export const fetchUserProfile = createAsyncThunk(
   "auth/fetchUserProfile",
-  async (_, { rejectWithValue, getState }) => {
+  async (token, { rejectWithValue }) => {  
+  //  console.log("token:", token)
+
     const endpoint = `${BASE_URL}/api/v1/auth/user/me`;
 
     try {
       console.debug("Fetching user profile");
-      const token = getState().auth.token;
       const response = await axios.get(endpoint, {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -201,16 +202,13 @@ export const fetchUserProfile = createAsyncThunk(
 
 export const updateUserProfile = createAsyncThunk(
   "auth/updateUserProfile",
-  async (profileData, { rejectWithValue, getState }) => {
+  async ({ data, token }, { rejectWithValue }) => {
     const endpoint = `${BASE_URL}/api/v1/auth/user/profile/update`;
 
     try {
-      console.debug(
-        "Updating user profile with data:",
-        JSON.stringify(profileData, null, 2)
-      );
-      const token = getState().auth.token;
-      const response = await axios.post(endpoint, profileData, {
+      console.debug("Updating user profile with data:", JSON.stringify(data, null, 2));
+
+      const response = await axios.post(endpoint, data, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -218,7 +216,7 @@ export const updateUserProfile = createAsyncThunk(
       logApiSuccess("updateUserProfile", response.data);
       return response.data;
     } catch (error) {
-      logApiError("updateUserProfile", endpoint, profileData, error);
+      logApiError("updateUserProfile", endpoint, data, error);
       return rejectWithValue({
         message: error.response?.data?.message || "Profile update failed",
         statusCode: error.response?.status || 500,
@@ -227,6 +225,7 @@ export const updateUserProfile = createAsyncThunk(
     }
   }
 );
+
 
 export const generatePasswordResetToken = createAsyncThunk(
   "auth/generatePasswordResetToken",

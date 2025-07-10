@@ -45,7 +45,6 @@ const AskHuddle = () => {
   // Updated to only set the prompt without sending
   const handlePromptClick = (value) => {
     setPrompt(value);
-    // Remove the handleSend call here
     // Auto-focus the input field
     setTimeout(() => {
       const input = document.querySelector('#chat-input');

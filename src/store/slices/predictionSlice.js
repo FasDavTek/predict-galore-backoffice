@@ -1,7 +1,11 @@
 // store/slices/predictionsSlice.js
-import { createSlice, createAsyncThunk, createSelector } from '@reduxjs/toolkit';
-import { HYDRATE } from 'next-redux-wrapper';
-import axios from 'axios';
+import {
+  createSlice,
+  createAsyncThunk,
+  createSelector,
+} from "@reduxjs/toolkit";
+import { HYDRATE } from "next-redux-wrapper";
+import axios from "axios";
 
 const BASE_URL = "https://apidev.predictgalore.com";
 
@@ -20,15 +24,24 @@ const logApiError = (operation, endpoint = null, payload = null, error) => {
     `\n`,
     error.response?.status && `Status: ${error.response.status}`,
     `\n`,
-    error.response?.data?.message && `Server Message: ${error.response.data.message}`,
+    error.response?.data?.message &&
+      `Server Message: ${error.response.data.message}`,
     `\n`,
-    error.response?.data?.errors && `Validation Errors: ${JSON.stringify(error.response.data.errors, null, 2)}`,
+    error.response?.data?.errors &&
+      `Validation Errors: ${JSON.stringify(
+        error.response.data.errors,
+        null,
+        2
+      )}`,
   ]
     .filter(Boolean) // Remove empty lines
-    .join('\n'); // Join with newlines
+    .join("\n"); // Join with newlines
 
   // Log to console (grouped for better visualization)
-  console.groupCollapsed(`%cAPI Error: ${operation}`, 'color: red; font-weight: bold;');
+  console.groupCollapsed(
+    `%cAPI Error: ${operation}`,
+    "color: red; font-weight: bold;"
+  );
   console.log(errorMessage);
   console.groupEnd();
 
@@ -51,13 +64,13 @@ const logApiSuccess = (operation, response) => {
 
 // Create a new prediction
 export const createPrediction = createAsyncThunk(
-  'predictions/create',
+  "predictions/create",
   async ({ data: predictionData, token }, { rejectWithValue }) => {
     const endpoint = `${BASE_URL}/api/v1/prediction/create`;
-    
+
     try {
       console.log("Creating new prediction with data:", predictionData);
-      
+
       // Transform data to match backend expectations
       const requestData = {
         matchId: predictionData.matchId,
@@ -67,37 +80,36 @@ export const createPrediction = createAsyncThunk(
         competitionId: predictionData.competitionId,
         expertAnalysis: predictionData.expertAnalysis,
         confidencePercentage: predictionData.confidencePercentage,
-        values: predictionData.values.map(value => ({
+        values: predictionData.values.map((value) => ({
           predictionTypeId: value.predictionTypeId,
           value: value.value,
           label: value.label || null,
           tip: value.tip || null,
           odds: Number(value.odds),
-          confidence: Number(value.confidence)
-        }))
+          confidence: Number(value.confidence),
+        })),
       };
 
       const response = await axios.post(endpoint, requestData, {
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        }
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
       });
 
       logApiSuccess("createPrediction", response.data);
       return response.data;
-      
     } catch (error) {
       logApiError(
-        "createPrediction", 
-        endpoint, 
+        "createPrediction",
+        endpoint,
         {
           matchId: predictionData.matchId,
-          competitionId: predictionData.competitionId
-        }, 
+          competitionId: predictionData.competitionId,
+        },
         error
       );
-      
+
       return rejectWithValue({
         message: error.response?.data?.message || "Prediction creation failed",
         statusCode: error.response?.status || 500,
@@ -109,10 +121,10 @@ export const createPrediction = createAsyncThunk(
 
 // Get a single prediction by ID
 export const fetchPrediction = createAsyncThunk(
-  'predictions/fetchOne',
+  "predictions/fetchOne",
   async (id, { rejectWithValue }) => {
     const endpoint = `${BASE_URL}/api/v1/prediction/{id}`;
-    
+
     try {
       console.debug(`Fetching prediction with ID: ${id}`);
       const response = await axios.get(endpoint);
@@ -131,11 +143,11 @@ export const fetchPrediction = createAsyncThunk(
 
 // Get all predictions with pagination and filtering
 export const fetchPredictions = createAsyncThunk(
-  'predictions/fetchAll',
+  "predictions/fetchAll",
   async (params = {}, { rejectWithValue }) => {
     const endpoint = `${BASE_URL}/api/v1/prediction`;
     const { Page = 1, Limit = 10, search, team, startDate, endDate } = params;
-    
+
     try {
       console.debug("Fetching predictions with params:", params);
       const response = await axios.get(endpoint, {
@@ -145,8 +157,8 @@ export const fetchPredictions = createAsyncThunk(
           search,
           team,
           startDate,
-          endDate
-        }
+          endDate,
+        },
       });
       logApiSuccess("fetchPredictions", response.data);
       return response.data;
@@ -163,10 +175,10 @@ export const fetchPredictions = createAsyncThunk(
 
 // Get prediction statistics (total, active, winning, accuracy)
 export const fetchPredictionStats = createAsyncThunk(
-  'predictions/fetchStats',
+  "predictions/fetchStats",
   async (_, { rejectWithValue }) => {
     const endpoint = `${BASE_URL}/api/v1/prediction`;
-    
+
     try {
       console.debug("Fetching prediction statistics");
       const response = await axios.get(endpoint);
@@ -175,7 +187,8 @@ export const fetchPredictionStats = createAsyncThunk(
     } catch (error) {
       logApiError("fetchPredictionStats", endpoint, null, error);
       return rejectWithValue({
-        message: error.response?.data?.message || "Failed to fetch prediction stats",
+        message:
+          error.response?.data?.message || "Failed to fetch prediction stats",
         statusCode: error.response?.status || 500,
         errorDetails: error.response?.data?.errors || null,
       });
@@ -185,16 +198,16 @@ export const fetchPredictionStats = createAsyncThunk(
 
 // Full update of a prediction
 export const updatePrediction = createAsyncThunk(
-  'predictions/update',
+  "predictions/update",
   async ({ id, title, description, teamId }, { rejectWithValue }) => {
     const endpoint = `${BASE_URL}/api/v1/prediction/update/{id}`;
-    
+
     try {
       console.debug(`Updating prediction with ID: ${id}`);
       const response = await axios.put(endpoint, {
         title,
         description,
-        teamId
+        teamId,
       });
       logApiSuccess("updatePrediction", response.data);
       return response.data;
@@ -211,23 +224,24 @@ export const updatePrediction = createAsyncThunk(
 
 // Partial update of a prediction
 export const patchPrediction = createAsyncThunk(
-  'predictions/patch',
+  "predictions/patch",
   async ({ id, title, description, teamId }, { rejectWithValue }) => {
     const endpoint = `${BASE_URL}/api/v1/prediction/edit/{id}`;
-    
+
     try {
       console.debug(`Partially updating prediction with ID: ${id}`);
       const response = await axios.patch(endpoint, {
         title,
         description,
-        teamId
+        teamId,
       });
       logApiSuccess("patchPrediction", response.data);
       return response.data;
     } catch (error) {
       logApiError("patchPrediction", endpoint, { id, title, teamId }, error);
       return rejectWithValue({
-        message: error.response?.data?.message || "Prediction partial update failed",
+        message:
+          error.response?.data?.message || "Prediction partial update failed",
         statusCode: error.response?.status || 500,
         errorDetails: error.response?.data?.errors || null,
       });
@@ -237,10 +251,10 @@ export const patchPrediction = createAsyncThunk(
 
 // Delete a prediction
 export const deletePrediction = createAsyncThunk(
-  'predictions/delete',
+  "predictions/delete",
   async (id, { rejectWithValue }) => {
     const endpoint = `${BASE_URL}/api/v1/prediction/delete/{id}`;
-    
+
     try {
       console.debug(`Deleting prediction with ID: ${id}`);
       await axios.delete(endpoint);
@@ -259,10 +273,10 @@ export const deletePrediction = createAsyncThunk(
 
 // Get all teams for prediction form
 export const fetchTeams = createAsyncThunk(
-  'predictions/fetchTeams',
+  "predictions/fetchTeams",
   async (_, { rejectWithValue }) => {
     const endpoint = `${BASE_URL}/api/v1/teams`;
-    
+
     try {
       console.debug("Fetching teams for predictions");
       const response = await axios.get(endpoint);
@@ -279,9 +293,162 @@ export const fetchTeams = createAsyncThunk(
   }
 );
 
+// Create a new team
+export const createTeam = createAsyncThunk(
+  "predictions/createTeam",
+  async ({ formData, token }, { rejectWithValue }) => {
+    const endpoint = `${BASE_URL}/api/v1/teams`;
+
+    try {
+      console.debug("Creating new team with data:", formData);
+      const response = await axios.post(endpoint, formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      logApiSuccess("createTeam", response.data);
+      return response.data;
+    } catch (error) {
+      logApiError("createTeam", endpoint, formData, error);
+      return rejectWithValue({
+        message: error.response?.data?.message || "Team creation failed",
+        statusCode: error.response?.status || 500,
+        errors: error.response?.data?.errors || null,
+      });
+    }
+  }
+);
+
+// Get a single team by ID
+export const fetchTeamById = createAsyncThunk(
+  "predictions/fetchTeamById",
+  async (id, { rejectWithValue }) => {
+    const endpoint = `${BASE_URL}/api/v1/teams/${id}`;
+
+    try {
+      console.debug(`Fetching team with ID: ${id}`);
+      const response = await axios.get(endpoint);
+      logApiSuccess("fetchTeamById", response.data);
+      return response.data;
+    } catch (error) {
+      logApiError("fetchTeamById", endpoint, { id }, error);
+      return rejectWithValue({
+        message: error.response?.data?.message || "Failed to fetch team",
+        statusCode: error.response?.status || 500,
+        errorDetails: error.response?.data?.errors || null,
+      });
+    }
+  }
+);
+
+// Get sports for prediction with filtering
+export const fetchSportsForPrediction = createAsyncThunk(
+  "predictions/fetchSportsForPrediction",
+  async (params = {}, { rejectWithValue }) => {
+    const endpoint = `${BASE_URL}/api/v1/prediction/get/sports`;
+    const {
+      PageNumber = 1,
+      PageSize = 10,
+      SportName,
+      Download,
+      Search,
+    } = params;
+
+    try {
+      console.debug("Fetching sports for prediction with params:", params);
+      const response = await axios.get(endpoint, {
+        params: {
+          PageNumber,
+          PageSize,
+          SportName,
+          Download,
+          Search,
+        },
+      });
+      logApiSuccess("fetchSportsForPrediction", response.data);
+      return response.data;
+    } catch (error) {
+      logApiError("fetchSportsForPrediction", endpoint, params, error);
+      return rejectWithValue({
+        message: error.response?.data?.message || "Failed to fetch sports",
+        statusCode: error.response?.status || 500,
+        errorDetails: error.response?.data?.errors || null,
+      });
+    }
+  }
+);
+
+// Get prediction types
+export const fetchPredictionTypes = createAsyncThunk(
+  "predictions/fetchTypes",
+  async (_, { rejectWithValue }) => {
+    const endpoint = `${BASE_URL}/api/v1/prediction/types`;
+
+    try {
+      console.debug("Fetching prediction types");
+      const response = await axios.get(endpoint);
+      logApiSuccess("fetchPredictionTypes", response.data);
+      return response.data;
+    } catch (error) {
+      logApiError("fetchPredictionTypes", endpoint, null, error);
+      return rejectWithValue({
+        message:
+          error.response?.data?.message || "Failed to fetch prediction types",
+        statusCode: error.response?.status || 500,
+        errorDetails: error.response?.data?.errors || null,
+      });
+    }
+  }
+);
+
+// Get matches with filtering
+export const fetchMatches = createAsyncThunk(
+  "predictions/fetchMatches",
+  async (params = {}, { rejectWithValue }) => {
+    const endpoint = `${BASE_URL}/api/matches`;
+    const {
+      leagueId,
+      pageNumber = 1,
+      pageSize = 10,
+      download = false,
+      startDate,
+      endDate,
+      matchDate,
+    } = params;
+
+    try {
+      console.debug("Fetching matches with params:", params);
+      const response = await axios.get(endpoint, {
+        params: {
+          leagueId,
+          pageNumber,
+          pageSize,
+          download,
+          startDate,
+          endDate,
+          matchDate,
+        },
+      });
+      logApiSuccess("fetchMatches", response.data);
+      return response.data;
+    } catch (error) {
+      logApiError("fetchMatches", endpoint, params, error);
+      return rejectWithValue({
+        message: error.response?.data?.message || "Failed to fetch matches",
+        statusCode: error.response?.status || 500,
+        errorDetails: error.response?.data?.errors || null,
+      });
+    }
+  }
+);
+
 // Initial state
 const initialState = {
   predictions: [],
+  sports: [],
+  matches: [],
+  predictionTypes: [],
   teams: [],
   currentPrediction: null,
   stats: {
@@ -290,19 +457,19 @@ const initialState = {
     winning: 0,
     accuracy: 0,
     loading: false,
-    error: null
+    error: null,
   },
   loading: false,
   error: null,
   pagination: {
     page: 1,
     limit: 10,
-    total: 0
-  }
+    total: 0,
+  },
 };
 
 const predictionsSlice = createSlice({
-  name: 'predictions',
+  name: "predictions",
   initialState,
   reducers: {
     clearCurrentPrediction: (state) => {
@@ -316,7 +483,7 @@ const predictionsSlice = createSlice({
     },
     setPagination: (state, action) => {
       state.pagination = action.payload;
-    }
+    },
   },
   extraReducers: (builder) => {
     builder
@@ -368,7 +535,7 @@ const predictionsSlice = createSlice({
         state.pagination = {
           page: action.payload.page || 1,
           limit: action.payload.limit || 10,
-          total: action.payload.totalCount || 0
+          total: action.payload.totalCount || 0,
         };
       })
       .addCase(fetchPredictions.rejected, (state, action) => {
@@ -386,7 +553,7 @@ const predictionsSlice = createSlice({
         state.stats = {
           ...state.stats,
           ...action.payload,
-          error: null
+          error: null,
         };
       })
       .addCase(fetchPredictionStats.rejected, (state, action) => {
@@ -401,7 +568,9 @@ const predictionsSlice = createSlice({
       })
       .addCase(updatePrediction.fulfilled, (state, action) => {
         state.loading = false;
-        const index = state.predictions.findIndex(p => p.id === action.payload.id);
+        const index = state.predictions.findIndex(
+          (p) => p.id === action.payload.id
+        );
         if (index !== -1) {
           state.predictions[index] = action.payload;
         }
@@ -421,7 +590,9 @@ const predictionsSlice = createSlice({
       })
       .addCase(patchPrediction.fulfilled, (state, action) => {
         state.loading = false;
-        const index = state.predictions.findIndex(p => p.id === action.payload.id);
+        const index = state.predictions.findIndex(
+          (p) => p.id === action.payload.id
+        );
         if (index !== -1) {
           state.predictions[index] = action.payload;
         }
@@ -441,13 +612,29 @@ const predictionsSlice = createSlice({
       })
       .addCase(deletePrediction.fulfilled, (state, action) => {
         state.loading = false;
-        state.predictions = state.predictions.filter(p => p.id !== action.payload);
+        state.predictions = state.predictions.filter(
+          (p) => p.id !== action.payload
+        );
         state.pagination.total -= 1;
         if (state.currentPrediction?.id === action.payload) {
           state.currentPrediction = null;
         }
       })
       .addCase(deletePrediction.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+      })
+
+      // Create team
+      .addCase(createTeam.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(createTeam.fulfilled, (state, action) => {
+        state.loading = false;
+        state.teams.unshift(action.payload);
+      })
+      .addCase(createTeam.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
       })
@@ -464,25 +651,100 @@ const predictionsSlice = createSlice({
       .addCase(fetchTeams.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
+      })
+
+      // Fetch team by id
+      .addCase(fetchTeamById.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(fetchTeamById.fulfilled, (state, action) => {
+        state.loading = false;
+        // You might want to store this in a separate state field if needed
+        // Currently adding to teams array
+        const existingIndex = state.teams.findIndex(
+          (t) => t.id === action.payload.id
+        );
+        if (existingIndex === -1) {
+          state.teams.push(action.payload);
+        } else {
+          state.teams[existingIndex] = action.payload;
+        }
+      })
+      .addCase(fetchTeamById.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+      })
+
+      // fetch sports for prediction
+      .addCase(fetchSportsForPrediction.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(fetchSportsForPrediction.fulfilled, (state, action) => {
+        state.loading = false;
+        // Store sports data - you might want to add a sports field to your state
+        state.sports = action.payload.data || [];
+      })
+      .addCase(fetchSportsForPrediction.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+      })
+
+      .addCase(fetchPredictionTypes.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(fetchPredictionTypes.fulfilled, (state, action) => {
+        state.loading = false;
+        state.predictionTypes = action.payload.data || [];
+      })
+      .addCase(fetchPredictionTypes.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+      })
+
+      .addCase(fetchMatches.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(fetchMatches.fulfilled, (state, action) => {
+        state.loading = false;
+        state.matches = action.payload.data || [];
+        // Update pagination if available in response
+        if (action.payload.pagination) {
+          state.pagination = {
+            ...state.pagination,
+            ...action.payload.pagination,
+          };
+        }
+      })
+      .addCase(fetchMatches.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
       });
-  }
+  },
 });
 
 // Selectors
 export const selectPredictions = (state) => state.predictions.predictions;
-export const selectCurrentPrediction = (state) => state.predictions.currentPrediction;
+export const selectCurrentPrediction = (state) =>
+  state.predictions.currentPrediction;
 export const selectTeams = (state) => state.predictions.teams;
+export const selectSports = (state) => state.predictions.sports;
 export const selectLoading = (state) => state.predictions.loading;
 export const selectError = (state) => state.predictions.error;
 export const selectPagination = (state) => state.predictions.pagination;
 export const selectPredictionStats = (state) => state.predictions.stats;
+export const selectPredictionTypes = (state) => state.predictions.predictionTypes;
+export const selectMatches = (state) => state.predictions.matches;
 
 // Actions
-export const { 
-  clearCurrentPrediction, 
+export const {
+  clearCurrentPrediction,
   clearError,
   clearStatsError,
-  setPagination 
+  setPagination,
 } = predictionsSlice.actions;
 
 export default predictionsSlice.reducer;

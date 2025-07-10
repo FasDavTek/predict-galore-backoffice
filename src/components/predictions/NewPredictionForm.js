@@ -1,9 +1,14 @@
 // pages/predictions.js
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useFormik } from "formik";
 import * as Yup from "yup";
-import { useDispatch } from "react-redux";
-import { createPrediction } from "@/store/slices/predictionSlice";
+import { useDispatch, useSelector } from "react-redux";
+import {
+  createPrediction,
+  fetchSportsForPrediction,
+  fetchMatches,
+  fetchPredictionTypes,
+} from "@/store/slices/predictionSlice";
 
 // Material-UI Components
 import {
@@ -68,74 +73,14 @@ import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 
 import AskHuddle from "@/components/common/AskHuddle";
 
-// Define the steps for the prediction form
-const steps = ["Match Selection", "Prediction Details", "Preview"];
 
 import { useAuth } from "@/context/AuthContext";
-
 // Constants
 const STEPS = ["Match Selection", "Prediction Details", "Preview"];
 
-// Mock Data
-const MATCHES = [
-  { id: 1, home: "Team A", away: "Team B", competitionId: 1 },
-  { id: 2, home: "Team C", away: "Team D", competitionId: 1 },
-  { id: 3, home: "Team E", away: "Team F", competitionId: 2 },
-];
-
-const COMPETITIONS = [
-  { id: 1, name: "Premier League" },
-  { id: 2, name: "Champions League" },
-];
-
-// Initialize matchesByLeague with all leagues
-const matchesByLeague = {
-  // Football leagues
-  "English Premier League": [
-    {
-      id: 1,
-      home: "Arsenal",
-      away: "Chelsea",
-      date: "2023-05-15 15:00",
-      stage: "Premier League",
-    },
-    {
-      id: 2,
-      home: "Manchester United",
-      away: "Liverpool",
-      date: "2023-05-16 17:30",
-      stage: "Premier League",
-    },
-  ],
-  "Champions League": [],
-  LaLiga: [],
-  "Serie A": [],
-  "Ligue 1": [],
-  Bundesliga: [],
-};
-
-const PREDICTION_TYPES = [
-  { 
-    id: 1, 
-    name: "Match Winner", 
-    values: ["1", "X", "2"] 
-  },
-  {
-    id: 2,
-    name: "Over/Under",
-    values: ["Over 1.5", "Over 2.5", "Under 1.5", "Under 2.5"],
-  },
-  { id: 3, name: "Both Teams to Score", values: ["Yes", "No"] },
-  { id: 4, name: "Double Chance", values: ["1X", "12", "X2"] },
-  {
-    id: 5,
-    name: "Correct Score",
-    values: ["1-0", "2-0", "2-1", "0-0", "1-1", "2-2"],
-  },
-];
-
 // Validation Schema
 const validationSchema = Yup.object().shape({
+  sportId: Yup.number().required("Sport is required").min(1, "Select a sport"),
   matchId: Yup.number().required("Match is required").min(1, "Select a match"),
   isPremium: Yup.boolean().default(false),
   isScheduled: Yup.boolean().default(false),
@@ -145,7 +90,6 @@ const validationSchema = Yup.object().shape({
       "scheduled-time-validation",
       "Scheduled time must be in the future",
       function (value) {
-        // Only validate if isScheduled is true and value exists
         if (this.parent.isScheduled && value) {
           return value > new Date();
         }
@@ -183,24 +127,30 @@ const validationSchema = Yup.object().shape({
     .min(1, "At least one prediction required"),
 });
 
-const NewPredictionForm = ({ teams = [], onBack, onSubmit }) => {
+const NewPredictionForm = ({  onBack,}) => {
   const dispatch = useDispatch();
   const { token } = useAuth();
 
   const [activeStep, setActiveStep] = useState(0);
   const [loading, setLoading] = useState(false);
-  const [submissionStatus, setSubmissionStatus] = useState(null); // 'success', 'error', or null
+  const [submissionStatus, setSubmissionStatus] = useState(null);
   const [openConfirmDialog, setOpenConfirmDialog] = useState(false);
-
   const [snackbar, setSnackbar] = useState({
     open: false,
     message: "",
     severity: "success",
   });
 
-  // Formik initialization
+  // State for fetched data
+  const [sports, setSports] = useState([]);
+  const [matches, setMatches] = useState([]);
+  const [predictionTypes, setPredictionTypes] = useState([]);
+  const [loadingData, setLoadingData] = useState(false);
+
+    // Formik initialization
   const formik = useFormik({
     initialValues: {
+      sportId: 0,
       matchId: 0,
       isPremium: false,
       isScheduled: false,
@@ -224,9 +174,8 @@ const NewPredictionForm = ({ teams = [], onBack, onSubmit }) => {
       try {
         setLoading(true);
         setSubmissionStatus(null);
-        setOpenConfirmDialog(true); // Keep dialog open to show progress
+        setOpenConfirmDialog(true);
 
-        // Prepare the submission data with all required fields
         const submissionData = {
           matchId: values.matchId,
           isPremium: values.isPremium,
@@ -238,14 +187,12 @@ const NewPredictionForm = ({ teams = [], onBack, onSubmit }) => {
           values: values.values.map((value) => ({
             predictionTypeId: value.predictionTypeId,
             value: value.value,
-            label: value.label || "", // Ensure empty string if label is null
-            tip: value.tip || "", // Ensure empty string if tip is null
+            label: value.label || "",
+            tip: value.tip || "",
             odds: Number(value.odds),
             confidence: Number(value.confidence),
           })),
         };
-
-        console.log("Submitting data:", submissionData); // Debug log
 
         await dispatch(
           createPrediction({
@@ -280,13 +227,107 @@ const NewPredictionForm = ({ teams = [], onBack, onSubmit }) => {
     },
   });
 
+
+  // Fetch data on component mount
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setLoadingData(true);
+        
+        // Fetch sports
+        const sportsResponse = await dispatch(fetchSportsForPrediction({ 
+          PageNumber: 1, 
+          PageSize: 10 
+        })).unwrap();
+        setSports(sportsResponse.data || []);
+
+        // Fetch prediction types
+        const typesResponse = await dispatch(fetchPredictionTypes()).unwrap();
+        setPredictionTypes(typesResponse.data || []);
+        
+      } catch (error) {
+        console.error("Error fetching data:", error);
+        setSnackbar({
+          open: true,
+          message: "Failed to fetch initial data",
+          severity: "error",
+        });
+      } finally {
+        setLoadingData(false);
+      }
+    };
+    fetchData();
+  }, [dispatch]);
+
+  // Fetch matches when competition changes
+  useEffect(() => {
+    const fetchLeagueMatches = async () => {
+      if (formik.values.competitionId) {
+        try {
+          setLoadingData(true);
+          const today = new Date();
+          const nextMonth = new Date();
+          nextMonth.setMonth(today.getMonth() + 1);
+          
+          const matchesResponse = await dispatch(fetchMatches({
+            leagueId: formik.values.competitionId,
+            pageNumber: 1,
+            pageSize: 50,
+            startDate: today.toISOString().split('T')[0],
+            endDate: nextMonth.toISOString().split('T')[0]
+          })).unwrap();
+          
+          setMatches(matchesResponse.data || []);
+        } catch (error) {
+          console.error("Error fetching matches:", error);
+          setSnackbar({
+            open: true,
+            message: "Failed to fetch matches",
+            severity: "error",
+          });
+        } finally {
+          setLoadingData(false);
+        }
+      }
+    };
+    
+    fetchLeagueMatches();
+  }, [formik.values.competitionId, dispatch]);
+
+  // Get leagues for selected sport
+  const getLeaguesForSelectedSport = () => {
+    if (!formik.values.sportId) return [];
+    const selectedSport = sports.find(sport => sport.id === formik.values.sportId);
+    return selectedSport?.leagues || [];
+  };
+
+  // Get matches for selected league
+  const getMatchesForSelectedLeague = () => {
+    if (!formik.values.competitionId) return [];
+    return matches.filter(match => match.leagueId === formik.values.competitionId);
+  };
+
+
+
+  // Handle sport change
+  const handleSportChange = (e) => {
+    formik.setFieldValue("sportId", e.target.value);
+    formik.setFieldValue("competitionId", 0); // Reset competition when sport changes
+    formik.setFieldValue("matchId", 0); // Reset match when sport changes
+  };
+
+  // Handle competition change
+  const handleCompetitionChange = (e) => {
+    formik.setFieldValue("competitionId", e.target.value);
+    formik.setFieldValue("matchId", 0); // Reset match when competition changes
+  };
+
   // Navigation handlers
   const handleBack = () => setActiveStep((prev) => prev - 1);
 
   const handleNext = async () => {
-    // Step-specific field validation
     const stepFields = {
-      0: ["matchId", "competitionId"],
+      0: ["sportId", "competitionId", "matchId"],
       1: ["expertAnalysis", "confidencePercentage", "values"],
     };
 
@@ -325,7 +366,22 @@ const NewPredictionForm = ({ teams = [], onBack, onSubmit }) => {
 
   // Helper functions
   const getPredictionValues = (typeId) => {
-    return PREDICTION_TYPES.find((t) => t.id === typeId)?.values || [];
+    const type = predictionTypes.find((t) => t.id === typeId);
+    if (!type) return [];
+    
+    // This is a simplified mapping - you might need to adjust based on your actual prediction types
+    switch(type.name) {
+      case '1X2':
+        return ['1', 'X', '2'];
+      case 'Over/Under':
+        return ['Over 1.5', 'Over 2.5', 'Under 1.5', 'Under 2.5'];
+      case 'Both Teams to Score':
+        return ['Yes', 'No'];
+      case 'Correct Score':
+        return ['1-0', '2-0', '2-1', '0-0', '1-1', '2-2'];
+      default:
+        return [];
+    }
   };
 
   const addPredictionValue = () => {
@@ -355,15 +411,14 @@ const NewPredictionForm = ({ teams = [], onBack, onSubmit }) => {
     formik.setFieldValue("values", newValues);
   };
 
-  // Get match details by ID
-  const getMatchDetails = (matchId) =>
-    MATCHES.find((m) => m.id === matchId) || {};
-
-  const getCompetitionDetails = (competitionId) =>
-    COMPETITIONS.find((c) => c.id === competitionId) || {};
-
-  const getPredictionTypeDetails = (typeId) =>
-    PREDICTION_TYPES.find((t) => t.id === typeId) || {};
+  // Get details by ID
+  const getMatchDetails = (matchId) => matches.find((m) => m.id === matchId) || {};
+  const getCompetitionDetails = (competitionId) => {
+    const leagues = getLeaguesForSelectedSport();
+    return leagues.find((l) => l.id === competitionId) || {};
+  };
+  const getSportDetails = (sportId) => sports.find((s) => s.id === sportId) || {};
+  const getPredictionTypeDetails = (typeId) => predictionTypes.find((t) => t.id === typeId) || {};
 
   // Step content rendering
   const renderStepContent = (step) => {
@@ -372,42 +427,70 @@ const NewPredictionForm = ({ teams = [], onBack, onSubmit }) => {
         return (
           <Paper sx={{ p: 3, mb: 3, width: "100%", maxWidth: 800 }}>
             <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
-              {/* section header */}
               <Typography variant="h6" gutterBottom>
                 Match Information
               </Typography>
 
+              {/* Sport selection */}
+              <FormControl
+                fullWidth
+                error={formik.touched.sportId && !!formik.errors.sportId}
+                sx={{ mb: 4 }}
+                disabled={loadingData}
+              >
+                <InputLabel>Sport</InputLabel>
+                <Select
+                  name="sportId"
+                  value={formik.values.sportId}
+                  onChange={handleSportChange}
+                  onBlur={formik.handleBlur}
+                  label="Sport *"
+                >
+                  <MenuItem value={0} disabled>
+                    Select sport
+                  </MenuItem>
+                  {sports.map((sport) => (
+                    <MenuItem key={sport.id} value={sport.id}>
+                      {sport.name}
+                    </MenuItem>
+                  ))}
+                </Select>
+                {formik.touched.sportId && formik.errors.sportId && (
+                  <Typography color="error" variant="caption">
+                    {formik.errors.sportId}
+                  </Typography>
+                )}
+              </FormControl>
+
               {/* Competition selection */}
               <FormControl
                 fullWidth
-                error={
-                  formik.touched.competitionId && !!formik.errors.competitionId
-                }
+                error={formik.touched.competitionId && !!formik.errors.competitionId}
                 sx={{ mb: 4 }}
+                disabled={!formik.values.sportId || loadingData}
               >
                 <InputLabel>Competition</InputLabel>
                 <Select
                   name="competitionId"
                   value={formik.values.competitionId}
-                  onChange={formik.handleChange}
+                  onChange={handleCompetitionChange}
                   onBlur={formik.handleBlur}
                   label="Competition *"
                 >
                   <MenuItem value={0} disabled>
                     Select competition
                   </MenuItem>
-                  {COMPETITIONS.map((comp) => (
-                    <MenuItem key={comp.id} value={comp.id}>
-                      {comp.name}
+                  {getLeaguesForSelectedSport().map((league) => (
+                    <MenuItem key={league.id} value={league.id}>
+                      {league.name}
                     </MenuItem>
                   ))}
                 </Select>
-                {formik.touched.competitionId &&
-                  formik.errors.competitionId && (
-                    <Typography color="error" variant="caption">
-                      {formik.errors.competitionId}
-                    </Typography>
-                  )}
+                {formik.touched.competitionId && formik.errors.competitionId && (
+                  <Typography color="error" variant="caption">
+                    {formik.errors.competitionId}
+                  </Typography>
+                )}
               </FormControl>
 
               {/* Match selection */}
@@ -415,6 +498,7 @@ const NewPredictionForm = ({ teams = [], onBack, onSubmit }) => {
                 fullWidth
                 error={formik.touched.matchId && !!formik.errors.matchId}
                 sx={{ mb: 2 }}
+                disabled={!formik.values.competitionId || loadingData}
               >
                 <InputLabel>Match</InputLabel>
                 <Select
@@ -427,13 +511,9 @@ const NewPredictionForm = ({ teams = [], onBack, onSubmit }) => {
                   <MenuItem value={0} disabled>
                     Select match
                   </MenuItem>
-                  {MATCHES.filter(
-                    (m) =>
-                      formik.values.competitionId === 0 ||
-                      m.competitionId === formik.values.competitionId
-                  ).map((match) => (
+                  {getMatchesForSelectedLeague().map((match) => (
                     <MenuItem key={match.id} value={match.id}>
-                      {`${match.home} vs ${match.away}`}
+                      {`${match.homeTeam} vs ${match.awayTeam}`} - {new Date(match.date).toLocaleDateString()}
                     </MenuItem>
                   ))}
                 </Select>
@@ -467,15 +547,12 @@ const NewPredictionForm = ({ teams = [], onBack, onSubmit }) => {
         return (
           <Paper sx={{ p: 3, mb: 3, width: "100%", maxWidth: 800 }}>
             <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
-              {/* section Header */}
               <Typography variant="h6" gutterBottom>
                 Prediction Details
               </Typography>
 
-              {/* Expert analysis and confidence percentage */}
               <Paper sx={{ p: 3, mb: 3, width: "100%", maxWidth: 800 }}>
                 <Box sx={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                  {/* Expert analysis */}
                   <TextField
                     fullWidth
                     multiline
@@ -496,7 +573,6 @@ const NewPredictionForm = ({ teams = [], onBack, onSubmit }) => {
                     inputProps={{ maxLength: 3000 }}
                   />
 
-                  {/* Confidence percentage */}
                   <TextField
                     fullWidth
                     type="number"
@@ -520,16 +596,13 @@ const NewPredictionForm = ({ teams = [], onBack, onSubmit }) => {
                 </Box>
               </Paper>
 
-              {/* prediction specifics */}
               <Paper sx={{ p: 3, mb: 3, width: "100%", maxWidth: 800 }}>
                 <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
-                  {/* Prediction values */}
                   {formik.values.values.map((value, index) => (
                     <Box
                       key={index}
                       sx={{ borderBottom: "1px solid #eee", pb: 3 }}
                     >
-                      {/* Header with delete button */}
                       <Box
                         display="flex"
                         justifyContent="space-between"
@@ -550,7 +623,6 @@ const NewPredictionForm = ({ teams = [], onBack, onSubmit }) => {
                         )}
                       </Box>
 
-                      {/* Prediction type */}
                       <FormControl
                         fullWidth
                         error={
@@ -576,7 +648,7 @@ const NewPredictionForm = ({ teams = [], onBack, onSubmit }) => {
                           <MenuItem value={0} disabled>
                             Select type
                           </MenuItem>
-                          {PREDICTION_TYPES.map((type) => (
+                          {predictionTypes.map((type) => (
                             <MenuItem key={type.id} value={type.id}>
                               {type.name}
                             </MenuItem>
@@ -589,7 +661,6 @@ const NewPredictionForm = ({ teams = [], onBack, onSubmit }) => {
                         )}
                       </FormControl>
 
-                      {/* Prediction value */}
                       {value.predictionTypeId > 0 && (
                         <FormControl
                           fullWidth
@@ -632,7 +703,6 @@ const NewPredictionForm = ({ teams = [], onBack, onSubmit }) => {
                         </FormControl>
                       )}
 
-                      {/* Label */}
                       <TextField
                         fullWidth
                         label="Label (Optional)"
@@ -649,7 +719,6 @@ const NewPredictionForm = ({ teams = [], onBack, onSubmit }) => {
                         sx={{ mb: 4 }}
                       />
 
-                      {/* Tip */}
                       <TextField
                         fullWidth
                         label="Tip (Optional)"
@@ -677,7 +746,6 @@ const NewPredictionForm = ({ teams = [], onBack, onSubmit }) => {
                         sx={{ mb: 4 }}
                       />
 
-                      {/* Odds and Confidence */}
                       <Box display="flex" gap={4} sx={{ mb: 2 }}>
                         <TextField
                           fullWidth
@@ -731,7 +799,6 @@ const NewPredictionForm = ({ teams = [], onBack, onSubmit }) => {
                     </Box>
                   ))}
 
-                  {/* Add Prediction Button */}
                   <Button
                     variant="outlined"
                     onClick={addPredictionValue}
@@ -746,7 +813,6 @@ const NewPredictionForm = ({ teams = [], onBack, onSubmit }) => {
                 </Box>
               </Paper>
 
-              {/* Scheduling section  */}
               <Paper sx={{ p: 3, mb: 1, width: "100%", maxWidth: 800 }}>
                 <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
                   <FormGroup>
@@ -802,9 +868,8 @@ const NewPredictionForm = ({ teams = [], onBack, onSubmit }) => {
 
       case 2: // Preview step
         const selectedMatch = getMatchDetails(formik.values.matchId);
-        const selectedCompetition = getCompetitionDetails(
-          formik.values.competitionId
-        );
+        const selectedCompetition = getCompetitionDetails(formik.values.competitionId);
+        const selectedSport = getSportDetails(formik.values.sportId);
 
         return (
           <Paper
@@ -818,7 +883,6 @@ const NewPredictionForm = ({ teams = [], onBack, onSubmit }) => {
             }}
           >
             <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
-              {/* Heading */}
               <Box
                 sx={{
                   display: "flex",
@@ -833,7 +897,6 @@ const NewPredictionForm = ({ teams = [], onBack, onSubmit }) => {
                 </Typography>
               </Box>
 
-              {/* Match preview */}
               <Card
                 sx={{
                   borderLeft: "4px solid",
@@ -843,7 +906,6 @@ const NewPredictionForm = ({ teams = [], onBack, onSubmit }) => {
                 }}
               >
                 <CardContent>
-                  {/* header */}
                   <Box
                     sx={{
                       display: "flex",
@@ -855,6 +917,24 @@ const NewPredictionForm = ({ teams = [], onBack, onSubmit }) => {
                     <EventIcon color="action" />
                     <Typography variant="subtitle1" fontWeight="bold">
                       Match Information
+                    </Typography>
+                  </Box>
+
+                  <Box
+                    sx={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 2,
+                      p: 1,
+                      mb: 4,
+                    }}
+                  >
+                    <SportsSoccerIcon fontSize="small" color="primary" />
+                    <Typography variant="body1">
+                      <Box component="span" fontWeight="bold">
+                        Sport:
+                      </Box>{" "}
+                      {selectedSport.name || "N/A"}
                     </Typography>
                   </Box>
 
@@ -890,8 +970,8 @@ const NewPredictionForm = ({ teams = [], onBack, onSubmit }) => {
                       <Box component="span" fontWeight="bold">
                         Match:
                       </Box>{" "}
-                      {selectedMatch.home || "N/A"} vs{" "}
-                      {selectedMatch.away || "N/A"}
+                      {selectedMatch.homeTeam || "N/A"} vs{" "}
+                      {selectedMatch.awayTeam || "N/A"} - {selectedMatch.date ? new Date(selectedMatch.date).toLocaleDateString() : "N/A"}
                     </Typography>
                   </Box>
 
@@ -915,7 +995,6 @@ const NewPredictionForm = ({ teams = [], onBack, onSubmit }) => {
                 </CardContent>
               </Card>
 
-              {/* Expert analysis preview */}
               <Card
                 sx={{
                   borderLeft: "4px solid",
@@ -925,7 +1004,6 @@ const NewPredictionForm = ({ teams = [], onBack, onSubmit }) => {
                 }}
               >
                 <CardContent>
-                  {/* Header */}
                   <Box
                     sx={{
                       display: "flex",
@@ -973,7 +1051,6 @@ const NewPredictionForm = ({ teams = [], onBack, onSubmit }) => {
                 </CardContent>
               </Card>
 
-              {/* Predictions specifics */}
               {formik.values.values.map((value, index) => {
                 const predictionType = getPredictionTypeDetails(
                   value.predictionTypeId
@@ -990,7 +1067,6 @@ const NewPredictionForm = ({ teams = [], onBack, onSubmit }) => {
                     }}
                   >
                     <CardContent>
-                      {/* prediction index */}
                       <Box
                         sx={{
                           display: "flex",
@@ -1005,7 +1081,6 @@ const NewPredictionForm = ({ teams = [], onBack, onSubmit }) => {
                         </Typography>
                       </Box>
 
-                      {/* Type and Prediction */}
                       <Box
                         sx={{
                           display: "flex",
@@ -1014,7 +1089,6 @@ const NewPredictionForm = ({ teams = [], onBack, onSubmit }) => {
                           p: 1,
                         }}
                       >
-                        {/* prediction type */}
                         <Box
                           sx={{
                             display: "flex",
@@ -1032,7 +1106,6 @@ const NewPredictionForm = ({ teams = [], onBack, onSubmit }) => {
                           </Typography>
                         </Box>
 
-                        {/* prediction value */}
                         <Box
                           sx={{
                             display: "flex",
@@ -1051,7 +1124,6 @@ const NewPredictionForm = ({ teams = [], onBack, onSubmit }) => {
                         </Box>
                       </Box>
 
-                      {/* Label and Tip */}
                       <Box
                         sx={{
                           display: "flex",
@@ -1061,7 +1133,6 @@ const NewPredictionForm = ({ teams = [], onBack, onSubmit }) => {
                           mb: 4,
                         }}
                       >
-                        {/* label */}
                         {value.label && (
                           <Box
                             sx={{
@@ -1081,7 +1152,6 @@ const NewPredictionForm = ({ teams = [], onBack, onSubmit }) => {
                           </Box>
                         )}
 
-                        {/* tip */}
                         {value.tip && (
                           <Box sx={{ display: "flex", gap: 1 }}>
                             <LightbulbIcon fontSize="small" color="warning" />
@@ -1095,7 +1165,6 @@ const NewPredictionForm = ({ teams = [], onBack, onSubmit }) => {
                         )}
                       </Box>
 
-                      {/* Odds and Confidence  */}
                       <Box
                         sx={{
                           display: "flex",
@@ -1143,7 +1212,6 @@ const NewPredictionForm = ({ teams = [], onBack, onSubmit }) => {
                 );
               })}
 
-              {/* Scheduling preview */}
               {formik.values.isScheduled && (
                 <Card
                   sx={{
@@ -1266,9 +1334,10 @@ const NewPredictionForm = ({ teams = [], onBack, onSubmit }) => {
           <AskHuddle />
         </Box>
 
-
         {/* Navigation buttons */}
         <Box sx={{ display: "flex", justifyContent: "space-between", mt: 3 }}>
+
+          {/* button */}
           <Button
             disabled={activeStep === 0 || loading}
             onClick={handleBack}
@@ -1276,21 +1345,27 @@ const NewPredictionForm = ({ teams = [], onBack, onSubmit }) => {
           >
             Back
           </Button>
-          <Button
-            variant="contained"
-            onClick={handleNext}
-            disabled={
-              loading ||
-              (activeStep === 0 &&
-                (!formik.values.matchId || !formik.values.competitionId))
-            }
-            endIcon={loading && <CircularProgress size={20} color="inherit" />}
-          >
-            {activeStep === STEPS.length - 1 ? "Submit" : "Next"}
-          </Button>
+
+          {/* next button */}
+        <Button
+  variant="contained"
+  onClick={handleNext}
+  disabled={
+    loading || 
+    loadingData ||
+    (activeStep === 0 && (
+      !formik.values.matchId || 
+      !formik.values.competitionId || 
+      !formik.values.sportId
+    ))
+  }
+  endIcon={loading && <CircularProgress size={20} color="inherit" />}
+>
+  {activeStep === STEPS.length - 1 ? "Submit" : "Next"}
+</Button>
+
         </Box>
 
-  
         {/* Confirmation Dialog */}
         <Dialog
           open={openConfirmDialog}
@@ -1494,6 +1569,7 @@ const NewPredictionForm = ({ teams = [], onBack, onSubmit }) => {
                 </Button>
               </Box>
             )}
+
           </DialogActions>
         </Dialog>
 
@@ -1513,6 +1589,7 @@ const NewPredictionForm = ({ teams = [], onBack, onSubmit }) => {
             {snackbar.message}
           </Alert>
         </Snackbar>
+
       </Box>
     </LocalizationProvider>
   );

@@ -27,11 +27,11 @@ import { logout } from "@/store/slices/authSlice";
 import { useAuth } from "@/context/AuthContext";
 
 const Header = () => {
-  const { user } = useAuth();
-  console.log("User data:", user);
+  const { user, token } = useAuth();
+  // console.log("User data:", user);
 
-  const { firstName, lastName, email, adminType } = user;
-  console.log("User details:", { firstName, lastName, email, adminType });
+const { firstName = '', lastName = '', email = '', adminType = '' } = user || {};
+  // console.log("User details:", { firstName, lastName, email, adminType });
 
   const router = useRouter();
   const dispatch = useDispatch();

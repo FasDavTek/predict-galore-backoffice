@@ -11,12 +11,7 @@ import {
 } from "@mui/material";
 import { AuthLayout } from "@/layouts/AuthLayout";
 import { useDispatch, useSelector } from "react-redux";
-import { 
-  verifyOTP, 
-  resendOTP, 
-  clearOtpError,
-  resetResendSuccess
-} from "@/store/slices/authSlice";
+import { verifyOTP, resendOTP, resendSuccess } from "@/store/slices/authSlice";
 import { useRouter } from "next/router";
 import { useFormik } from "formik";
 import * as yup from "yup";

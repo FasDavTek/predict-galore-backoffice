@@ -13,7 +13,11 @@ import {
 import { Mail as MailIcon } from "@mui/icons-material";
 import { AuthLayout } from "@/layouts/AuthLayout";
 import { useDispatch, useSelector } from "react-redux";
-import { verifyEmail, clearAuthError, resendVerificationEmail } from "@/store/slices/authSlice";
+import {
+  verifyEmail,
+  clearAuthError,
+  resendVerificationEmail,
+} from "@/store/slices/authSlice";
 import { useRouter } from "next/router";
 import { useFormik } from "formik";
 import * as yup from "yup";
@@ -27,22 +31,24 @@ const EmailVerficationPage = () => {
   const dispatch = useDispatch();
   const router = useRouter();
   const { loading, error } = useSelector((state) => state.auth);
-  
+
   const formik = useFormik({
     initialValues: {
       email: "",
     },
     validationSchema,
+    // Replace the existing onSubmit with this
     onSubmit: async (values) => {
       try {
         const result = await dispatch(verifyEmail(values.email));
-        if (verifyEmail.fulfilled.match(result)) {
-          toast.success(`We've sent a 6-digit code to ${values.email}. Please check your inbox.`);
-          // Navigate to OTP verification page after 3 seconds
+        if (result.meta.requestStatus === "fulfilled") {
+          toast.success(
+            `We've sent a 6-digit code to ${values.email}. Please check your inbox.`
+          );
           setTimeout(() => {
             router.push({
               pathname: "/auth/verify-otp",
-              query: { email: values.email }
+              query: { email: values.email },
             });
           }, 3000);
         }
@@ -120,9 +126,9 @@ const EmailVerficationPage = () => {
         <Box sx={{ textAlign: "center" }}>
           <Typography
             variant="body2"
-            sx={{ 
-              // fontFamily: "Inter", 
-              color: "text.secondary" 
+            sx={{
+              // fontFamily: "Inter",
+              color: "text.secondary",
             }}
           >
             Already verified?{" "}

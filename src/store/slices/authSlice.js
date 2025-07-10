@@ -1,7 +1,10 @@
 // store/slices/auth/authSlice.js
 
-import { createSlice, createAsyncThunk, createSelector } from "@reduxjs/toolkit";
-
+import {
+  createSlice,
+  createAsyncThunk,
+  createSelector,
+} from "@reduxjs/toolkit";
 
 import { HYDRATE } from "next-redux-wrapper";
 import axios from "axios";
@@ -175,8 +178,8 @@ export const confirmEmail = createAsyncThunk(
 
 export const fetchUserProfile = createAsyncThunk(
   "auth/fetchUserProfile",
-  async (token, { rejectWithValue }) => {  
-  //  console.log("token:", token)
+  async (token, { rejectWithValue }) => {
+    //  console.log("token:", token)
 
     const endpoint = `${BASE_URL}/api/v1/auth/user/me`;
 
@@ -206,7 +209,10 @@ export const updateUserProfile = createAsyncThunk(
     const endpoint = `${BASE_URL}/api/v1/auth/user/profile/update`;
 
     try {
-      console.debug("Updating user profile with data:", JSON.stringify(data, null, 2));
+      console.debug(
+        "Updating user profile with data:",
+        JSON.stringify(data, null, 2)
+      );
 
       const response = await axios.post(endpoint, data, {
         headers: {
@@ -225,7 +231,6 @@ export const updateUserProfile = createAsyncThunk(
     }
   }
 );
-
 
 export const generatePasswordResetToken = createAsyncThunk(
   "auth/generatePasswordResetToken",
@@ -412,6 +417,91 @@ export const resendTwoFAToken = createAsyncThunk(
   }
 );
 
+export const verifyEmail = createAsyncThunk(
+  "auth/verifyEmail",
+  async (email, { rejectWithValue }) => {
+    const endpoint = `${BASE_URL}/api/v1/auth/verify-email`;
+
+    try {
+      console.debug(`Verifying email: ${email}`);
+      const response = await axios.post(endpoint, { email });
+      logApiSuccess("verifyEmail", response.data);
+      return response.data;
+    } catch (error) {
+      logApiError("verifyEmail", endpoint, { email }, error);
+      return rejectWithValue({
+        message: error.response?.data?.message || "Email verification failed",
+        statusCode: error.response?.status || 500,
+        errorDetails: error.response?.data?.errors || null,
+      });
+    }
+  }
+);
+
+export const resendVerificationEmail = createAsyncThunk(
+  "auth/resendVerificationEmail",
+  async (email, { rejectWithValue }) => {
+    const endpoint = `${BASE_URL}/api/v1/auth/resend-verification`;
+
+    try {
+      console.debug(`Resending verification to: ${email}`);
+      const response = await axios.post(endpoint, { email });
+      logApiSuccess("resendVerificationEmail", response.data);
+      return response.data;
+    } catch (error) {
+      logApiError("resendVerificationEmail", endpoint, { email }, error);
+      return rejectWithValue({
+        message:
+          error.response?.data?.message || "Failed to resend verification",
+        statusCode: error.response?.status || 500,
+        errorDetails: error.response?.data?.errors || null,
+      });
+    }
+  }
+);
+
+export const verifyOTP = createAsyncThunk(
+  "auth/verifyOTP",
+  async (otp, { rejectWithValue }) => {
+    const endpoint = `${BASE_URL}/api/v1/auth/verify-otp`;
+
+    try {
+      console.debug("Verifying OTP");
+      const response = await axios.post(endpoint, { otp });
+      logApiSuccess("verifyOTP", response.data);
+      return response.data;
+    } catch (error) {
+      logApiError("verifyOTP", endpoint, { otp }, error);
+      return rejectWithValue({
+        message: error.response?.data?.message || "OTP verification failed",
+        statusCode: error.response?.status || 500,
+        errorDetails: error.response?.data?.errors || null,
+      });
+    }
+  }
+);
+
+export const resendOTP = createAsyncThunk(
+  "auth/resendOTP",
+  async (email, { rejectWithValue }) => {
+    const endpoint = `${BASE_URL}/api/v1/auth/resend-otp`;
+
+    try {
+      console.debug(`Resending OTP to: ${email}`);
+      const response = await axios.post(endpoint, { email });
+      logApiSuccess("resendOTP", response.data);
+      return response.data;
+    } catch (error) {
+      logApiError("resendOTP", endpoint, { email }, error);
+      return rejectWithValue({
+        message: error.response?.data?.message || "Failed to resend OTP",
+        statusCode: error.response?.status || 500,
+        errorDetails: error.response?.data?.errors || null,
+      });
+    }
+  }
+);
+
 // Initial state
 const initialState = {
   loading: false,
@@ -422,8 +512,12 @@ const initialState = {
   token:
     typeof window !== "undefined" ? localStorage.getItem("authToken") : null,
   user: null,
-  token: null, // Initialize as null
+  token: null,
   role: null,
+  otpLoading: false,
+  resendLoading: false,
+  otpError: null,
+  resendSuccess: false,
 };
 
 if (typeof window !== "undefined") {
@@ -476,7 +570,7 @@ const authSlice = createSlice({
         state.status = "loading";
         state.authStatus = AuthStatus.CHECKING;
       })
-      
+
       .addCase(adminSignin.fulfilled, (state, action) => {
         state.loading = false;
         state.status = "succeeded";
@@ -661,6 +755,63 @@ const authSlice = createSlice({
       .addCase(resendTwoFAToken.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
+      })
+
+      // verify email
+      .addCase(verifyEmail.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(verifyEmail.fulfilled, (state) => {
+        state.loading = false;
+        state.status = "succeeded";
+      })
+      .addCase(verifyEmail.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+      })
+
+      // resend eamil verification
+      .addCase(resendVerificationEmail.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(resendVerificationEmail.fulfilled, (state) => {
+        state.loading = false;
+        state.status = "succeeded";
+      })
+      .addCase(resendVerificationEmail.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+      })
+
+      // Verify OTP
+      .addCase(verifyOTP.pending, (state) => {
+        state.otpLoading = true;
+        state.otpError = null;
+      })
+      .addCase(verifyOTP.fulfilled, (state) => {
+        state.otpLoading = false;
+      })
+      .addCase(verifyOTP.rejected, (state, action) => {
+        state.otpLoading = false;
+        state.otpError = action.payload;
+      })
+
+      // resend OTP
+      .addCase(resendOTP.pending, (state) => {
+        state.resendLoading = true;
+        state.resendSuccess = false;
+        state.otpError = null;
+      })
+      .addCase(resendOTP.fulfilled, (state) => {
+        state.resendLoading = false;
+        state.resendSuccess = true;
+      })
+      .addCase(resendOTP.rejected, (state, action) => {
+        state.resendLoading = false;
+        state.resendSuccess = false;
+        state.otpError = action.payload;
       });
   },
 });

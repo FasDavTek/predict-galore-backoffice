@@ -12,7 +12,6 @@ import {
   Alert,
   CircularProgress,
   LinearProgress,
-  MenuItem,
   Autocomplete,
 } from "@mui/material";
 import {
@@ -22,7 +21,6 @@ import {
   VisibilityOff as VisibilityOffIcon,
   Person as PersonIcon,
   Phone as PhoneIcon,
-  ArrowDropDown as ArrowDropDownIcon,
 } from "@mui/icons-material";
 import { AuthLayout } from "@/layouts/AuthLayout";
 import { useDispatch, useSelector } from "react-redux";
@@ -30,16 +28,39 @@ import { registerUser, clearAuthError } from "@/store/slices/authSlice";
 import { useRouter } from "next/router";
 import { useFormik } from "formik";
 import * as yup from "yup";
-import PhoneInput from "react-phone-number-input";
-import "react-phone-number-input/style.css";
 
-
+// Country codes data
+const countryCodes = [
+  { code: "+1", name: "United States", flag: "🇺🇸" },
+  { code: "+44", name: "United Kingdom", flag: "🇬🇧" },
+  { code: "+91", name: "India", flag: "🇮🇳" },
+  { code: "+86", name: "China", flag: "🇨🇳" },
+  { code: "+33", name: "France", flag: "🇫🇷" },
+  { code: "+49", name: "Germany", flag: "🇩🇪" },
+  { code: "+81", name: "Japan", flag: "🇯🇵" },
+  { code: "+7", name: "Russia", flag: "🇷🇺" },
+  { code: "+61", name: "Australia", flag: "🇦🇺" },
+  { code: "+55", name: "Brazil", flag: "🇧🇷" },
+  { code: "+234", name: "Nigeria", flag: "🇳🇬" },
+  { code: "+27", name: "South Africa", flag: "🇿🇦" },
+  { code: "+52", name: "Mexico", flag: "🇲🇽" },
+  { code: "+92", name: "Pakistan", flag: "🇵🇰" },
+  { code: "+62", name: "Indonesia", flag: "🇮🇩" },
+  { code: "+90", name: "Turkey", flag: "🇹🇷" },
+  { code: "+39", name: "Italy", flag: "🇮🇹" },
+  { code: "+34", name: "Spain", flag: "🇪🇸" },
+  { code: "+82", name: "South Korea", flag: "🇰🇷" },
+  { code: "+971", name: "United Arab Emirates", flag: "🇦🇪" },
+];
 
 const validationSchema = yup.object({
   firstName: yup.string().required("First name is required"),
   lastName: yup.string().required("Last name is required"),
   email: yup.string().email("Invalid email").required("Email is required"),
-  countryCode: yup.string().required("Country code is required"),
+  countryCode: yup
+    .string()
+    .matches(/^\+[0-9]{1,4}$/, "Invalid country code")
+    .required("Country code is required"),
   phoneNumber: yup
     .string()
     .matches(/^[0-9]{7,15}$/, "Invalid phone number")
@@ -52,45 +73,6 @@ const validationSchema = yup.object({
     .string()
     .oneOf([yup.ref("password"), null], "Passwords must match")
     .required("Confirm password is required"),
-});
-
-// Custom TextField component for PhoneInput to match MUI styling
-const PhoneNumberTextField = React.forwardRef(function PhoneNumberTextField(
-  props,
-  ref
-) {
-  return (
-    <TextField
-      {...props}
-      fullWidth
-      variant="outlined"
-      label="Phone number"
-      inputRef={ref}
-      sx={{
-        "& .MuiOutlinedInput-root": {
-          paddingLeft: "14px",
-          "& fieldset": {
-            borderColor: props.error ? "#f44336" : "rgba(0, 0, 0, 0.23)",
-          },
-          "&:hover fieldset": {
-            borderColor: props.error ? "#f44336" : "rgba(0, 0, 0, 0.87)",
-          },
-          "&.Mui-focused fieldset": {
-            borderColor: props.error ? "#f44336" : "#42A605",
-            borderWidth: "1px",
-          },
-        },
-      }}
-      InputProps={{
-        ...props.InputProps,
-        startAdornment: (
-          <InputAdornment position="start">
-            <PhoneIcon sx={{ color: "text.disabled" }} />
-          </InputAdornment>
-        ),
-      }}
-    />
-  );
 });
 
 const PasswordStrengthIndicator = ({ password }) => {
@@ -122,16 +104,8 @@ const PasswordStrengthIndicator = ({ password }) => {
   return (
     <Box sx={{ width: "100%", mb: 4 }}>
       <Box sx={{ display: "flex", justifyContent: "space-between", mb: 0.5 }}>
-        <Typography variant="caption" sx={{ fontFamily: "Inter" }}>
-          Password strength
-        </Typography>
-        <Typography
-          variant="caption"
-          sx={{
-            fontFamily: "Inter",
-            color: getColor(),
-          }}
-        >
+        <Typography variant="caption">Password strength</Typography>
+        <Typography variant="caption" sx={{ color: getColor() }}>
           {strengthText()}
         </Typography>
       </Box>
@@ -151,6 +125,88 @@ const PasswordStrengthIndicator = ({ password }) => {
   );
 };
 
+const PhoneNumberInput = ({ formik }) => {
+  const [showCustomCode, setShowCustomCode] = useState(false);
+
+  const handleCountryCodeChange = (e, newValue) => {
+    if (newValue) {
+      formik.setFieldValue('countryCode', newValue.code);
+      setShowCustomCode(false);
+    } else {
+      setShowCustomCode(true);
+      formik.setFieldValue('countryCode', '+');
+    }
+  };
+
+  const handleCustomCodeChange = (e) => {
+    const value = e.target.value;
+    const cleanValue = value.replace(/[^0-9+]/g, '');
+    formik.setFieldValue('countryCode', cleanValue);
+  };
+
+  return (
+    <Box sx={{ display: 'flex', gap: 1, mb: 4 }}>
+      {showCustomCode ? (
+        <TextField
+          fullWidth
+          label="Country Code"
+          value={formik.values.countryCode}
+          onChange={handleCustomCodeChange}
+          onBlur={() => formik.setFieldTouched('countryCode', true)}
+          error={formik.touched.countryCode && Boolean(formik.errors.countryCode)}
+          helperText={formik.touched.countryCode && formik.errors.countryCode}
+          sx={{ width: 150 }}
+          InputProps={{
+            startAdornment: (
+              <InputAdornment position="start">
+                <Typography>🌐</Typography>
+              </InputAdornment>
+            ),
+          }}
+        />
+      ) : (
+        <Autocomplete
+          options={countryCodes}
+          getOptionLabel={(option) => `${option.flag} ${option.code}`}
+          value={countryCodes.find(c => c.code === formik.values.countryCode) || countryCodes[0]}
+          onChange={handleCountryCodeChange}
+          renderInput={(params) => (
+            <TextField
+              {...params}
+              label="Country"
+              sx={{ width: 150 }}
+            />
+          )}
+          freeSolo
+          onInputChange={(e, newInputValue) => {
+            if (newInputValue && !countryCodes.some(c => 
+              `${c.flag} ${c.code}` === newInputValue)) {
+              setShowCustomCode(true);
+            }
+          }}
+        />
+      )}
+      <TextField
+        fullWidth
+        label="Phone Number"
+        name="phoneNumber"
+        value={formik.values.phoneNumber}
+        onChange={formik.handleChange}
+        onBlur={formik.handleBlur}
+        error={formik.touched.phoneNumber && Boolean(formik.errors.phoneNumber)}
+        helperText={formik.touched.phoneNumber && formik.errors.phoneNumber}
+        InputProps={{
+          startAdornment: (
+            <InputAdornment position="start">
+              <PhoneIcon sx={{ color: "text.disabled" }} />
+            </InputAdornment>
+          ),
+        }}
+      />
+    </Box>
+  );
+};
+
 const RegisterPage = () => {
   const dispatch = useDispatch();
   const router = useRouter();
@@ -158,18 +214,17 @@ const RegisterPage = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [agreeToTerms, setAgreeToTerms] = useState(false);
-  const [phoneValue, setPhoneValue] = useState();
 
   const formik = useFormik({
     initialValues: {
       firstName: "",
       lastName: "",
       email: "",
-      countryCode: "+1", // Default to US
+      countryCode: "+1",
       phoneNumber: "",
       password: "",
       confirmPassword: "",
-      userTypeId: 1, // Default user type
+      userTypeId: 1,
     },
     validationSchema,
     onSubmit: async (values, { setSubmitting }) => {
@@ -184,7 +239,6 @@ const RegisterPage = () => {
           lastName: values.lastName,
           email: values.email,
           userTypeId: values.userTypeId,
-          countryCode: values.countryCode,
           phoneNumber: `${values.countryCode}${values.phoneNumber}`,
           password: values.password,
         };
@@ -204,19 +258,6 @@ const RegisterPage = () => {
       }
     },
   });
-
-  const handlePhoneChange = (value) => {
-    setPhoneValue(value);
-    if (value) {
-      const countryCode = value.match(/^\+\d+/)?.[0] || "+1";
-      const phoneNumber = value.replace(countryCode, "");
-      formik.setFieldValue("countryCode", countryCode);
-      formik.setFieldValue("phoneNumber", phoneNumber);
-    } else {
-      formik.setFieldValue("countryCode", "+1");
-      formik.setFieldValue("phoneNumber", "");
-    }
-  };
 
   useEffect(() => {
     return () => {
@@ -294,39 +335,7 @@ const RegisterPage = () => {
           }}
         />
 
-        <Box sx={{ mb: 4 }}>
-          <PhoneInput
-            international
-            defaultCountry="US"
-            value={phoneValue}
-            onChange={handlePhoneChange}
-            onBlur={() => {
-              formik.setFieldTouched("countryCode", true);
-              formik.setFieldTouched("phoneNumber", true);
-            }}
-            inputComponent={PhoneNumberTextField}
-            countrySelectProps={{
-              style: {
-                padding: "16.5px 14px",
-                borderRight: "1px solid rgba(0, 0, 0, 0.23)",
-                marginRight: "8px",
-              },
-            }}
-            style={{
-              "--PhoneInput-color--focus": "#42A605",
-              "--PhoneInputCountrySelectArrow-color": "#42A605",
-            }}
-          />
-          {formik.touched.phoneNumber && formik.errors.phoneNumber && (
-            <Typography
-              color="error"
-              variant="caption"
-              sx={{ mt: 1, display: "block" }}
-            >
-              {formik.errors.phoneNumber}
-            </Typography>
-          )}
-        </Box>
+        <PhoneNumberInput formik={formik} />
 
         <TextField
           fullWidth
@@ -410,7 +419,7 @@ const RegisterPage = () => {
             />
           }
           label={
-            <Typography variant="body2" sx={{ fontFamily: "Inter" }}>
+            <Typography variant="body2">
               I agree to the{" "}
               <Link href="#" sx={{ color: "#42A605", textDecoration: "none" }}>
                 Terms of Service
@@ -444,7 +453,6 @@ const RegisterPage = () => {
             "&:hover": {
               bgcolor: "#3a9504",
             },
-            fontFamily: "Inter",
             fontWeight: 600,
             mb: 3,
           }}
@@ -457,10 +465,7 @@ const RegisterPage = () => {
         </Button>
 
         <Box sx={{ textAlign: "center" }}>
-          <Typography
-            variant="body2"
-            sx={{ fontFamily: "Inter", color: "text.secondary" }}
-          >
+          <Typography variant="body2" sx={{ color: "text.secondary" }}>
             Already have an account?{" "}
             <Link
               href="/auth/login"

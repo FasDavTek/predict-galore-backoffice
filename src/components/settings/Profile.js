@@ -6,7 +6,8 @@ import {
   Button, 
   Divider,
   CircularProgress,
-  Alert
+  Alert,
+    Skeleton
 } from "@mui/material";
 import { useDispatch } from "react-redux";
 import TimezoneSelect from 'react-timezone-select';
@@ -44,39 +45,41 @@ const ProfileComponent = () => {
   });
 
  // Fetch profile data
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setLoading(true);
-        // Pass the token to fetchUserProfile
-        const response = await dispatch(fetchUserProfile(token)).unwrap();
-        console.log("Profile data:", response)
+  // useEffect(() => {
+  //   const fetchData = async () => {
+  //     try {
+  //       setLoading(true);
+  //       // Pass the token to fetchUserProfile
+  //       const response = await dispatch(fetchUserProfile(token)).unwrap();
+  //       console.log("Profile data:", response)
         
-        // Ensure response exists before accessing properties
-        if (response) {
-          const safeResponse = {
-            firstName: response.firstName || '',
-            lastName: response.lastName || '',
-            email: response.email || '',
-            timezone: response.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone
-          };
+  //       // Ensure response exists before accessing properties
+  //       if (response) {
+  //         const safeResponse = {
+  //           firstName: response.firstName || '',
+  //           lastName: response.lastName || '',
+  //           email: response.email || '',
+  //           timezone: response.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone
+  //         };
 
-          setProfileData(safeResponse);
-          setFormData(safeResponse);
-          setOriginalData(safeResponse);
-          setError(null);
-        }
-      } catch (err) {
-        setError(err.message || 'Failed to load profile');
-        console.error("Profile fetch error:", err);
-      } finally {
-        setLoading(false);
-      }
-    };
+  //         setProfileData(safeResponse);
+  //         setFormData(safeResponse);
+  //         setOriginalData(safeResponse);
+  //         setError(null);
+  //       }
+  //     } catch (err) {
+  //       setError(err.message || 'Failed to load profile');
+  //       console.error("Profile fetch error:", err);
+  //     } finally {
+  //       setLoading(false);
+  //     }
+  //   };
 
-    fetchData();
-  }, [dispatch, token]);
+  //   fetchData();
+  // }, [dispatch, token]);
 
+
+  
   // Handle input changes
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -164,12 +167,58 @@ const ProfileComponent = () => {
 };
 
 
-  if (loading) {
-    return (
-      <Box display="flex" justifyContent="center" alignItems="center" minHeight="200px">
-        <CircularProgress />
+// Skeleton Loading Component
+  const ProfileSkeleton = () => (
+    <Box component="form">
+      {/* Personal Information Section Skeleton */}
+      <div className="grid grid-cols-1 md:grid-cols-12 gap-8">
+        {/* Left Column Skeleton */}
+        <Box className="md:col-span-4">
+          <Skeleton variant="text" width="60%" height={40} />
+          <Skeleton variant="text" width="90%" height={24} />
+          <Skeleton variant="text" width="80%" height={24} />
+        </Box>
+
+        {/* Right Column Skeleton */}
+        <Box className="md:col-span-8">
+          <Box display="flex" gap={2} mb={3}>
+            <Skeleton variant="rectangular" width="100%" height={56} />
+            <Skeleton variant="rectangular" width="100%" height={56} />
+          </Box>
+          <Box mb={3}>
+            <Skeleton variant="rectangular" width="100%" height={56} />
+          </Box>
+        </Box>
+      </div>
+
+      <Divider sx={{ my: 4 }} />
+
+      {/* Timezone Section Skeleton */}
+      <div className="grid grid-cols-1 md:grid-cols-12 gap-8">
+        {/* Left Column Skeleton */}
+        <Box className="md:col-span-4">
+          <Skeleton variant="text" width="60%" height={40} />
+          <Skeleton variant="text" width="90%" height={24} />
+        </Box>
+
+        {/* Right Column Skeleton */}
+        <Box className="md:col-span-8">
+          <Box mb={3}>
+            <Skeleton variant="rectangular" width="100%" height={56} />
+          </Box>
+        </Box>
+      </div>
+
+      {/* Action Buttons Skeleton */}
+      <Box mt={4} display="flex" justifyContent="flex-end" gap={2}>
+        <Skeleton variant="rectangular" width={120} height={36} />
       </Box>
-    );
+    </Box>
+  );
+
+
+ if (loading) {
+    return <ProfileSkeleton />;
   }
 
   if (error) {

@@ -41,6 +41,8 @@ const DashboardPage = () => {
 
   // console.log("Logged in User details:", user);
 
+  const isAuthenticated = useSelector(selectIsAuthenticated);
+  const [showAuthDialog, setShowAuthDialog] = useState(false);
   const [hasMounted, setHasMounted] = useState(false);
 
   // Track when component has mounted
@@ -48,7 +50,19 @@ const DashboardPage = () => {
     setHasMounted(true);
   }, []);
 
+  // Check authentication status and show dialog if not authenticated
+  useEffect(() => {
+    if (hasMounted && !isAuthenticated) {
+      setShowAuthDialog(true);
+      
+      // Redirect to login page after 3 seconds
+      const timer = setTimeout(() => {
+        router.push(`/auth/login?returnUrl=${encodeURIComponent(router.pathname)}`);
+      }, 3000);
 
+      return () => clearTimeout(timer);
+    }
+  }, [isAuthenticated, router, hasMounted]);
 
   // State for controlling full-screen activity log view
   const [showFullActivityLog, setShowFullActivityLog] = useState(false);
@@ -64,13 +78,13 @@ const DashboardPage = () => {
 
   // Fetch data when component mounts or filters change
   useEffect(() => {
-    if (hasMounted) {
+    if (hasMounted && isAuthenticated) {
       dispatch(fetchDashboardStats());
       dispatch(fetchUserEngagement(filters.timeRange));
       dispatch(fetchTrafficData(filters.trafficFilter));
       dispatch(fetchActivityLog());
     }
-  }, [dispatch, filters.timeRange, filters.trafficFilter, hasMounted]);
+  }, [dispatch, filters.timeRange, filters.trafficFilter, isAuthenticated, hasMounted]);
 
   // Handler for time range filter change
   const handleTimeRangeChange = (range) => {
@@ -105,6 +119,24 @@ const DashboardPage = () => {
     return null;
   }
 
+  // If not authenticated, show the auth dialog instead of dashboard content
+  if (!isAuthenticated) {
+    return (
+      <Dialog open={showAuthDialog} onClose={() => setShowAuthDialog(false)}>
+        <DialogTitle>Authentication Required</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            You need to be logged in to access the dashboard. You will be redirected to the login page shortly.
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleNavigateToLogin} color="primary" variant="contained">
+            Go to Login Page
+          </Button>
+        </DialogActions>
+      </Dialog>
+    );
+  }
 
   // Render dashboard content if authenticated
   return (

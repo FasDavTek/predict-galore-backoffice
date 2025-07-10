@@ -1,5 +1,8 @@
 // store/slices/auth/authSlice.js
+
 import { createSlice, createAsyncThunk, createSelector } from "@reduxjs/toolkit";
+
+
 import { HYDRATE } from "next-redux-wrapper";
 import axios from "axios";
 
@@ -172,12 +175,13 @@ export const confirmEmail = createAsyncThunk(
 
 export const fetchUserProfile = createAsyncThunk(
   "auth/fetchUserProfile",
-  async (_, { rejectWithValue, getState }) => {
+  async (token, { rejectWithValue }) => {  
+  //  console.log("token:", token)
+
     const endpoint = `${BASE_URL}/api/v1/auth/user/me`;
 
     try {
       console.debug("Fetching user profile");
-      const token = getState().auth.token;
       const response = await axios.get(endpoint, {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -198,16 +202,13 @@ export const fetchUserProfile = createAsyncThunk(
 
 export const updateUserProfile = createAsyncThunk(
   "auth/updateUserProfile",
-  async (profileData, { rejectWithValue, getState }) => {
+  async ({ data, token }, { rejectWithValue }) => {
     const endpoint = `${BASE_URL}/api/v1/auth/user/profile/update`;
 
     try {
-      console.debug(
-        "Updating user profile with data:",
-        JSON.stringify(profileData, null, 2)
-      );
-      const token = getState().auth.token;
-      const response = await axios.post(endpoint, profileData, {
+      console.debug("Updating user profile with data:", JSON.stringify(data, null, 2));
+
+      const response = await axios.post(endpoint, data, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -215,7 +216,7 @@ export const updateUserProfile = createAsyncThunk(
       logApiSuccess("updateUserProfile", response.data);
       return response.data;
     } catch (error) {
-      logApiError("updateUserProfile", endpoint, profileData, error);
+      logApiError("updateUserProfile", endpoint, data, error);
       return rejectWithValue({
         message: error.response?.data?.message || "Profile update failed",
         statusCode: error.response?.status || 500,
@@ -224,6 +225,7 @@ export const updateUserProfile = createAsyncThunk(
     }
   }
 );
+
 
 export const generatePasswordResetToken = createAsyncThunk(
   "auth/generatePasswordResetToken",
@@ -282,21 +284,27 @@ export const confirmPasswordResetToken = createAsyncThunk(
 
 export const resetPassword = createAsyncThunk(
   "auth/resetPassword",
-  async ({ username, password, confirmPassword, token }, { rejectWithValue }) => {
+  async (
+    { username, password, confirmPassword, token },
+    { rejectWithValue }
+  ) => {
     const endpoint = `${BASE_URL}/api/v1/auth/forgot_password/reset_password`;
 
     try {
       console.debug("Resetting password for user:", username);
-      const response = await axios.post(endpoint, {
-        username,
-        password,
-        confirmPassword,
-      },
-    {
-        headers: {
-          Authorization: `Bearer ${token}` 
+      const response = await axios.post(
+        endpoint,
+        {
+          username,
+          password,
+          confirmPassword,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
         }
-      });
+      );
       logApiSuccess("resetPassword", response.data);
       return response.data;
     } catch (error) {
@@ -410,10 +418,12 @@ const initialState = {
   status: "idle",
   error: null,
   authStatus: AuthStatus.IDLE,
- user: null,
+  user: null,
+  token:
+    typeof window !== "undefined" ? localStorage.getItem("authToken") : null,
+  user: null,
   token: null, // Initialize as null
   role: null,
-  permissions: null
 };
 
 if (typeof window !== "undefined") {
@@ -466,16 +476,17 @@ const authSlice = createSlice({
         state.status = "loading";
         state.authStatus = AuthStatus.CHECKING;
       })
-      // Update the adminSignin.fulfilled case in your authSlice
-.addCase(adminSignin.fulfilled, (state, action) => {
-  state.loading = false;
-  state.status = "succeeded";
-  state.authStatus = AuthStatus.AUTHENTICATED;
-  state.user = action.payload.user;
-  state.token = action.payload.token; 
-  state.role = action.payload.role;
-  state.permissions = action.payload.user?.permissions;
-})
+      
+      .addCase(adminSignin.fulfilled, (state, action) => {
+        state.loading = false;
+        state.status = "succeeded";
+        state.authStatus = AuthStatus.AUTHENTICATED;
+        state.user = action.payload.user;
+        state.token = action.payload.token;
+        state.role = action.payload.role;
+        state.permissions = action.payload.user?.permissions;
+      })
+
       .addCase(adminSignin.rejected, (state, action) => {
         state.loading = false;
         state.status = "failed";
@@ -672,7 +683,7 @@ export const selectCurrentUser = createSelector(
     user: auth.user,
     token: auth.token,
     role: auth.role,
-    permissions: auth.permissions
+    permissions: auth.permissions,
   })
 );
 

@@ -25,14 +25,13 @@ const promptOptions = [
   "Top Scorers",
   "Player Stats",
   "League Standings",
-  "See More",
 ];
 
 const AskHuddle = () => {
   const [open, setOpen] = useState(false);
   const [prompt, setPrompt] = useState("");
   const [chatHistory, setChatHistory] = useState([]);
-  const [chatStarted, setChatStarted] = useState(false); // Track chat start
+  const [chatStarted, setChatStarted] = useState(false);
 
   const handleOpen = () => setOpen(true);
 
@@ -40,12 +39,17 @@ const AskHuddle = () => {
     setOpen(false);
     setPrompt("");
     setChatHistory([]);
-    setChatStarted(false); // Reset when closed
+    setChatStarted(false);
   };
 
+  // Updated to only set the prompt without sending
   const handlePromptClick = (value) => {
     setPrompt(value);
-    handleSend(value);
+    // Auto-focus the input field
+    setTimeout(() => {
+      const input = document.querySelector('#chat-input');
+      if (input) input.focus();
+    }, 0);
   };
 
   const handlePromptChange = (e) => setPrompt(e.target.value);
@@ -59,7 +63,7 @@ const AskHuddle = () => {
       { sender: "user", message: userMessage },
     ]);
     setPrompt("");
-    setChatStarted(true); // Mark chat as started
+    setChatStarted(true);
 
     // Simulated bot response
     setTimeout(() => {
@@ -125,7 +129,7 @@ const AskHuddle = () => {
           },
         }}
       >
-        <DialogTitle sx={{ textAlign: "center", pb: 0, mb: 2,}}>
+        <DialogTitle sx={{ textAlign: "center", pb: 0, mb: 2 }}>
           <Box sx={{ display: "flex", justifyContent: "flex-end" }}>
             <IconButton onClick={handleClose}>
               <CloseIcon />
@@ -198,7 +202,6 @@ const AskHuddle = () => {
               },
             }}
           >
-            {/* chat history */}
             {chatHistory.map((chat, index) => (
               <Box
                 key={index}
@@ -224,6 +227,7 @@ const AskHuddle = () => {
           </Box>
 
           <TextField
+            id="chat-input"
             fullWidth
             placeholder="Type your message or select a prompt..."
             value={prompt}
@@ -236,17 +240,13 @@ const AskHuddle = () => {
                     onClick={() => handleSend()}
                     disabled={!prompt.trim()}
                   >
-                    <SendIcon    
-                    onClick={() => handleSend()} 
-                    />
+                    <SendIcon />
                   </IconButton>
                 </InputAdornment>
               ),
             }}
           />
         </DialogContent>
-
-
       </Dialog>
     </>
   );

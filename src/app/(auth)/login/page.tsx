@@ -23,22 +23,31 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useRouter } from 'next/navigation';
 import { toast } from 'react-toastify';
-import { AuthCard } from '@/features/auth/components/AuthCard';
-import { ErrorMessage } from '@/features/auth/components/ErrorMessage';
-import { loginFormValidation, LoginFormData } from '../../../features/auth/validations/auth';
+import { AuthCard } from '@/app/(auth)/features/components/AuthCard';
+import { ErrorMessage } from '@/app/(auth)/features/components/ErrorMessage';
+import { loginFormValidation, LoginFormData } from '../features/validations/auth';
 import { useAppDispatch, useAppSelector } from '@/hooks/redux';
-import { useLoginMutation } from '../../../features/auth/api/authApi';
-import { setToken, setAuthUser, setAuthStatus } from '../../../features/auth/slices/authSlice';
-import { AuthStatus } from '@/features/auth/types/authTypes';
+import { useLoginMutation } from '../features/api/authApi';
+import { setToken, setAuthUser, setAuthStatus } from '../features/slices/authSlice';
+import { AuthStatus } from '@/app/(auth)/features/types/authTypes';
+
+// Define error response type
+interface ApiError {
+  data?: {
+    fieldErrors?: Record<string, string>;
+    message?: string;
+  };
+  status?: number;
+}
 
 export default function LoginPage() {
   const router = useRouter();
   const dispatch = useAppDispatch();
-   const authStatus = useAppSelector((state) => state.auth.authStatus);
+  const authStatus = useAppSelector((state) => state.auth.authStatus);
   
   const [mounted, setMounted] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const [apiError, setApiError] = useState<any>(null);
+  const [apiError, setApiError] = useState<ApiError | null>(null);
 
   const [login, { isLoading: isLoggingIn }] = useLoginMutation();
 
@@ -53,7 +62,11 @@ export default function LoginPage() {
   });
 
   useEffect(() => {
-    setMounted(true);
+    const timer = setTimeout(() => {
+      setMounted(true);
+    }, 0);
+    
+    return () => clearTimeout(timer);
   }, []);
 
   useEffect(() => {
@@ -79,12 +92,13 @@ export default function LoginPage() {
         toast.success('Login successful! Redirecting...');
         router.push('/dashboard');
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Login Error:', error);
-      setApiError(error);
+      const apiError = error as ApiError;
+      setApiError(apiError);
 
-      if (error.data?.fieldErrors) {
-        Object.entries(error.data.fieldErrors).forEach(([field, message]) => {
+      if (apiError.data?.fieldErrors) {
+        Object.entries(apiError.data.fieldErrors).forEach(([field, message]) => {
           setError(field as keyof LoginFormData, {
             type: 'server',
             message: message as string
@@ -170,7 +184,7 @@ export default function LoginPage() {
 
         <Box sx={{ textAlign: 'center' }}>
           <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-            Don't have an account?{' '}
+            Don&apos;t have an account?{' '}
             <Link href="/register" sx={{ color: 'primary.main', fontWeight: 600 }}>
               Sign Up
             </Link>

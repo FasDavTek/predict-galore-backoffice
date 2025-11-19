@@ -21,9 +21,9 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useRouter } from 'next/navigation';
 import { toast } from 'react-toastify';
-import { AuthCard } from '@/features/auth/components/AuthCard';
-import { ErrorMessage } from '@/features/auth/components/ErrorMessage';
-import { PasswordStrengthIndicator } from '../../../features/auth/components/PasswordStrengthIndicator';
+import { AuthCard } from '@/app/(auth)/features/components/AuthCard';
+import { ErrorMessage } from '@/app/(auth)/features/components/ErrorMessage';
+import { PasswordStrengthIndicator } from '../features/components/PasswordStrengthIndicator';
 import {
   resetPasswordFirstStepFormValidation,
   resetPasswordTokenValidation,
@@ -31,13 +31,22 @@ import {
   ResetPasswordFirstStepData,
   ResetPasswordTokenData,
   ResetPasswordFinalStepData,
-} from '../../../features/auth/validations/auth';
-import { ResetPasswordStep } from '@/features/auth/types/authTypes';
+} from '../features/validations/auth';
+import { ResetPasswordStep } from '@/app/(auth)/features/types/authTypes';
 import { 
   useGenerateResetTokenMutation, 
   useConfirmResetTokenMutation, 
   useResetPasswordMutation 
-} from '../../../features/auth/api/authApi';
+} from '../features/api/authApi';
+
+// Define error response type
+interface ApiError {
+  data?: {
+    message?: string;
+    fieldErrors?: Record<string, string>;
+  };
+  status?: number;
+}
 
 export default function ResetPasswordPage() {
   const router = useRouter();
@@ -46,7 +55,7 @@ export default function ResetPasswordPage() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [authToken, setAuthToken] = useState<string>('');
   const [username, setUsername] = useState('');
-  const [apiError, setApiError] = useState<any>(null);
+  const [apiError, setApiError] = useState<ApiError | null>(null);
 
   // API mutations
   const [generateResetToken, { isLoading: isGeneratingToken }] = useGenerateResetTokenMutation();
@@ -64,35 +73,37 @@ export default function ResetPasswordPage() {
     mode: 'onChange',
   });
 
-  const { register: registerFinal, handleSubmit: handleSubmitFinal, formState: { errors: errorsFinal, isValid: isValidFinal }, watch } = useForm<ResetPasswordFinalStepData>({
+  const { register: registerFinal, handleSubmit: handleSubmitFinal, formState: { errors: errorsFinal, isValid: isValidFinal }, getValues } = useForm<ResetPasswordFinalStepData>({
     resolver: zodResolver(resetPasswordFinalStepFormValidation),
     mode: 'onChange',
   });
 
-  const watchPassword = watch('password');
+  // Use getValues instead of watch to avoid React Compiler issues
+  const getPasswordValue = () => getValues('password') || '';
 
   const handleInitialSubmit = async (data: ResetPasswordFirstStepData) => {
     setApiError(null);
     try {
-      await generateResetToken(data.username).unwrap();
+      await generateResetToken({ username: data.username }).unwrap();
       setUsername(data.username);
       setCurrentStep(ResetPasswordStep.TOKEN_GENERATED);
       toast.success('Reset token sent to your email');
-    } catch (error: any) {
-      setApiError(error);
-      toast.error(error?.data?.message || 'Failed to generate token');
+    } catch (error: unknown) {
+      const apiError = error as ApiError;
+      setApiError(apiError);
+      toast.error(apiError?.data?.message || 'Failed to generate token');
     }
   };
 
   const handleTokenSubmit = async (data: ResetPasswordTokenData) => {
     setApiError(null);
     try {
-      const result = await confirmResetToken({ token: data.token, username }).unwrap();
+      const result = await confirmResetToken({ token: data.token }).unwrap();
       setAuthToken(result.token || data.token);
       setCurrentStep(ResetPasswordStep.TOKEN_CONFIRMED);
       toast.success('Token verified successfully');
-    } catch (error: any) {
-      setApiError(error);
+    } catch (error: unknown) {
+      setApiError(error as ApiError);
       toast.error('Invalid or expired token');
     }
   };
@@ -111,18 +122,19 @@ export default function ResetPasswordPage() {
       toast.success('Password reset successfully!');
       
       setTimeout(() => router.push('/login'), 2000);
-    } catch (error: any) {
-      setApiError(error);
+    } catch (error: unknown) {
+      setApiError(error as ApiError);
       toast.error('Failed to reset password');
     }
   };
 
   const handleResendToken = async () => {
     try {
-      await generateResetToken(username).unwrap();
+      await generateResetToken({ username }).unwrap();
       toast.success('New token sent to your email');
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast.error('Failed to resend token');
+      setApiError(error as ApiError);
     }
   };
 
@@ -135,8 +147,6 @@ export default function ResetPasswordPage() {
       default: return '';
     }
   };
-
-  const isLoading = isGeneratingToken || isConfirmingToken || isResettingPassword;
 
   return (
     <AuthCard title="Reset Password" subtitle={getStepSubtitle()}>
@@ -229,7 +239,7 @@ export default function ResetPasswordPage() {
               ),
             }}
           />
-          <PasswordStrengthIndicator password={watchPassword || ''} />
+          <PasswordStrengthIndicator password={getPasswordValue()} />
           
           <TextField
             fullWidth

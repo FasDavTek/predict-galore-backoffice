@@ -1,61 +1,62 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import { useSelector, useDispatch } from "react-redux";
-import { toast } from "react-toastify";
-
-import DashboardHeader, { TimeRange } from "../../../features/dashboard/components/DashboardHeader";
-import AnalyticsGrid from "../../../features/dashboard/components/AnalyticsGrid";
-import UserEngagementChart from "../../../features/dashboard/components/UserEngagementChart";
-import Traffic from "../../../features/dashboard/components/Traffic";
-import ActivityLog from "../../../features/dashboard/components/ActivityLog";
-import UILoadingSkeleton from "../../../components/UILoadingSkeleton";
-
-// Auth state selectors and actions
-import { RootState } from "../../../store/store";
-import { useGetProfileQuery } from "@/features/auth/api/authApi";
-import { logout } from "@/features/auth/slices/authSlice";
-
 import { Box } from "@mui/material";
+import DashboardHeader, { TimeRange } from "./features/components/DashboardHeader";
+import UserEngagementChart from "./features/components/UserEngagementChart";
+import Traffic from "./features/components/Traffic";
+import ActivityLog from "./features/components/ActivityLog";
+import { DashboardPageLoadingSkeleton } from "@/app/(dashboard)/dashboard/features/components/DashboardPageLoadingSkeleton";
+import { RootState } from "../../../store/store";
+import { useSelector } from "react-redux";
+import DashboardAnalytics from "@/app/(dashboard)/dashboard/features/components/DashboardAnalytics";
 
 export default function DashboardPage() {
-  const router = useRouter();
-  const dispatch = useDispatch();
   const [isClientSide, setIsClientSide] = useState(false);
-  const [hasRedirected, setHasRedirected] = useState(false);
   
   // Global time range state for all dashboard components
   const [globalTimeRange, setGlobalTimeRange] = useState<TimeRange>('default');
+  
+  // Refresh trigger state
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   // Redux auth state
-  const token = useSelector((state: RootState) => state.auth.token);
   const user = useSelector((state: RootState) => state.auth.user);
-  const isAuthenticated = Boolean(token);
 
-  // Set client-side flag
+  // Set client-side flag using setTimeout to avoid synchronous state update
   useEffect(() => {
-    setIsClientSide(true);
+    const timer = setTimeout(() => {
+      setIsClientSide(true);
+    }, 0);
+    
+    return () => clearTimeout(timer);
   }, []);
+
+  // Handle refresh button click
+  const handleRefresh = () => {
+    setIsRefreshing(true);
+    // Increment refresh trigger to force all components to refetch
+    setRefreshTrigger(prev => prev + 1);
+    
+    // Set a timeout to hide the loading skeleton after a minimum duration
+    // This ensures users see the loading state even for fast refreshes
+    setTimeout(() => {
+      setIsRefreshing(false);
+    }, 1000); // Minimum 1 second loading state for better UX
+  };
 
   // Use user from auth state first, fallback to fresh profile
   const currentUser = user;
 
   // Prevent rendering on server to avoid hydration mismatches
   if (!isClientSide) {
-    return <UILoadingSkeleton variant="dashboard" itemCount={4} />;
+    return <DashboardPageLoadingSkeleton />;
   }
 
-  // Show loading while redirecting
-  if (hasRedirected) {
-    return <UILoadingSkeleton variant="dashboard" itemCount={4} />;
-  }
-
-  // Show loading only if we don't have any user data and profile is loading
-  const isLoading = !currentUser;
-  
-  if (isLoading) {
-    return <UILoadingSkeleton variant="dashboard" itemCount={4} />;
+  // Show loading skeleton if refreshing, or if we don't have any user data
+  if (isRefreshing || !currentUser) {
+    return <DashboardPageLoadingSkeleton />;
   }
 
   return (
@@ -63,11 +64,15 @@ export default function DashboardPage() {
       <DashboardHeader 
         timeRange={globalTimeRange}
         onTimeRangeChange={setGlobalTimeRange}
+        onRefresh={handleRefresh}
         user={currentUser}
       />
 
       {/* Overview Analytics Cards */}
-      <AnalyticsGrid timeRange={globalTimeRange} />
+      <DashboardAnalytics 
+        timeRange={globalTimeRange} 
+        refreshTrigger={refreshTrigger}
+      />
 
       {/* Main content area with flexbox layout */}
       <Box sx={{ 
@@ -84,8 +89,11 @@ export default function DashboardPage() {
           flexDirection: 'column',
           gap: 3
         }}>
-          <UserEngagementChart globalTimeRange={globalTimeRange} />
-          <Traffic />
+          <UserEngagementChart 
+            globalTimeRange={globalTimeRange} 
+            refreshTrigger={refreshTrigger}
+          />
+          <Traffic refreshTrigger={refreshTrigger} />
         </Box>
 
         {/* Right column - Activity log (full height) */}
@@ -95,7 +103,7 @@ export default function DashboardPage() {
           display: 'flex',
           flexDirection: 'column'
         }}>
-          <ActivityLog />
+          <ActivityLog refreshTrigger={refreshTrigger} />
         </Box>
       </Box>
     </>

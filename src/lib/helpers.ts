@@ -1,4 +1,4 @@
-import { User, UserStatus, SubscriptionPlan } from '../features/users/types/user.types';
+import { User, UserStatus, SubscriptionPlan } from '../app/(dashboard)/users/features/types/user.types';
 
 export const getUserStatusColor = (status: UserStatus): string => {
   const colorMap: Record<UserStatus, string> = {

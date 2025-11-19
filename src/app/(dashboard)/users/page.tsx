@@ -4,32 +4,37 @@ import React, { useState, useMemo } from "react";
 import {
   Box,
   Container,
-  Typography,
   Dialog,
   Snackbar,
   Alert,
+  Skeleton,
 } from "@mui/material";
 
 // Components
-import { UsersTable } from "../../../features/users/components/UsersTable";
-import { UserFilters } from "../../../features/users/components/UserFilters";
-import { UserAnalytics } from "../../../features/users/components/UserAnalytics";
-import { UserForm } from "../../../features/users/components/UserForm";
-import { UsersPagination } from "../../../features/users/components/UsersPagination";
-import { UsersToolbar } from "../../../features/users/components/UsersToolbar";
-import { SelectedUserPreview } from "../../../features/users/components/SelectedUserPreview"; // New component
+import { UsersTable } from "./features/components/UsersTable";
+import { UserFilters } from "./features/components/UserFilters";
+import { UserAnalytics } from "./features/components/UserAnalytics";
+import { UserForm } from "./features/components/UserForm";
+import { UsersPagination } from "./features/components/UsersPagination";
+import { UsersToolbar } from "./features/components/UsersToolbar";
+import { SelectedUserPreview } from "./features/components/SelectedUserPreview";
+import { UsersPageLoadingSkeleton } from "@/app/(dashboard)/users/features/components/UsersPageLoadingSkeleton";
+import UsersPageHeader, { TimeRange } from "./features/components/UsersPageHeader";
 
 // Global State Components
-import { PageLoadingState } from "@/components/LoadingState";
 import { EmptyState } from "@/components/EmptyState";
 import { ErrorState } from "@/components/ErrorState";
 
 // Hooks
-import { useUsers } from "@/features/users/hooks/useUsers";
-import { useUserForm } from "@/features/users/hooks/useUserForm";
+import { useUsers } from "@/app/(dashboard)/users/features/hooks/useUsers";
+import { useUserForm } from "@/app/(dashboard)/users/features/hooks/useUserForm";
 
 // Types
-import { User } from "@/features/users/types/user.types";
+import { User } from "@/app/(dashboard)/users/features/types/user.types";
+
+// Auth state selectors
+import { RootState } from "../../../store/store";
+import { useSelector } from "react-redux";
 
 const UsersPage: React.FC = () => {
   const [isUserFormOpen, setIsUserFormOpen] = useState(false);
@@ -44,6 +49,16 @@ const UsersPage: React.FC = () => {
     message: "",
     severity: "success",
   });
+
+  // Global time range state for users page
+  const [globalTimeRange, setGlobalTimeRange] = useState<TimeRange>('default');
+  
+  // Refresh trigger state
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  // Redux auth state
+  const user = useSelector((state: RootState) => state.auth.user);
 
   const {
     users,
@@ -67,6 +82,8 @@ const UsersPage: React.FC = () => {
       setIsUserFormOpen(false);
       setSelectedUser(null);
       showSnackbar("User saved successfully", "success");
+      // Trigger refresh after successful form submission
+      handleRefresh();
     },
     onError: (error) => {
       showSnackbar(error, "error");
@@ -79,13 +96,30 @@ const UsersPage: React.FC = () => {
     [selectedUsers]
   );
 
+  // Handle refresh button click
+  const handleRefresh = () => {
+    setIsRefreshing(true);
+    // Clear selections when refreshing
+    setSelectedUsers([]);
+    setSelectedUser(null);
+    // Increment refresh trigger to force all components to refetch
+    setRefreshTrigger(prev => prev + 1);
+    
+    // Refetch users data
+    refetchUsers();
+    
+    // Set a timeout to hide the loading skeleton after a minimum duration
+    setTimeout(() => {
+      setIsRefreshing(false);
+    }, 1000); // Minimum 1 second loading state for better UX
+  };
+
   const showSnackbar = (message: string, severity: "success" | "error") => {
     setSnackbar({ open: true, message, severity });
   };
 
   const handleUserSelect = (user: User) => {
     setSelectedUser(user);
-    // You could open a detailed view modal here if needed
   };
 
   const handleUserEdit = (user: User) => {
@@ -104,6 +138,8 @@ const UsersPage: React.FC = () => {
       showSnackbar("User deleted successfully", "success");
       // Remove from selected users if it was selected
       setSelectedUsers((prev) => prev.filter((u) => u.id !== user.id));
+      // Trigger refresh after successful deletion
+      handleRefresh();
     } else {
       showSnackbar("Failed to delete user", "error");
     }
@@ -150,14 +186,17 @@ const UsersPage: React.FC = () => {
     setSelectedUsers((prev) => prev.filter((user) => user.id !== userId));
   };
 
-  // Show loading state for initial page load
-  if (isLoading && users.length === 0) {
+  // Show loading skeleton for initial page load or during refresh
+  if ((isLoading && users.length === 0) || isRefreshing) {
     return (
       <Container maxWidth="xl" sx={{ py: 4 }}>
-        <PageLoadingState
-          message="Loading users..."
-          subtitle="Please wait while we fetch your user data"
-        />
+        {/* Header Skeleton */}
+        <Box sx={{ mb: 4 }}>
+          <Skeleton variant="text" width={250} height={48} sx={{ mb: 1 }} />
+          <Skeleton variant="text" width={350} height={24} />
+        </Box>
+        
+        <UsersPageLoadingSkeleton />
       </Container>
     );
   }
@@ -171,7 +210,7 @@ const UsersPage: React.FC = () => {
           title="Failed to Load Users"
           message="We encountered an error while loading user data. Please try again."
           retryAction={{
-            onClick: refetchUsers,
+            onClick: handleRefresh,
             label: "Retry Loading",
           }}
           height={400}
@@ -183,17 +222,16 @@ const UsersPage: React.FC = () => {
   return (
     <Container maxWidth="xl" sx={{ py: 4 }}>
       {/* Header */}
-      <Box sx={{ mb: 4 }}>
-        <Typography variant="h4" fontWeight="bold" gutterBottom>
-          User Management
-        </Typography>
-        <Typography variant="body1" color="text.secondary">
-          Manage your platform users, their roles, and subscriptions
-        </Typography>
-      </Box>
+      <UsersPageHeader 
+        title="User Management"
+        timeRange={globalTimeRange}
+        onTimeRangeChange={setGlobalTimeRange}
+        onRefresh={handleRefresh}
+        user={user}
+      />
 
       {/* Analytics */}
-      <UserAnalytics />
+      <UserAnalytics refreshTrigger={refreshTrigger} />
 
       {/* Selected Users Preview */}
       <SelectedUserPreview
@@ -205,8 +243,8 @@ const UsersPage: React.FC = () => {
         onRemoveUser={handleRemoveUserFromSelection}
       />
 
-      <Box className="mflex flex-col gap-3">
-        {/* filters and toolbox */}
+      <Box className="flex flex-col gap-3">
+        {/* Filters and Toolbar */}
         <Box className="flex flex-row justify-between">
           {/* Filters */}
           <UserFilters
@@ -226,7 +264,7 @@ const UsersPage: React.FC = () => {
             selectedCount={selectedUsers.length}
             onAddUser={handleAddUser}
             onExportUsers={() => handleExportUsers()}
-            onRefresh={refetchUsers}
+            onRefresh={handleRefresh}
             isLoading={isLoading}
           />
         </Box>
@@ -287,6 +325,7 @@ const UsersPage: React.FC = () => {
               onToggleSelection={handleToggleSelection}
               onSelectAll={handleSelectAll}
               isLoading={isLoading}
+              hasError={!!error}
             />
 
             {/* Pagination */}

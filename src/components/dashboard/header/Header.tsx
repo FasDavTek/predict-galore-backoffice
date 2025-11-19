@@ -7,8 +7,8 @@ import { useSelector, useDispatch } from "react-redux";
 import SearchBar from "./SearchBar";
 import UserMenu from "./UserMenu";
 import NotificationBell from "./NotificationBell";
-import { logout } from "@/features/auth/slices/authSlice";
-import { useGetProfileQuery } from "@/features/auth/api/authApi";
+import { logout } from "@/app/(auth)/features/slices/authSlice";
+import { useGetProfileQuery } from "@/app/(auth)/features/api/authApi";
 
 // Define proper Redux state types
 interface AuthState {
@@ -54,7 +54,7 @@ export default function Header() {
 
   const handleLogout = () => {
     dispatch(logout());
-    router.push("/auth/login"); 
+    router.push("/login"); 
   };
 
   // Close notification panel when clicking outside

@@ -4,7 +4,7 @@ import React from 'react';
 import Image from 'next/image';
 import { Box, Typography, Card, CardContent } from '@mui/material';
 import { Description, People, AccountBalanceWallet } from '@mui/icons-material';
-import { AuthFeature } from '@/features/auth/types/authTypes';
+import { AuthFeature } from '@/app/(auth)/features/types/authTypes';
 
 const features: AuthFeature[] = [
   {

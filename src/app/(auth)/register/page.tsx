@@ -26,14 +26,14 @@ import { useForm, UseFormRegister, UseFormSetValue, FieldErrors, useWatch, Contr
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useRouter } from 'next/navigation';
 import { toast } from 'react-toastify';
-import { AuthCard } from '@/features/auth/components/AuthCard';
-import { ErrorMessage } from '@/features/auth/components/ErrorMessage';
-import { PasswordStrengthIndicator } from '../../../features/auth/components/PasswordStrengthIndicator';
-import { registerFormValidation, RegisterFormData, CountryCode } from '../../../features/auth/validations/auth';
+import { AuthCard } from '@/app/(auth)/features/components/AuthCard';
+import { ErrorMessage } from '@/app/(auth)/features/components/ErrorMessage';
+import { PasswordStrengthIndicator } from '../features/components/PasswordStrengthIndicator';
+import { registerFormValidation, RegisterFormData, CountryCode } from '../features/validations/auth';
 import { useAppDispatch } from '@/hooks/redux';
-import { useRegisterMutation, useCheckEmailQuery } from '../../../features/auth/api/authApi';
-import { setToken, setAuthUser, setAuthStatus } from '../../../features/auth/slices/authSlice';
-import { AuthStatus } from '@/features/auth/types/authTypes';
+import { useRegisterMutation, useCheckEmailQuery } from '../features/api/authApi';
+import { setToken, setAuthUser, setAuthStatus } from '../features/slices/authSlice';
+import { AuthStatus } from '@/app/(auth)/features/types/authTypes';
 
 const countryCodes: CountryCode[] = [
   { code: '+1', name: 'United States', flag: '🇺🇸' },

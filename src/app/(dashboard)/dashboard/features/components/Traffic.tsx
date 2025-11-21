@@ -23,21 +23,40 @@ import {
 import { useGetTrafficQuery } from "../api/dashboardApi";
 import LoadingState from "../../../../../components/LoadingState";
 
-type TrafficFilter = 'default' | 'byLocation' | 'bySport' | 'byPrediction';
+// Use the actual dimension values from the API (0, 1, 2)
+type TrafficDimension = 0 | 1 | 2;
 
 interface TrafficProps {
   refreshTrigger?: number;
 }
 
+// Types for the actual API response structure
+interface TrafficApiItem {
+  name: string;
+  percentage: string;
+  users: string;
+  countryCode?: string;
+}
+
+interface TrafficApiResponse {
+  dimension: number;
+  items: TrafficApiItem[];
+}
+
+
 export default function Traffic({ refreshTrigger }: TrafficProps) {
-  const [trafficFilter, setTrafficFilter] = useState<TrafficFilter>('default');
+  const [trafficDimension, setTrafficDimension] = useState<TrafficDimension>(0); // Default to Source (0)
   
-  const queryParams = trafficFilter !== 'default' ? { filter: trafficFilter } : undefined;
+  // Convert dimension to API parameter
+  const queryParams = { dimension: trafficDimension, top: 10 };
   
   const { data, isLoading, error, refetch } = useGetTrafficQuery(queryParams);
   
+  // Type assertion to handle the actual API response structure
+  const trafficData = data?.data as unknown as TrafficApiResponse;
+  
   const hasError = !!error;
-  const isEmpty = !data?.data || data.data.length === 0;
+  const isEmpty = !trafficData?.items || trafficData.items.length === 0;
 
   // Refetch when refreshTrigger changes
   React.useEffect(() => {
@@ -46,49 +65,53 @@ export default function Traffic({ refreshTrigger }: TrafficProps) {
     }
   }, [refreshTrigger, refetch]);
 
-  const handleFilterChange = (event: SelectChangeEvent<TrafficFilter>) => {
-    setTrafficFilter(event.target.value as TrafficFilter);
+  const handleDimensionChange = (event: SelectChangeEvent<TrafficDimension>) => {
+    setTrafficDimension(Number(event.target.value) as TrafficDimension);
   };
 
-  const getFilterDisplayLabel = (filter: TrafficFilter): string => {
-    const labels: Record<TrafficFilter, string> = {
-      default: 'Default View',
-      byLocation: 'By Location',
-      bySport: 'By Sport',
-      byPrediction: 'By Prediction'
+  const getDimensionDisplayLabel = (dimension: TrafficDimension): string => {
+    const labels: Record<TrafficDimension, string> = {
+      0: 'By Source',
+      1: 'By Medium', 
+      2: 'By Campaign'
     };
-    return labels[filter];
+    return labels[dimension];
   };
 
   const getTableHeaders = () => {
-    switch (trafficFilter) {
-      case 'bySport':
+    switch (trafficDimension) {
+      case 1: // Medium
         return (
           <TableRow>
-            <TableCell>Sport</TableCell>
+            <TableCell>Medium</TableCell>
             <TableCell align="right">Percentage</TableCell>
             <TableCell align="right">No. of users</TableCell>
           </TableRow>
         );
-      case 'byPrediction':
+      case 2: // Campaign
         return (
           <TableRow>
-            <TableCell>Prediction Type</TableCell>
+            <TableCell>Campaign</TableCell>
             <TableCell align="right">Percentage</TableCell>
             <TableCell align="right">No. of users</TableCell>
           </TableRow>
         );
-      case 'default':
-      case 'byLocation':
+      case 0: // Source
       default:
         return (
           <TableRow>
-            <TableCell>Country</TableCell>
+            <TableCell>Source</TableCell>
             <TableCell align="right">Percentage</TableCell>
             <TableCell align="right">No. of users</TableCell>
           </TableRow>
         );
     }
+  };
+
+  const getRowDisplayName = (item: TrafficApiItem, ): string => {
+    // If there's a specific name for the dimension, use it
+    // Otherwise fall back to the name field
+    return item.name || 'Unknown';
   };
 
   if (isLoading) {
@@ -102,14 +125,13 @@ export default function Traffic({ refreshTrigger }: TrafficProps) {
             <FormControl size="small" sx={{ minWidth: 140 }}>
               <InputLabel>View By</InputLabel>
               <Select
-                value={trafficFilter}
+                value={trafficDimension}
                 label="View By"
-                onChange={handleFilterChange}
+                onChange={handleDimensionChange}
               >
-                <MenuItem value="default">Default View</MenuItem>
-                <MenuItem value="byLocation">By Location</MenuItem>
-                <MenuItem value="bySport">By Sport</MenuItem>
-                <MenuItem value="byPrediction">By Prediction</MenuItem>
+                <MenuItem value={0}>By Source</MenuItem>
+                <MenuItem value={1}>By Medium</MenuItem>
+                <MenuItem value={2}>By Campaign</MenuItem>
               </Select>
             </FormControl>
           </Box>
@@ -134,14 +156,13 @@ export default function Traffic({ refreshTrigger }: TrafficProps) {
           <FormControl size="small" sx={{ minWidth: 140 }}>
             <InputLabel>View By</InputLabel>
             <Select
-              value={trafficFilter}
+              value={trafficDimension}
               label="View By"
-              onChange={handleFilterChange}
+              onChange={handleDimensionChange}
             >
-              <MenuItem value="default">Default View</MenuItem>
-              <MenuItem value="byLocation">By Location</MenuItem>
-              <MenuItem value="bySport">By Sport</MenuItem>
-              <MenuItem value="byPrediction">By Prediction</MenuItem>
+              <MenuItem value={0}>By Source</MenuItem>
+              <MenuItem value={1}>By Medium</MenuItem>
+              <MenuItem value={2}>By Campaign</MenuItem>
             </Select>
           </FormControl>
         </Box>
@@ -162,6 +183,9 @@ export default function Traffic({ refreshTrigger }: TrafficProps) {
                     <Typography variant="h6" color="error.main" gutterBottom>
                       Unable to Load Traffic Data
                     </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      {error?.toString()}
+                    </Typography>
                   </TableCell>
                 </TableRow>
               ) : isEmpty ? (
@@ -177,16 +201,16 @@ export default function Traffic({ refreshTrigger }: TrafficProps) {
                   </TableCell>
                 </TableRow>
               ) : (
-                data?.data.map((r, idx) => (
+                trafficData?.items.map((item: TrafficApiItem, index: number) => (
                   <TableRow 
-                    key={r.name ?? idx}
+                    key={item.name || index}
                     sx={{ 
                       '&:hover': { bgcolor: 'action.hover' }
                     }}
                   >
-                    <TableCell>{r.name}</TableCell>
-                    <TableCell align="right">{r.percentage}</TableCell>
-                    <TableCell align="right">{r.users}</TableCell>
+                    <TableCell>{getRowDisplayName(item,)}</TableCell>
+                    <TableCell align="right">{item.percentage}</TableCell>
+                    <TableCell align="right">{item.users}</TableCell>
                   </TableRow>
                 ))
               )}
@@ -194,10 +218,11 @@ export default function Traffic({ refreshTrigger }: TrafficProps) {
           </Table>
         </TableContainer>
 
-        {!hasError && !isEmpty && (
+        {!hasError && !isEmpty && trafficData && (
           <Box sx={{ mt: 2, textAlign: 'center' }}>
             <Typography variant="caption" color="text.secondary">
-              {getFilterDisplayLabel(trafficFilter)} - Showing {data?.data.length || 0} items
+              {getDimensionDisplayLabel(trafficDimension)} - Showing {trafficData.items.length} items
+              {trafficData.dimension !== undefined && ` (Dimension: ${trafficData.dimension})`}
             </Typography>
           </Box>
         )}

@@ -1,122 +1,215 @@
-// src/features/dashboard/api/dashboardApi.ts
-import { apiSlice } from "../../../../../slices/api/apiSlice";
+// /app/(dashboard)/dashboard/features/api/dashboardApi.ts
+import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
+import { RootState } from '../../../../../store/store';
+import { 
+  SummaryResponse,
+  UserCardsResponse,
+  PaymentCardsResponse,
+  EngagementResponse,
+  TrafficResponse,
+  ActivityResponse,
+  RecentActivityResponse,
+  AnalyticsResponse,
+  SummaryParams,
+  UserCardsParams,
+  PaymentCardsParams,
+  EngagementParams,
+  TrafficParams,
+  ActivityParams,
+  RecentActivityParams
+} from '../types/dashboard.types';
 
-/* ---------------------- Types ---------------------- */
+const BASE_URL = process.env.NEXT_PUBLIC_API_URL;
 
-export type AnalyticsCard = {
-    id?: string | number;
-    title: string;
-    value: string | number;
-    change?: string;
-    icon?: string;
-    bgColor?: string;
-};
+export const dashboardApi = createApi({
+  reducerPath: 'dashboardApi',
+  baseQuery: fetchBaseQuery({
+    baseUrl: BASE_URL,
+  prepareHeaders: (headers, { getState }) => {
+  const state = getState() as RootState;
+  const token = state.auth?.token;
+  if (token) {
+    headers.set('authorization', `Bearer ${token}`);
+  }
+  return headers;
+},
+  }),
+  tagTypes: [
+    'DashboardSummary', 
+    'UserCards', 
+    'PaymentCards', 
+    'Engagement', 
+    'Traffic', 
+    'Activity', 
+    'Analytics'
+  ],
+  endpoints: (builder) => ({
+    // 1. Dashboard Summary
+    getDashboardSummary: builder.query<SummaryResponse, SummaryParams | void>({
+      query: (params) => {
+        const queryParams: Record<string, string | number> = {};
+        
+        if (params && 'from' in params && params.from) queryParams.from = params.from;
+        if (params && 'to' in params && params.to) queryParams.to = params.to;
+        if (params && 'trafficDimension' in params && params.trafficDimension !== undefined) queryParams.trafficDimension = params.trafficDimension;
+        if (params && 'activityPage' in params && params.activityPage) queryParams.activityPage = params.activityPage;
+        if (params && 'activityPageSize' in params && params.activityPageSize) queryParams.activityPageSize = params.activityPageSize;
 
-export type AnalyticsResponse = {
-    data: AnalyticsCard[];
-};
-
-export type EngagementPoint = {
-    label: string;
-    value: number;
-};
-
-export type EngagementResponse = {
-    data: EngagementPoint[];
-};
-
-export type TrafficRow = {
-    name: string;
-    percentage: string;
-    users: string;
-    countryCode?: string;
-};
-
-export type TrafficResponse = {
-    data: TrafficRow[];
-};
-
-export type ActivityItem = {
-    id?: string | number;
-    type: string;
-    title: string;
-    description: string;
-    createdAt?: string;
-};
-
-export type ActivityResponse = {
-    data: ActivityItem[];
-};
-
-/* ---------------------- API ---------------------- */
-
-export const dashboardApi = apiSlice.injectEndpoints({
-    endpoints: (builder) => ({
-      getAnalytics: builder.query<AnalyticsResponse, { range?: string } | void>({
-  query: (arg) => {
-    // If no args or no range, don't include range parameter
-    if (!arg || !arg.range) {
-      return { url: '/dashboard/analytics', method: 'GET' };
-    }
-    
-    return {
-      url: `/dashboard/analytics?range=${encodeURIComponent(arg.range)}`,
-      method: 'GET',
-    };
-  },
-  providesTags: ['Analytics'],
-}),
-
-getEngagement: builder.query<EngagementResponse, { range?: string } | void>({
-  query: (arg) => {
-    // If no args or no range, don't include range parameter
-    if (!arg || !arg.range) {
-      return { url: '/dashboard/engagement', method: 'GET' };
-    }
-    
-    return {
-      url: `/dashboard/engagement?range=${encodeURIComponent(arg.range)}`,
-      method: 'GET',
-    };
-  },
-  providesTags: ['Engagement'],
-}),
-
-      getTraffic: builder.query<TrafficResponse, { filter?: string } | void>({
-  query: (arg) => {
-    // If no args or no filter, don't include filter parameter
-    if (!arg || !arg.filter) {
-      return { url: '/dashboard/traffic', method: 'GET' };
-    }
-    
-    return {
-      url: `/dashboard/traffic?filter=${encodeURIComponent(arg.filter)}`,
-      method: 'GET',
-    };
-  },
-  providesTags: ['Traffic'],
-}),
-
-        getActivity: builder.query<ActivityResponse, { limit?: number } | void>({
-            query: (arg) => {
-                // If no args or no limit, don't include limit parameter
-                if (!arg || !arg.limit) {
-                    return { url: '/dashboard/activity', method: 'GET' };
-                }
-
-                return {
-                    url: `/dashboard/activity?limit=${arg.limit}`,
-                    method: 'GET',
-                };
-            },
-            providesTags: ['Activity'],
-        }),
+        return {
+          url: '/api/v1/dashboard/summary',
+          params: queryParams,
+        };
+      },
+      providesTags: ['DashboardSummary'],
     }),
+
+    // 2. User Cards
+    getUserCards: builder.query<UserCardsResponse, UserCardsParams | void>({
+      query: (params) => {
+        const queryParams: Record<string, string> = {};
+        
+        if (params && 'from' in params && params.from) queryParams.from = params.from;
+        if (params && 'to' in params && params.to) queryParams.to = params.to;
+
+        return {
+          url: '/api/v1/dashboard/cards/users',
+          params: queryParams,
+        };
+      },
+      providesTags: ['UserCards'],
+    }),
+
+    // 3. Payment Cards
+    getPaymentCards: builder.query<PaymentCardsResponse, PaymentCardsParams | void>({
+      query: (params) => {
+        const queryParams: Record<string, string> = {};
+        
+        if (params && 'from' in params && params.from) queryParams.from = params.from;
+        if (params && 'to' in params && params.to) queryParams.to = params.to;
+
+        return {
+          url: '/api/v1/dashboard/cards/payments',
+          params: queryParams,
+        };
+      },
+      providesTags: ['PaymentCards'],
+    }),
+
+    // 4. Engagement Data
+    getEngagement: builder.query<EngagementResponse, EngagementParams | void>({
+      query: (params) => {
+        const queryParams: Record<string, string | number> = {};
+        
+        if (params && 'from' in params && params.from) queryParams.from = params.from;
+        if (params && 'to' in params && params.to) queryParams.to = params.to;
+        if (params && 'segment' in params && params.segment !== undefined) queryParams.segment = params.segment;
+
+        return {
+          url: '/api/v1/dashboard/engagement',
+          params: queryParams,
+        };
+      },
+      providesTags: ['Engagement'],
+    }),
+
+    // 5. Traffic Data
+    getTraffic: builder.query<TrafficResponse, TrafficParams | void>({
+      query: (params) => {
+        const queryParams: Record<string, string | number> = {};
+        
+        if (params && 'from' in params && params.from) queryParams.from = params.from;
+        if (params && 'to' in params && params.to) queryParams.to = params.to;
+        if (params && 'dimension' in params && params.dimension !== undefined) queryParams.dimension = params.dimension;
+        if (params && 'top' in params && params.top) queryParams.top = params.top;
+
+        return {
+          url: '/api/v1/dashboard/traffic',
+          params: queryParams,
+        };
+      },
+      providesTags: ['Traffic'],
+    }),
+
+    // 6. Activity Log (with pagination and filters)
+    getActivity: builder.query<ActivityResponse, ActivityParams | void>({
+      query: (params) => {
+        const queryParams: Record<string, string | number> = {};
+        
+        if (params && 'from' in params && params.from) queryParams.from = params.from;
+        if (params && 'to' in params && params.to) queryParams.to = params.to;
+        if (params && 'page' in params && params.page) queryParams.page = params.page;
+        if (params && 'pageSize' in params && params.pageSize) queryParams.pageSize = params.pageSize;
+        if (params && 'category' in params && params.category) queryParams.category = params.category;
+        if (params && 'actorId' in params && params.actorId) queryParams.actorId = params.actorId;
+        if (params && 'search' in params && params.search) queryParams.search = params.search;
+
+        return {
+          url: '/api/v1/dashboard/activity',
+          params: queryParams,
+        };
+      },
+      providesTags: ['Activity'],
+    }),
+
+    // 7. Recent Activity
+    getRecentActivity: builder.query<RecentActivityResponse, RecentActivityParams | void>({
+      query: (params) => {
+        const queryParams: Record<string, string | number> = {};
+        
+        if (params && 'from' in params && params.from) queryParams.from = params.from;
+        if (params && 'to' in params && params.to) queryParams.to = params.to;
+        if (params && 'take' in params && params.take) queryParams.take = params.take;
+
+        return {
+          url: '/api/v1/dashboard/activity/recent',
+          params: queryParams,
+        };
+      },
+      providesTags: ['Activity'],
+    }),
+
+    // Legacy endpoints (keeping for backward compatibility)
+    getAnalytics: builder.query<AnalyticsResponse, { range?: string } | void>({
+      query: (params) => {
+        const queryParams: Record<string, string> = {};
+        
+        if (params && 'range' in params && params.range) queryParams.range = params.range;
+
+        return {
+          url: '/api/v1/dashboard/analytics',
+          params: queryParams,
+        };
+      },
+      providesTags: ['Analytics'],
+    }),
+
+    // Export Dashboard Data
+    exportDashboardData: builder.mutation<Blob, SummaryParams>({
+      query: (params) => {
+        const queryParams: Record<string, string | number> = {};
+        
+        if (params.from) queryParams.from = params.from;
+        if (params.to) queryParams.to = params.to;
+        if (params.trafficDimension !== undefined) queryParams.trafficDimension = params.trafficDimension;
+
+        return {
+          url: '/api/v1/dashboard/export',
+          responseHandler: (response) => response.blob(),
+          params: queryParams,
+        };
+      },
+    }),
+  }),
 });
 
 export const {
-    useGetAnalyticsQuery,
-    useGetEngagementQuery,
-    useGetTrafficQuery,
-    useGetActivityQuery,
+  useGetDashboardSummaryQuery,
+  useGetUserCardsQuery,
+  useGetPaymentCardsQuery,
+  useGetEngagementQuery,
+  useGetTrafficQuery,
+  useGetActivityQuery,
+  useGetRecentActivityQuery,
+  useGetAnalyticsQuery,
+  useExportDashboardDataMutation,
 } = dashboardApi;

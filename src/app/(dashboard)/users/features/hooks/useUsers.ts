@@ -15,6 +15,7 @@ import {
 } from '../slices/userSlice';
 import { UsersFilter, User, PaginationMeta } from '../types/user.types';
 import { ExportOptions } from '../types/api.types';
+import { saveAs } from 'file-saver';
 
 // Main hook for managing users data and operations
 // This hook centralizes all user-related logic for easy consumption by components
@@ -109,28 +110,27 @@ export const useUsers = () => {
   }, [deleteUser]); // Only recreate if deleteUser mutation changes
 
   // Export users data to CSV file
-  const handleExportUsers = useCallback(async (options: ExportOptions = {}) => {
-    try {
-      // Call export API and get blob data
-      const blob = await exportUsers(currentFilters).unwrap();
-      
-      // Create download link and trigger download
-      const url = window.URL.createObjectURL(blob); // Create temporary URL for blob
-      const link = document.createElement('a');
-      link.href = url;
-      // Set filename with current date or custom name
-      link.download = options.filename || `users-export-${new Date().toISOString().split('T')[0]}.csv`;
-      document.body.appendChild(link);
-      link.click(); // Trigger download
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(url); // Clean up temporary URL
-      
-      return true;
-    } catch (error) {
-      console.error('Failed to export users:', error);
-      return false; 
+const handleExportUsers = useCallback(async (options: ExportOptions = {}) => {
+  try {
+    // Call export API and get blob data
+    const blob = await exportUsers(currentFilters).unwrap();
+    
+    // Check if blob is valid
+    if (!blob || blob.size === 0) {
+      console.error('Export API returned empty or invalid blob');
+      return false;
     }
-  }, [exportUsers, currentFilters]); // Recreate when export function or filters change
+
+    // Use file-saver to handle the download
+    const filename = options.filename || `users-export-${new Date().toISOString().split('T')[0]}.csv`;
+    saveAs(blob, filename);
+    
+    return true;
+  } catch (error) {
+    console.error('Failed to export users:', error);
+    return false; 
+  }
+}, [exportUsers, currentFilters]);
 
   // Selection management for bulk operations
 

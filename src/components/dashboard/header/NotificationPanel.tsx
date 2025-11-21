@@ -195,10 +195,10 @@ const NotificationPanel = ({ onClose }: NotificationPanelProps) => {
     setDeleteAllDialog(false);
   };
 
-  // Data
+  // Data - Access stats from the data object
   const notifications: Notification[] = notificationsData?.data || [];
-  const unreadCount = statsData?.unreadCount || notifications.filter(n => !n.isRead).length;
-  const totalCount = statsData?.total || notifications.length;
+  const unreadCount = statsData?.data?.unreadCount || notifications.filter(n => !n.isRead).length;
+  const totalCount = statsData?.data?.total || notifications.length;
 
   // Handle loading state
   if (isLoading) {

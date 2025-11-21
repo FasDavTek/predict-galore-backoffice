@@ -1,32 +1,38 @@
+// src/store/store.ts
 import { configureStore } from "@reduxjs/toolkit";
 import { setupListeners } from "@reduxjs/toolkit/query";
-import { apiSlice } from "../slices/api/apiSlice";
 import { authApi } from "../app/(auth)/features/api/authApi";
 import authReducer from "../app/(auth)/features/slices/authSlice";
+import { dashboardApi } from "../app/(dashboard)/dashboard/features/api/dashboardApi";
+import { notificationApi } from "@/api/notificationApi";
 import { usersReducer } from "@/app/(dashboard)/users/features/slices/userSlice";
 import { userApi } from "@/app/(dashboard)/users/features/api/userApi";
 import { predictionsReducer } from '@/app/(dashboard)/predictions/features/slices/predictionSlice';
 import { predictionApi } from "@/app/(dashboard)/predictions/features/api/predictionApi";
-
+import { transactionApi } from "@/app/(dashboard)/transactions/features/api/transactionApi";
 
 export const store = configureStore({
   reducer: {
     auth: authReducer,
     users: usersReducer,
     predictions: predictionsReducer,
-    [apiSlice.reducerPath]: apiSlice.reducer,
     [authApi.reducerPath]: authApi.reducer,
+    [dashboardApi.reducerPath]: dashboardApi.reducer,
+    [notificationApi.reducerPath]: notificationApi.reducer,
     [userApi.reducerPath]: userApi.reducer,
     [predictionApi.reducerPath]: predictionApi.reducer,
+    [transactionApi.reducerPath]: transactionApi.reducer, // FIXED: Changed from predictionApi.reducer to transactionApi.reducer
   },
 
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware()
       .concat(
-        apiSlice.middleware,
         authApi.middleware,
+        dashboardApi.middleware,
+        notificationApi.middleware,
         userApi.middleware,
-        predictionApi.middleware
+        predictionApi.middleware,
+        transactionApi.middleware
       ),
 });
 

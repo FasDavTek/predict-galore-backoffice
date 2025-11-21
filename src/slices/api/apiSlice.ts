@@ -1,4 +1,4 @@
-// slices/api/apiSlice.ts - Central API configuration hub
+// src/slices/api/apiSlice.ts - Central API configuration hub
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
 import { RootState } from '../../store/store'; 
 
@@ -16,17 +16,34 @@ export const apiSlice = createApi({
     },
   }),
   tagTypes: [
-    'Users', 
-    'Notifications', 
-    'Transactions', 
-    'Predictions', 
-    'Dashboard', 
-    'Settings',
+    // Auth tags
+    'Auth',
+    'User',
+    
+    // Dashboard tags (all the ones used in dashboardApi)
     'Analytics',      
     'Engagement',     
     'Traffic',        
     'Activity',
-    'NotificationStats' 
+    'DashboardSummary',
+    'UserCards',
+    'PaymentCards',
+    
+    // Users tags
+    'Users', 
+    
+    // Notifications tags
+    'Notifications', 
+    'NotificationStats',
+    
+    // Transactions tags
+    'Transactions', 
+    
+    // Predictions tags
+    'Predictions', 
+    
+    // Settings tags
+    'Settings',
   ],
   endpoints: () => ({}),
 });

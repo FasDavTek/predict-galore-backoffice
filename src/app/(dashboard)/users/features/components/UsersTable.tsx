@@ -27,6 +27,7 @@ import { User, UserStatus, SubscriptionPlan } from '../types/user.types';
 import { UsersTableProps } from '../types/table.types';
 import { TableLoadingState } from '@/components/LoadingState';
 
+
 export const UsersTable: React.FC<UsersTableProps> = ({
   users,
   selectedUserIds,

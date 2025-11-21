@@ -12,12 +12,12 @@ import {
   useMediaQuery,
   IconButton,
   PaginationItem,
+  SelectChangeEvent,
 } from '@mui/material';
 import {
   KeyboardArrowLeft as PreviousIcon,
   KeyboardArrowRight as NextIcon,
 } from '@mui/icons-material';
-import { PaginationMeta } from '../types/user.types';
 import { UsersPaginationProps } from '../types/pagination.types';
 
 export const UsersPagination: React.FC<UsersPaginationProps> = ({
@@ -35,8 +35,8 @@ export const UsersPagination: React.FC<UsersPaginationProps> = ({
     onPageChange(newPage);
   };
 
-  const handlePageSizeChange = (event: any) => {
-    const newSize = parseInt(event.target.value, 10);
+  const handlePageSizeChange = (event: SelectChangeEvent<number>) => {
+    const newSize = event.target.value;
     onPageSizeChange?.(newSize);
     onPageChange(1); // Reset to page 1 when page size changes
   };
@@ -76,9 +76,15 @@ export const UsersPagination: React.FC<UsersPaginationProps> = ({
           {onPageSizeChange && (
             <FormControl size="small" sx={{ minWidth: 120 }}>
               <InputLabel>Rows per page</InputLabel>
-              <Select value={limit} label="Rows per page" onChange={handlePageSizeChange}>
+              <Select 
+                value={limit} 
+                label="Rows per page" 
+                onChange={handlePageSizeChange}
+              >
                 {pageSizeOptions.map((option) => (
-                  <MenuItem key={option} value={option}>{option} per page</MenuItem>
+                  <MenuItem key={option} value={option}>
+                    {option} per page
+                  </MenuItem>
                 ))}
               </Select>
             </FormControl>
@@ -102,8 +108,11 @@ export const UsersPagination: React.FC<UsersPaginationProps> = ({
               // Custom previous/next buttons with icons
               if (item.type === 'previous' || item.type === 'next') {
                 return (
-                  <IconButton onClick={item.onClick} disabled={item.disabled}
-                    sx={{ borderRadius: 1, '&.Mui-disabled': { opacity: 0.5 } }}>
+                  <IconButton 
+                    onClick={item.onClick} 
+                    disabled={item.disabled}
+                    sx={{ borderRadius: 1, '&.Mui-disabled': { opacity: 0.5 } }}
+                  >
                     {item.type === 'previous' ? <PreviousIcon /> : <NextIcon />}
                   </IconButton>
                 );
@@ -115,7 +124,8 @@ export const UsersPagination: React.FC<UsersPaginationProps> = ({
             sx={{
               '& .MuiPaginationItem-root': { fontWeight: 600, borderRadius: 2 },
               '& .MuiPaginationItem-page.Mui-selected': {
-                backgroundColor: 'primary.main', color: 'white',
+                backgroundColor: 'primary.main', 
+                color: 'white',
                 '&:hover': { backgroundColor: 'primary.dark' },
               },
             }}
@@ -142,15 +152,17 @@ export const SimpleUsersPagination: React.FC<UsersPaginationProps> = ({
   onPageSizeChange,
   pageSizeOptions = [10, 25, 50, 100],
 }) => {
-  const isMobile = useMediaQuery(useTheme().breakpoints.down('sm'));
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const { page, limit, total, totalPages } = pagination;
 
   const handlePageChange = (event: React.ChangeEvent<unknown>, newPage: number) => {
     onPageChange(newPage);
   };
 
-  const handlePageSizeChange = (event: any) => {
-    onPageSizeChange?.(parseInt(event.target.value, 10));
+  const handlePageSizeChange = (event: SelectChangeEvent<number>) => {
+    const newSize = event.target.value;
+    onPageSizeChange?.(newSize);
     onPageChange(1);
   };
 
@@ -186,9 +198,15 @@ export const SimpleUsersPagination: React.FC<UsersPaginationProps> = ({
           {onPageSizeChange && (
             <FormControl size="small" sx={{ minWidth: 120 }}>
               <InputLabel>Rows per page</InputLabel>
-              <Select value={limit} label="Rows per page" onChange={handlePageSizeChange}>
+              <Select 
+                value={limit} 
+                label="Rows per page" 
+                onChange={handlePageSizeChange}
+              >
                 {pageSizeOptions.map((option) => (
-                  <MenuItem key={option} value={option}>{option} per page</MenuItem>
+                  <MenuItem key={option} value={option}>
+                    {option} per page
+                  </MenuItem>
                 ))}
               </Select>
             </FormControl>
@@ -208,7 +226,8 @@ export const SimpleUsersPagination: React.FC<UsersPaginationProps> = ({
             sx={{
               '& .MuiPaginationItem-root': { fontWeight: 600, borderRadius: 2 },
               '& .MuiPaginationItem-page.Mui-selected': {
-                backgroundColor: 'primary.main', color: 'white',
+                backgroundColor: 'primary.main', 
+                color: 'white',
                 '&:hover': { backgroundColor: 'primary.dark' },
               },
             }}

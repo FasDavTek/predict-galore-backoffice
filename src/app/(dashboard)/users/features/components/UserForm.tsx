@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -32,9 +32,14 @@ export const UserForm: React.FC<UserFormProps> = ({
   open = true,
 }) => {
   const isEditing = Boolean(user?.id);
+  const [previewData, setPreviewData] = useState({
+    firstName: user?.firstName || '',
+    lastName: user?.lastName || '',
+    email: user?.email || '',
+  });
 
   // React Hook Form with Zod validation
-  const { control, handleSubmit, formState: { errors, isDirty }, watch, reset } = useForm<UserFormSchema>({
+  const { control, handleSubmit, formState: { errors, isDirty }, reset, getValues } = useForm<UserFormSchema>({
     resolver: zodResolver(userFormSchema),
     defaultValues: {
       firstName: user?.firstName || '',
@@ -46,9 +51,35 @@ export const UserForm: React.FC<UserFormProps> = ({
     },
   });
 
-  // Watch form values for real-time preview
-  const watchedValues = watch();
-  const userInitials = generateUserInitials(watchedValues.firstName, watchedValues.lastName);
+  // Update preview data when form values change (alternative to watch())
+  useEffect(() => {
+    const subscription = {
+      unsubscribe: () => {} // Placeholder for cleanup
+    };
+    
+    // Use getValues to get current form values for preview
+    const updatePreview = () => {
+      const values = getValues();
+      setPreviewData({
+        firstName: values.firstName,
+        lastName: values.lastName,
+        email: values.email,
+      });
+    };
+
+    // Update preview initially
+    updatePreview();
+
+    // For real-time updates, you can use a different approach
+    // Since we can't use watch(), we'll rely on form submission and manual updates
+    // Alternatively, you could use individual field watchers if needed
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [getValues]);
+
+  const userInitials = generateUserInitials(previewData.firstName, previewData.lastName);
 
   const handleFormSubmit = async (data: UserFormSchema) => {
     const success = await onSubmit(data);
@@ -96,33 +127,87 @@ export const UserForm: React.FC<UserFormProps> = ({
             {/* Name fields in responsive row */}
             <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, gap: 3, mb: 3 }}>
               <Box sx={{ flex: 1 }}>
-                <Controller name="firstName" control={control} render={({ field }) => (
-                  <TextField {...field} label="First Name" fullWidth error={Boolean(errors.firstName)}
-                    helperText={errors.firstName?.message} disabled={isLoading} />
-                )}/>
+                <Controller 
+                  name="firstName" 
+                  control={control} 
+                  render={({ field }) => (
+                    <TextField 
+                      {...field} 
+                      label="First Name" 
+                      fullWidth 
+                      error={Boolean(errors.firstName)}
+                      helperText={errors.firstName?.message} 
+                      disabled={isLoading}
+                      onChange={(e) => {
+                        field.onChange(e);
+                        setPreviewData(prev => ({ ...prev, firstName: e.target.value }));
+                      }}
+                    />
+                  )}
+                />
               </Box>
               <Box sx={{ flex: 1 }}>
-                <Controller name="lastName" control={control} render={({ field }) => (
-                  <TextField {...field} label="Last Name" fullWidth error={Boolean(errors.lastName)}
-                    helperText={errors.lastName?.message} disabled={isLoading} />
-                )}/>
+                <Controller 
+                  name="lastName" 
+                  control={control} 
+                  render={({ field }) => (
+                    <TextField 
+                      {...field} 
+                      label="Last Name" 
+                      fullWidth 
+                      error={Boolean(errors.lastName)}
+                      helperText={errors.lastName?.message} 
+                      disabled={isLoading}
+                      onChange={(e) => {
+                        field.onChange(e);
+                        setPreviewData(prev => ({ ...prev, lastName: e.target.value }));
+                      }}
+                    />
+                  )}
+                />
               </Box>
             </Box>
 
             {/* Email field (disabled when editing) */}
             <Box sx={{ mb: 3 }}>
-              <Controller name="email" control={control} render={({ field }) => (
-                <TextField {...field} label="Email Address" type="email" fullWidth error={Boolean(errors.email)}
-                  helperText={errors.email?.message} disabled={isLoading || isEditing} />
-              )}/>
+              <Controller 
+                name="email" 
+                control={control} 
+                render={({ field }) => (
+                  <TextField 
+                    {...field} 
+                    label="Email Address" 
+                    type="email" 
+                    fullWidth 
+                    error={Boolean(errors.email)}
+                    helperText={errors.email?.message} 
+                    disabled={isLoading || isEditing}
+                    onChange={(e) => {
+                      field.onChange(e);
+                      setPreviewData(prev => ({ ...prev, email: e.target.value }));
+                    }}
+                  />
+                )}
+              />
             </Box>
 
             {/* Phone field */}
             <Box sx={{ mb: 3 }}>
-              <Controller name="phone" control={control} render={({ field }) => (
-                <TextField {...field} label="Phone Number" fullWidth error={Boolean(errors.phone)}
-                  helperText={errors.phone?.message} disabled={isLoading} placeholder="+1 (555) 123-4567" />
-              )}/>
+              <Controller 
+                name="phone" 
+                control={control} 
+                render={({ field }) => (
+                  <TextField 
+                    {...field} 
+                    label="Phone Number" 
+                    fullWidth 
+                    error={Boolean(errors.phone)}
+                    helperText={errors.phone?.message} 
+                    disabled={isLoading} 
+                    placeholder="+1 (555) 123-4567" 
+                  />
+                )}
+              />
             </Box>
           </Box>
 
@@ -173,8 +258,8 @@ export const UserForm: React.FC<UserFormProps> = ({
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                   <Avatar sx={{ bgcolor: 'primary.main' }}>{userInitials}</Avatar>
                   <Box>
-                    <Typography fontWeight={500}>{watchedValues.firstName} {watchedValues.lastName}</Typography>
-                    <Typography variant="body2" color="text.secondary">{watchedValues.email}</Typography>
+                    <Typography fontWeight={500}>{previewData.firstName} {previewData.lastName}</Typography>
+                    <Typography variant="body2" color="text.secondary">{previewData.email}</Typography>
                   </Box>
                 </Box>
               </Box>
@@ -188,8 +273,16 @@ export const UserForm: React.FC<UserFormProps> = ({
         <Button startIcon={<CancelIcon />} onClick={handleCancel} disabled={isLoading} size="large">
           Cancel
         </Button>
-        <LoadingButton type="submit" form="user-form" startIcon={<SaveIcon />} loading={isLoading}
-          loadingPosition="start" variant="contained" disabled={!isDirty && isEditing} size="large">
+        <LoadingButton 
+          type="submit" 
+          form="user-form" 
+          startIcon={<SaveIcon />} 
+          loading={isLoading}
+          loadingPosition="start" 
+          variant="contained" 
+          disabled={!isDirty && isEditing} 
+          size="large"
+        >
           {isEditing ? 'Update User' : 'Create User'}
         </LoadingButton>
       </DialogActions>

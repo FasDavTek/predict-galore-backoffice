@@ -10,6 +10,13 @@ import {
 } from '../types/user.types';
 import { transformApiUserToAppUser, transformApiUsersToAppUsers } from '../utils/userTransformers';
 
+// Define proper RootState type to avoid using 'any'
+interface RootState {
+  auth: {
+    token: string | null;
+  };
+}
+
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL;
 
 export const userApi = createApi({
@@ -17,7 +24,8 @@ export const userApi = createApi({
   baseQuery: fetchBaseQuery({
     baseUrl: BASE_URL,
     prepareHeaders: (headers, { getState }) => {
-      const token = (getState() as any).auth.token;
+      const state = getState() as RootState;
+      const token = state.auth.token;
       if (token) {
         headers.set('authorization', `Bearer ${token}`);
       }

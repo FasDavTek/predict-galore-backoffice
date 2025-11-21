@@ -11,7 +11,8 @@ interface NotificationBellProps {
 
 const NotificationBell = ({ openNotifs, setOpenNotifs }: NotificationBellProps) => {
   const { data: statsData } = useGetNotificationStatsQuery();
-  const unreadCount = statsData?.unreadCount || 0;
+  // Access unreadCount from the data object
+  const unreadCount = statsData?.data?.unreadCount || 0;
   const notificationRef = useRef<HTMLDivElement>(null);
 
   // Close notification panel when clicking outside

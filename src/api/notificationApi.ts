@@ -1,6 +1,8 @@
-// features/dashboard/api/notificationApi.ts
-import { apiSlice } from "../slices/api/apiSlice";
+// /app/(dashboard)/dashboard/features/api/notificationApi.ts
+import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
+import { RootState } from '../store/store';
 
+// Types
 interface Notification {
   _id: string;
   id?: string;
@@ -20,6 +22,14 @@ interface NotificationsResponse {
   unreadCount?: number;
 }
 
+interface NotificationStatsResponse {
+  success: boolean;
+  data: {
+    unreadCount: number;
+    total: number;
+  };
+}
+
 interface MarkAsReadResponse {
   success: boolean;
   message: string;
@@ -30,17 +40,32 @@ interface DeleteNotificationResponse {
   message: string;
 }
 
-export const notificationApi = apiSlice.injectEndpoints({
+const BASE_URL = process.env.NEXT_PUBLIC_API_URL;
+
+export const notificationApi = createApi({
+  reducerPath: 'notificationApi',
+  baseQuery: fetchBaseQuery({
+    baseUrl: BASE_URL,
+    prepareHeaders: (headers, { getState }) => {
+      const state = getState() as RootState;
+      const token = state.auth?.token;
+      if (token) {
+        headers.set('authorization', `Bearer ${token}`);
+      }
+      return headers;
+    },
+  }),
+  tagTypes: ['Notifications', 'NotificationStats'],
   endpoints: (builder) => ({
     // Get all notifications
     getNotifications: builder.query<NotificationsResponse, void>({
-      query: () => "/api/v1/notifications",
+      query: () => '/api/v1/notifications',
       providesTags: ['Notifications'],
     }),
 
     // Get notification stats (unread count, etc.)
-    getNotificationStats: builder.query<{ unreadCount: number; total: number }, void>({
-      query: () => "/api/v1/notifications/stats",
+    getNotificationStats: builder.query<NotificationStatsResponse, void>({
+      query: () => '/api/v1/notifications/stats',
       providesTags: ['NotificationStats'],
     }),
 
@@ -79,6 +104,16 @@ export const notificationApi = apiSlice.injectEndpoints({
       }),
       invalidatesTags: ['Notifications', 'NotificationStats'],
     }),
+
+    // Create new notification (optional - if you need to send notifications)
+    createNotification: builder.mutation<MarkAsReadResponse, Partial<Notification>>({
+      query: (notificationData) => ({
+        url: '/api/v1/notifications',
+        method: 'POST',
+        body: notificationData,
+      }),
+      invalidatesTags: ['Notifications', 'NotificationStats'],
+    }),
   }),
 });
 
@@ -89,4 +124,5 @@ export const {
   useMarkAllAsReadMutation,
   useDeleteNotificationMutation,
   useDeleteAllNotificationsMutation,
+  useCreateNotificationMutation,
 } = notificationApi;

@@ -4,11 +4,12 @@ import React, { useState, useMemo } from "react";
 import {
   Box,
   Container,
-  Dialog,
   Snackbar,
   Alert,
   Skeleton,
+  Button,
 } from "@mui/material";
+import { ArrowBack as ArrowBackIcon } from "@mui/icons-material";
 
 // Components
 import { PredictionsTable } from "./features/components/PredictionsTable";
@@ -18,8 +19,10 @@ import { PredictionForm } from "./features/components/PredictionForm";
 import { PredictionsPagination } from "./features/components/PredictionsPagination";
 import { PredictionsToolbar } from "./features/components/PredictionsToolbar";
 import { SelectedPredictionPreview } from "./features/components/SelectedPredictionPreview";
-import { PredictionsPageLoadingSkeleton } from './features/components/PredictionsPageLoadingSkeleton';
-import PredictionsPageHeader, { TimeRange } from "./features/components/PredictionsPageHeader";
+import { PredictionsPageLoadingSkeleton } from "./features/components/PredictionsPageLoadingSkeleton";
+import PredictionsPageHeader, {
+  TimeRange,
+} from "./features/components/PredictionsPageHeader";
 
 // Global State Components
 import { EmptyState } from "@/components/EmptyState";
@@ -27,7 +30,6 @@ import { ErrorState } from "@/components/ErrorState";
 
 // Hooks
 import { usePredictions } from "@/app/(dashboard)/predictions/features/hooks/usePredictions";
-import { usePredictionForm } from "@/app/(dashboard)/predictions/features/hooks/usePredictionForm";
 
 // Types
 import { Prediction } from "@/app/(dashboard)/predictions/features/types/prediction.types";
@@ -37,8 +39,7 @@ import { RootState } from "../../../store/store";
 import { useSelector } from "react-redux";
 
 const PredictionsPage: React.FC = () => {
-  const [isPredictionFormOpen, setIsPredictionFormOpen] = useState(false);
-  const [selectedPrediction, setSelectedPrediction] = useState<Prediction | null>(null);
+  const [showPredictionForm, setShowPredictionForm] = useState(false);
   const [snackbar, setSnackbar] = useState<{
     open: boolean;
     message: string;
@@ -50,9 +51,9 @@ const PredictionsPage: React.FC = () => {
   });
 
   // Global time range state for predictions page
-  const [globalTimeRange, setGlobalTimeRange] = useState<TimeRange>('default');
-  
-  // Refresh trigger state - EXACTLY like users page
+  const [globalTimeRange, setGlobalTimeRange] = useState<TimeRange>("default");
+
+  // Refresh trigger state
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
@@ -80,56 +81,41 @@ const PredictionsPage: React.FC = () => {
     isExporting,
   } = usePredictions();
 
-  const { handleSubmit, isLoading: isSubmitting } = usePredictionForm({
-    prediction: selectedPrediction,
-    onSuccess: () => {
-      setIsPredictionFormOpen(false);
-      setSelectedPrediction(null);
-      showSnackbar("Prediction saved successfully", "success");
-      // Trigger refresh after successful form submission - EXACTLY like users page
-      handleRefresh();
-    },
-    onError: (error) => {
-      showSnackbar(error, "error");
-    },
-  });
-
   // Memoize selected predictions for performance
   const selectedPredictionsData = useMemo(() => {
-    return predictions.filter(prediction => 
+    return predictions.filter((prediction) =>
       selectedPredictionIds.includes(prediction.id)
     );
   }, [predictions, selectedPredictionIds]);
 
-  // Handle refresh button click - EXACTLY like users page
+  // Handle refresh button click
   const handleRefresh = () => {
     setIsRefreshing(true);
     // Clear selections when refreshing
     handleClearAllSelection();
-    setSelectedPrediction(null);
     // Increment refresh trigger to force all components to refetch
-    setRefreshTrigger(prev => prev + 1);
-    
+    setRefreshTrigger((prev) => prev + 1);
+
     // Refetch predictions data
     refetchPredictions();
-    
+
     // Set a timeout to hide the loading skeleton after a minimum duration
     setTimeout(() => {
       setIsRefreshing(false);
-    }, 1000); // Minimum 1 second loading state for better UX
+    }, 1000);
   };
 
   const showSnackbar = (message: string, severity: "success" | "error") => {
     setSnackbar({ open: true, message, severity });
   };
 
-  const handlePredictionSelect = (prediction: Prediction) => {
-    setSelectedPrediction(prediction);
+  const handlePredictionSelect = () => {
+    // Selection is handled by the usePredictions hook via selectedPredictionIds and handleToggleSelection
+    // This function exists to satisfy the interface but doesn't need to do anything
   };
 
-  const handlePredictionEdit = (prediction: Prediction) => {
-    setSelectedPrediction(prediction);
-    setIsPredictionFormOpen(true);
+  const handlePredictionEdit = () => {
+    setShowPredictionForm(true);
   };
 
   const handlePredictionDelete = async (prediction: Prediction) => {
@@ -141,7 +127,7 @@ const PredictionsPage: React.FC = () => {
     const success = await handleDeletePrediction(prediction.id);
     if (success) {
       showSnackbar("Prediction deleted successfully", "success");
-      // Trigger refresh after successful deletion - EXACTLY like users page
+      // Trigger refresh after successful deletion
       handleRefresh();
     } else {
       showSnackbar("Failed to delete prediction", "error");
@@ -157,7 +143,7 @@ const PredictionsPage: React.FC = () => {
     const success = await handleCancelPrediction(prediction.id);
     if (success) {
       showSnackbar("Prediction cancelled successfully", "success");
-      // Trigger refresh after successful cancellation - EXACTLY like users page
+      // Trigger refresh after successful cancellation
       handleRefresh();
     } else {
       showSnackbar("Failed to cancel prediction", "error");
@@ -165,13 +151,18 @@ const PredictionsPage: React.FC = () => {
   };
 
   const handleAddPrediction = () => {
-    setSelectedPrediction(null);
-    setIsPredictionFormOpen(true);
+    setShowPredictionForm(true);
   };
 
-  const handleClosePredictionForm = () => {
-    setIsPredictionFormOpen(false);
-    setSelectedPrediction(null);
+  const handleFormSuccess = () => {
+    setShowPredictionForm(false);
+    showSnackbar("Prediction created successfully", "success");
+    // Trigger refresh after successful form submission
+    handleRefresh();
+  };
+
+  const handleFormCancel = () => {
+    setShowPredictionForm(false);
   };
 
   const handleCloseSnackbar = () => {
@@ -180,7 +171,29 @@ const PredictionsPage: React.FC = () => {
 
   const hasError = !!error;
 
-  // Show loading skeleton for initial page load or during refresh - EXACTLY like users page
+  // Show Prediction Form as main component
+  if (showPredictionForm) {
+    return (
+      <Container maxWidth="lg" sx={{ py: 4 }}>
+        <Box sx={{ mb: 3 }}>
+          <Button
+            startIcon={<ArrowBackIcon />}
+            onClick={handleFormCancel}
+            variant="outlined"
+            sx={{ mb: 2 }}
+          >
+            Back to Predictions
+          </Button>
+        </Box>
+        <PredictionForm
+          onSuccess={handleFormSuccess}
+          onCancel={handleFormCancel}
+        />
+      </Container>
+    );
+  }
+
+  // Show loading skeleton for initial page load or during refresh
   if ((isLoading && predictions.length === 0) || isRefreshing) {
     return (
       <Container maxWidth="xl" sx={{ py: 4 }}>
@@ -189,13 +202,13 @@ const PredictionsPage: React.FC = () => {
           <Skeleton variant="text" width={250} height={48} sx={{ mb: 1 }} />
           <Skeleton variant="text" width={350} height={24} />
         </Box>
-        
+
         <PredictionsPageLoadingSkeleton />
       </Container>
     );
   }
 
-  // Show error state if there's an API error - EXACTLY like users page
+  // Show error state if there's an API error
   if (error) {
     return (
       <Container maxWidth="xl" sx={{ py: 4 }}>
@@ -215,8 +228,8 @@ const PredictionsPage: React.FC = () => {
 
   return (
     <Container maxWidth="xl" sx={{ py: 4 }}>
-      {/* Header - EXACTLY like users page */}
-      <PredictionsPageHeader 
+      {/* Header  */}
+      <PredictionsPageHeader
         title="Predictions Management"
         timeRange={globalTimeRange}
         onTimeRangeChange={setGlobalTimeRange}
@@ -224,7 +237,7 @@ const PredictionsPage: React.FC = () => {
         user={user}
       />
 
-      {/* Analytics - Pass refresh trigger like users page */}
+      {/* Analytics - Pass refresh trigger  */}
       <PredictionAnalytics refreshTrigger={refreshTrigger} />
 
       {/* Selected Predictions Preview */}
@@ -254,7 +267,7 @@ const PredictionsPage: React.FC = () => {
             onClearFilters={handleClearFilters}
           />
 
-          {/* Toolbar - Use handleRefresh like users page */}
+          {/* Toolbar - Use handleRefresh  */}
           <PredictionsToolbar
             selectedCount={selectedPredictionIds.length}
             onAddPrediction={handleAddPrediction}
@@ -322,7 +335,7 @@ const PredictionsPage: React.FC = () => {
               onToggleSelection={handleToggleSelection}
               isLoading={isLoading}
               hasError={hasError}
-              onRetry={handleRefresh} // Use handleRefresh for retry
+              onRetry={handleRefresh}
             />
 
             {/* Pagination */}
@@ -335,21 +348,6 @@ const PredictionsPage: React.FC = () => {
           </>
         )}
       </Box>
-
-      {/* Add/Edit Prediction Dialog */}
-      <Dialog
-        open={isPredictionFormOpen}
-        onClose={handleClosePredictionForm}
-        maxWidth="md"
-        fullWidth
-      >
-        <PredictionForm
-          prediction={selectedPrediction}
-          onSubmit={handleSubmit}
-          onCancel={handleClosePredictionForm}
-          isLoading={isSubmitting}
-        />
-      </Dialog>
 
       {/* Snackbar */}
       <Snackbar

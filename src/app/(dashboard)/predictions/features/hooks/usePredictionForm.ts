@@ -2,7 +2,7 @@ import {
   useCreatePredictionMutation,
   useUpdatePredictionMutation,
 } from '../api/predictionApi';
-import { Prediction, PredictionFormData } from '../types/prediction.types';
+import { Prediction, PredictionFormData, CreatePredictionPayload } from '../types/prediction.types';
 
 // Define a type for RTK Query errors
 interface RTKQueryError {
@@ -24,6 +24,20 @@ export const usePredictionForm = ({ prediction, onSuccess, onError }: UsePredict
 
   const isLoading = isCreating || isUpdating;
 
+  // Helper function to transform PredictionFormData to CreatePredictionPayload
+  const transformFormDataToPayload = (formData: PredictionFormData): CreatePredictionPayload => {
+    // You'll need to adjust this transformation based on your actual form structure
+    // and what data is available in your form vs what the API expects
+    return {
+      fixtureId: 0, // You need to get this from somewhere - maybe from form state or props
+      title: formData.name, // Assuming name maps to title
+      analysis: formData.description || '', // Assuming description maps to analysis
+      accuracy: 0, // You need to calculate or get this from form data
+      audience: 'FREE' as const, // Default or from form data
+      picks: [], // You need to get this from form data
+    };
+  };
+
   const handleSubmit = async (formData: PredictionFormData): Promise<boolean> => {
     try {
       if (prediction?.id) {
@@ -32,7 +46,9 @@ export const usePredictionForm = ({ prediction, onSuccess, onError }: UsePredict
           predictionData: formData,
         }).unwrap();
       } else {
-        await createPrediction(formData).unwrap();
+        // Transform the form data to match the API payload
+        const createPayload = transformFormDataToPayload(formData);
+        await createPrediction(createPayload).unwrap();
       }
 
       onSuccess?.();

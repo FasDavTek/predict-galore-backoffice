@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo, useEffect, useRef } from "react";
 import { 
   Box, 
   Card, 
@@ -14,47 +14,25 @@ import {
   Warning as WarningIcon,
 } from "@mui/icons-material";
 import { useGetEngagementQuery } from "../api/dashboardApi";
-import { 
-  Chart as ChartJS, 
-  CategoryScale, 
-  LinearScale, 
-  PointElement, 
-  LineElement, 
-  Title, 
-  Tooltip, 
-  Legend 
-} from 'chart.js';
-import { Line } from "react-chartjs-2";
-import type { ChartData, ChartOptions } from "chart.js";
+import * as echarts from 'echarts';
+import ReactECharts from 'echarts-for-react';
 import LoadingState from "../../../../../components/LoadingState";
-
-ChartJS.register(
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  Title,
-  Tooltip,
-  Legend
-);
 
 // Define TimeRange type here or import it
 export type TimeRange = 'default' | 'today' | 'thisWeek' | 'thisMonth' | 'lastMonth' | 'thisYear';
 
 interface UserEngagementChartProps {
   refreshTrigger?: number;
-  globalTimeRange?: TimeRange; // Add this prop
+  globalTimeRange?: TimeRange;
 }
 
 // Types for the engagement API response
 interface EngagementPoint {
   date: string;
   activeUsers: number;
-}
-
-interface EngagementSegment {
-  segment: number;
-  points: EngagementPoint[];
+  predictions: number;
+  successfulPredictions?: number;
+  engagementScore?: number;
 }
 
 interface EngagementApiResponse {
@@ -65,19 +43,24 @@ interface EngagementApiResponse {
     message?: string;
     details?: unknown[];
   } | null;
-  data: EngagementSegment[];
+  data: EngagementPoint[];
 }
 
-const getSegmentDisplayName = (segment: number): string => {
-  const names: Record<number, string> = {
-    0: 'All Users',
-    1: 'Active Users',
-    2: 'Inactive Users',
-    3: 'New Users',
-    4: 'Returning Users'
-  };
-  return names[segment] || `Segment ${segment}`;
-};
+// ECharts tooltip parameter type
+interface TooltipParams {
+  componentType: string;
+  seriesType: string;
+  seriesIndex: number;
+  seriesName: string;
+  name: string;
+  dataIndex: number;
+  data: number;
+  value: number | number[];
+  color: string;
+  dimensionNames?: string[];
+  encode?: Record<string, number[]>;
+  $vars: string[];
+}
 
 // Helper function to format dates
 const formatDate = (date: Date): string => {
@@ -98,19 +81,15 @@ const calculateDateRange = (timeRange: TimeRange): { from: string; to: string } 
   
   switch (timeRange) {
     case 'today':
-      // Today only
       from.setDate(today.getDate());
       break;
     case 'thisWeek':
-      // Start of current week (Sunday)
       from.setDate(today.getDate() - today.getDay());
       break;
     case 'thisMonth':
-      // First day of current month
       from.setDate(1);
       break;
     case 'lastMonth':
-      // First day of previous month to last day of previous month
       from.setMonth(today.getMonth() - 1);
       from.setDate(1);
       const to = new Date(from);
@@ -121,7 +100,6 @@ const calculateDateRange = (timeRange: TimeRange): { from: string; to: string } 
         to: formatDate(to)
       };
     case 'thisYear':
-      // January 1st of current year
       from.setMonth(0, 1);
       break;
     default:
@@ -137,7 +115,7 @@ const calculateDateRange = (timeRange: TimeRange): { from: string; to: string } 
 const EmptyChartState: React.FC = () => {
   return (
     <Box sx={{ 
-      height: 300, 
+      height: 400, 
       display: 'flex', 
       flexDirection: 'column', 
       alignItems: 'center', 
@@ -146,10 +124,10 @@ const EmptyChartState: React.FC = () => {
     }}>
       <WarningIcon sx={{ fontSize: 48, color: 'grey.400', mb: 2 }} />
       <Typography variant="h6" color="text.secondary" gutterBottom>
-        No Engagement Data
+        No Engagement Data Available
       </Typography>
       <Typography variant="body2" color="text.secondary">
-        Engagement data will appear here once available
+        User engagement data will appear here once users start making predictions
       </Typography>
     </Box>
   );
@@ -158,7 +136,7 @@ const EmptyChartState: React.FC = () => {
 const ErrorChartState: React.FC = () => {
   return (
     <Box sx={{ 
-      height: 300, 
+      height: 400, 
       display: 'flex', 
       flexDirection: 'column', 
       alignItems: 'center', 
@@ -171,116 +149,71 @@ const ErrorChartState: React.FC = () => {
         Unable to Load Engagement Data
       </Typography>
       <Typography variant="body2" color="text.secondary">
-        There was an error loading the engagement data
+        Please try refreshing the page or check your connection
       </Typography>
     </Box>
   );
 };
 
-// Helper function to get segment colors
-const getSegmentColor = (segment: number): string => {
-  const colors: Record<number, string> = {
-    0: '#42A605', // All Users - Green
-    1: '#1976d2', // Active Users - Blue
-    2: '#ed6c02', // Inactive Users - Orange
-    3: '#9c27b0', // New Users - Purple
-    4: '#2e7d32'  // Returning Users - Dark Green
-  };
-  return colors[segment] || '#42A605';
-};
-
-// Helper function to get segment background colors
-const getSegmentBackgroundColor = (segment: number): string => {
-  const colors: Record<number, string> = {
-    0: 'rgba(66, 166, 5, 0.1)',
-    1: 'rgba(25, 118, 210, 0.1)',
-    2: 'rgba(237, 108, 2, 0.1)',
-    3: 'rgba(156, 39, 176, 0.1)',
-    4: 'rgba(46, 125, 50, 0.1)'
-  };
-  return colors[segment] || 'rgba(66, 166, 5, 0.1)';
-};
-
 export default function UserEngagementChart({ refreshTrigger, globalTimeRange = 'default' }: UserEngagementChartProps) {
-  // Use the globalTimeRange prop as the default, but allow local override
   const [localTimeRange, setLocalTimeRange] = useState<TimeRange>(globalTimeRange);
-  const [selectedSegment, setSelectedSegment] = useState<number>(0); // Default to All Users (segment 0)
+  const chartRef = useRef<ReactECharts>(null);
   
-  // Update localTimeRange when globalTimeRange changes
   useEffect(() => {
     setLocalTimeRange(globalTimeRange);
   }, [globalTimeRange]);
   
-  // Calculate date range based on timeRange selection - returns undefined for 'default'
   const dateRange = calculateDateRange(localTimeRange);
   
-  // Prepare query parameters - only include them when user has selected non-default values
   const queryParams = {
     ...(dateRange && { from: dateRange.from, to: dateRange.to }),
-    ...(selectedSegment !== 0 && { segment: selectedSegment })
   };
 
-  // Only pass query params if they have values, otherwise pass undefined for default behavior
   const shouldUseParams = Object.keys(queryParams).length > 0;
   
   const { data, isLoading, error, refetch } = useGetEngagementQuery(shouldUseParams ? queryParams : undefined);
   
-  // Type assertion to handle the actual API response structure
   const engagementData = data as unknown as EngagementApiResponse;
   
   const hasError = !!error;
   
-  // FIXED: Check if data exists and has segments with points
   const isEmpty = !engagementData?.data || 
                   engagementData.data.length === 0 || 
-                  !engagementData.data.some(segment => 
-                    segment.points && segment.points.length > 0 && 
-                    segment.points.some(point => point.activeUsers > 0)
-                  );
+                  !engagementData.data.some(point => point.activeUsers > 0);
 
-  // Refetch when refreshTrigger or filters change
   useEffect(() => {
     refetch();
-  }, [refreshTrigger, localTimeRange, selectedSegment, refetch]);
+  }, [refreshTrigger, localTimeRange, refetch]);
 
   const handleTimeRangeChange = (event: SelectChangeEvent<TimeRange>) => {
     setLocalTimeRange(event.target.value as TimeRange);
   };
 
-  const handleSegmentChange = (event: SelectChangeEvent<number>) => {
-    setSelectedSegment(Number(event.target.value));
-  };
-
-  // Get available segments from API response
-  const availableSegments = engagementData?.data || [];
-
-  // Find the selected segment data
-  const selectedSegmentData = availableSegments.find(segment => segment.segment === selectedSegment);
-
-  const chartData: ChartData<"line"> = useMemo(() => {
-    if (isEmpty || hasError || !selectedSegmentData || !selectedSegmentData.points) {
+  // Enhanced ECharts configuration
+  const chartOption = useMemo(() => {
+    if (isEmpty || hasError || !engagementData?.data) {
       return {
-        labels: [],
-        datasets: [
-          {
-            label: "Active Users",
-            data: [],
-            fill: false,
-            tension: 0.4,
-            borderColor: '#42A605',
-            backgroundColor: 'rgba(66, 166, 5, 0.1)',
-            borderWidth: 3,
-            pointBackgroundColor: '#42A605',
-            pointBorderColor: '#ffffff',
-            pointBorderWidth: 2,
-            pointRadius: 4,
-            pointHoverRadius: 8,
-          },
-        ],
+        title: {
+          text: 'No Data Available',
+          left: 'center',
+          top: 'center',
+          textStyle: {
+            color: '#999',
+            fontSize: 16,
+            fontWeight: 'normal'
+          }
+        },
+        xAxis: { show: false },
+        yAxis: { show: false }
       };
     }
 
-    // Format dates for better display based on time range
+    // Sort points by date
+    const sortedPoints = [...engagementData.data].sort((a, b) => 
+      new Date(a.date).getTime() - new Date(b.date).getTime()
+    );
+
+    // Format labels based on time range
     const formatDateLabel = (dateString: string): string => {
       const date = new Date(dateString);
       
@@ -288,153 +221,226 @@ export default function UserEngagementChart({ refreshTrigger, globalTimeRange = 
         case 'today':
           return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
         case 'thisWeek':
-        case 'lastMonth':
-          return date.toLocaleDateString('en-US', { weekday: 'short', day: 'numeric' });
+          return date.toLocaleDateString('en-US', { weekday: 'short' });
         case 'thisMonth':
+        case 'lastMonth':
           return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
         case 'thisYear':
           return date.toLocaleDateString('en-US', { month: 'short' });
-        case 'default':
         default:
           return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
       }
     };
 
-    // Sort points by date to ensure chronological order
-    const sortedPoints = [...selectedSegmentData.points].sort((a, b) => 
-      new Date(a.date).getTime() - new Date(b.date).getTime()
+    const dates = sortedPoints.map(point => formatDateLabel(point.date));
+    const activeUsers = sortedPoints.map(point => point.activeUsers);
+    const predictions = sortedPoints.map(point => point.predictions || 0);
+    const successfulPredictions = sortedPoints.map(point => point.successfulPredictions || 0);
+
+    // Calculate engagement score if available, otherwise use active users
+    const engagementScores = sortedPoints.map(point => 
+      point.engagementScore || point.activeUsers
     );
 
     return {
-      labels: sortedPoints.map((point: EngagementPoint) => formatDateLabel(point.date)),
-      datasets: [
-        {
-          label: getSegmentDisplayName(selectedSegment),
-          data: sortedPoints.map((point: EngagementPoint) => point.activeUsers),
-          fill: true,
-          tension: 0.4,
-          borderColor: getSegmentColor(selectedSegment),
-          backgroundColor: getSegmentBackgroundColor(selectedSegment),
-          borderWidth: 3,
-          pointBackgroundColor: getSegmentColor(selectedSegment),
-          pointBorderColor: '#ffffff',
-          pointBorderWidth: 2,
-          pointRadius: 4,
-          pointHoverRadius: 8,
-        },
-      ],
-    };
-  }, [selectedSegmentData, hasError, isEmpty, selectedSegment, localTimeRange]);
-
-  const options: ChartOptions<"line"> = {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: { 
-      legend: { 
-        display: true,
-        position: 'top',
-        labels: {
-          usePointStyle: true,
-          padding: 20,
-          font: {
-            size: 12
-          }
-        }
-      },
       tooltip: {
-        mode: 'index',
-        intersect: false,
+        trigger: 'axis',
         backgroundColor: 'rgba(255, 255, 255, 0.95)',
-        titleColor: '#333',
-        bodyColor: '#666',
-        borderColor: 'rgba(0, 0, 0, 0.1)',
+        borderColor: '#ddd',
         borderWidth: 1,
-        padding: 12,
-        callbacks: {
-          title: (context) => {
-            if (selectedSegmentData?.points?.[context[0].dataIndex]?.date) {
-              const pointDate = selectedSegmentData.points[context[0].dataIndex].date;
-              const date = new Date(pointDate);
-              
-              // Different date formats based on time range
-              switch (localTimeRange) {
-                case 'today':
-                  return date.toLocaleDateString('en-US', { 
-                    weekday: 'long', 
-                    year: 'numeric', 
-                    month: 'long', 
-                    day: 'numeric' 
-                  }) + ' ' + date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
-                case 'thisWeek':
-                  return date.toLocaleDateString('en-US', { 
-                    weekday: 'long', 
-                    year: 'numeric', 
-                    month: 'long', 
-                    day: 'numeric' 
-                  });
-                default:
-                  return date.toLocaleDateString('en-US', { 
-                    year: 'numeric', 
-                    month: 'long', 
-                    day: 'numeric' 
-                  });
-              }
-            }
-            return '';
-          },
-          label: (context) => {
-            const value = context.parsed.y;
-            return `${getSegmentDisplayName(selectedSegment)}: ${value !== null ? value.toLocaleString() : '0'}`;
-          }
-        }
-      }
-    },
-    scales: {
-      y: {
-        beginAtZero: true,
-        grid: {
-          color: 'rgba(0, 0, 0, 0.1)',
+        textStyle: {
+          color: '#333'
         },
-        ticks: {
-          color: 'rgba(0, 0, 0, 0.6)',
-          precision: 0,
-          callback: function(value) {
-            return typeof value === 'number' ? value.toLocaleString() : value;
-          }
-        },
-        title: {
-          display: true,
-          text: 'Active Users',
-          color: 'rgba(0, 0, 0, 0.6)',
-          font: {
-            size: 12
-          }
+        formatter: (params: TooltipParams[] | TooltipParams) => {
+          // Handle both array and single parameter cases
+          const tooltipParams = Array.isArray(params) ? params : [params];
+          const dataIndex = tooltipParams[0]?.dataIndex ?? 0;
+          
+          const point = sortedPoints[dataIndex];
+          if (!point) return '';
+
+          let html = `<div style="font-weight: 600; margin-bottom: 8px;">${new Date(point.date).toLocaleDateString('en-US', { 
+            weekday: 'long', 
+            year: 'numeric', 
+            month: 'long', 
+            day: 'numeric' 
+          })}</div>`;
+          
+          tooltipParams.forEach((param: TooltipParams) => {
+            const value = typeof param.value === 'number' ? param.value.toLocaleString() : '0';
+            html += `
+              <div style="display: flex; align-items: center; margin: 4px 0;">
+                <span style="display: inline-block; width: 10px; height: 10px; background: ${param.color}; border-radius: 50%; margin-right: 8px;"></span>
+                <span style="flex: 1;">${param.seriesName}:</span>
+                <span style="font-weight: 600; margin-left: 8px;">${value}</span>
+              </div>
+            `;
+          });
+          
+          return html;
         }
       },
-      x: {
-        grid: {
-          color: 'rgba(0, 0, 0, 0.1)',
+      grid: {
+        left: '3%',
+        right: '4%',
+        bottom: '12%',
+        top: '10%',
+        containLabel: true
+      },
+      xAxis: {
+        type: 'category',
+        boundaryGap: false,
+        data: dates,
+        axisLine: {
+          lineStyle: {
+            color: '#ccc'
+          }
         },
-        ticks: {
-          color: 'rgba(0, 0, 0, 0.6)',
-          maxTicksLimit: localTimeRange === 'today' ? 12 : 8
+        axisLabel: {
+          color: '#666',
+          fontSize: 11
         }
-      }
-    },
-    interaction: {
-      mode: 'nearest',
-      axis: 'x',
-      intersect: false
-    },
-  };
+      },
+      yAxis: [
+        {
+          type: 'value',
+          axisLine: {
+            show: true,
+            lineStyle: {
+              color: '#ccc'
+            }
+          },
+          axisLabel: {
+            color: '#666',
+            formatter: '{value}'
+          },
+          splitLine: {
+            lineStyle: {
+              color: '#f0f0f0',
+              type: 'dashed'
+            }
+          }
+        },
+        {
+          type: 'value',
+          position: 'right',
+          axisLine: {
+            show: true,
+            lineStyle: {
+              color: '#ccc'
+            }
+          },
+          axisLabel: {
+            color: '#666',
+            formatter: '{value}'
+          },
+          splitLine: {
+            show: false
+          }
+        }
+      ],
+      series: [
+        {
+          name: 'Active Users',
+          type: 'line',
+          data: activeUsers,
+          smooth: true,
+          symbol: 'circle',
+          symbolSize: 6,
+          lineStyle: {
+            width: 3,
+            color: '#42A605'
+          },
+          areaStyle: {
+            color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+              { offset: 0, color: 'rgba(66, 166, 5, 0.1)' },
+              { offset: 1, color: 'rgba(255, 255, 255, 0)' }
+            ])
+          },
+          emphasis: {
+            focus: 'series',
+            itemStyle: {
+              borderColor: '#fff',
+              borderWidth: 2
+            }
+          }
+        },
+        {
+          name: 'Predictions Made',
+          type: 'line',
+          data: predictions,
+          smooth: true,
+          symbol: 'circle',
+          symbolSize: 6,
+          lineStyle: {
+            width: 2,
+            color: '#ff6b35'
+          },
+          emphasis: {
+            focus: 'series'
+          }
+        },
+        {
+          name: 'Successful Predictions',
+          type: 'line',
+          data: successfulPredictions,
+          smooth: true,
+          symbol: 'circle',
+          symbolSize: 6,
+          lineStyle: {
+            width: 2,
+            color: '#00b894'
+          },
+          emphasis: {
+            focus: 'series'
+          }
+        },
+        {
+          name: 'Engagement Score',
+          type: 'line',
+          yAxisIndex: 1,
+          data: engagementScores,
+          smooth: true,
+          symbol: 'circle',
+          symbolSize: 6,
+          lineStyle: {
+            width: 2,
+            type: 'dashed',
+            color: '#a29bfe'
+          },
+          emphasis: {
+            focus: 'series'
+          }
+        }
+      ],
+      dataZoom: [
+        {
+          type: 'inside',
+          start: 0,
+          end: 100
+        },
+        {
+          type: 'slider',
+          show: true,
+          bottom: '2%',
+          height: 20,
+          backgroundColor: '#f8f9fa',
+          borderColor: '#e9ecef',
+          textStyle: {
+            color: '#666'
+          }
+        }
+      ]
+    };
+  }, [engagementData, hasError, isEmpty, localTimeRange]);
 
   if (isLoading) {
     return (
-      <Card sx={{ mb: 3 }}>
+      <Card sx={{ mb: 3, boxShadow: 2 }}>
         <CardContent>
           <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
             <Typography variant="h6" fontWeight={600}>
-              User Engagement
+              Sports Prediction Engagement
             </Typography>
             <Box display="flex" gap={2}>
               <FormControl size="small" sx={{ minWidth: 140 }}>
@@ -452,26 +458,12 @@ export default function UserEngagementChart({ refreshTrigger, globalTimeRange = 
                   <MenuItem value="thisYear">This Year</MenuItem>
                 </Select>
               </FormControl>
-              <FormControl size="small" sx={{ minWidth: 140 }}>
-                <InputLabel>User Segment</InputLabel>
-                <Select
-                  value={selectedSegment}
-                  label="User Segment"
-                  onChange={handleSegmentChange}
-                >
-                  {availableSegments.map(segment => (
-                    <MenuItem key={segment.segment} value={segment.segment}>
-                      {getSegmentDisplayName(segment.segment)}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
             </Box>
           </Box>
           <LoadingState
             variant="text"
-            message="Loading engagement chart..."
-            height={300}
+            message="Loading engagement analytics..."
+            height={400}
           />
         </CardContent>
       </Card>
@@ -479,12 +471,17 @@ export default function UserEngagementChart({ refreshTrigger, globalTimeRange = 
   }
 
   return (
-    <Card sx={{ mb: 3 }}>
+    <Card sx={{ mb: 3, boxShadow: 2 }}>
       <CardContent>
-        <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
-          <Typography variant="h6" fontWeight={600}>
-            User Engagement - {getSegmentDisplayName(selectedSegment)}
-          </Typography>
+        <Box display="flex" justifyContent="space-between" alignItems="flex-start" mb={2}>
+          <Box>
+            <Typography variant="h6" fontWeight={600} gutterBottom>
+              Sports Prediction Engagement
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              Track user activity, predictions, and engagement over time
+            </Typography>
+          </Box>
           
           <Box display="flex" gap={2}>
             <FormControl size="small" sx={{ minWidth: 140 }}>
@@ -502,42 +499,72 @@ export default function UserEngagementChart({ refreshTrigger, globalTimeRange = 
                 <MenuItem value="thisYear">This Year</MenuItem>
               </Select>
             </FormControl>
-            <FormControl size="small" sx={{ minWidth: 140 }}>
-              <InputLabel>User Segment</InputLabel>
-              <Select
-                value={selectedSegment}
-                label="User Segment"
-                onChange={handleSegmentChange}
-              >
-                {availableSegments.map(segment => (
-                  <MenuItem key={segment.segment} value={segment.segment}>
-                    {getSegmentDisplayName(segment.segment)}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
           </Box>
         </Box>
 
-        <Box sx={{ height: 300 }}>
+        <Box sx={{ height: 400 }}>
           {hasError ? (
             <ErrorChartState />
           ) : isEmpty ? (
             <EmptyChartState />
           ) : (
-            <Line data={chartData} options={options} />
+            <ReactECharts
+              ref={chartRef}
+              option={chartOption}
+              style={{ height: '100%', width: '100%' }}
+              opts={{ renderer: 'svg' }}
+            />
           )}
         </Box>
 
-        {/* Chart Summary */}
-        {!hasError && !isEmpty && selectedSegmentData && (
-          <Box sx={{ mt: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <Typography variant="body2" color="text.secondary">
-              Showing {selectedSegmentData.points.length} data points
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              Total: {selectedSegmentData.points.reduce((sum, point) => sum + point.activeUsers, 0).toLocaleString()} users
-            </Typography>
+        {/* Enhanced Summary Stats */}
+        {!hasError && !isEmpty && engagementData?.data && (
+          <Box sx={{ 
+            mt: 3, 
+            p: 2, 
+            backgroundColor: 'grey.50', 
+            borderRadius: 1,
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            flexWrap: 'wrap',
+            gap: 2
+          }}>
+            <Box textAlign="center">
+              <Typography variant="h6" color="primary.main" fontWeight={600}>
+                {engagementData.data.reduce((sum, point) => sum + point.activeUsers, 0).toLocaleString()}
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Total Active Users
+              </Typography>
+            </Box>
+            <Box textAlign="center">
+              <Typography variant="h6" color="success.main" fontWeight={600}>
+                {engagementData.data.reduce((sum, point) => sum + (point.predictions || 0), 0).toLocaleString()}
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Predictions Made
+              </Typography>
+            </Box>
+            <Box textAlign="center">
+              <Typography variant="h6" color="info.main" fontWeight={600}>
+                {engagementData.data.length}
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Data Points
+              </Typography>
+            </Box>
+            <Box textAlign="center">
+              <Typography variant="h6" color="warning.main" fontWeight={600}>
+                {engagementData.data.length > 0 
+                  ? Math.round(engagementData.data.reduce((sum, point) => sum + (point.engagementScore || point.activeUsers), 0) / engagementData.data.length)
+                  : 0
+                }
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Avg Engagement
+              </Typography>
+            </Box>
           </Box>
         )}
       </CardContent>

@@ -27,7 +27,6 @@ import { ErrorState } from "@/components/ErrorState";
 
 // Hooks
 import { useUsers } from "@/app/(dashboard)/users/features/hooks/useUsers";
-import { useUserForm } from "@/app/(dashboard)/users/features/hooks/useUserForm";
 
 // Types
 import { User } from "@/app/(dashboard)/users/features/types/user.types";
@@ -75,20 +74,6 @@ const UsersPage: React.FC = () => {
     handleExportUsers,
     refetchUsers,
   } = useUsers();
-
-  const { handleSubmit, isLoading: isSubmitting } = useUserForm({
-    user: selectedUser,
-    onSuccess: () => {
-      setIsUserFormOpen(false);
-      setSelectedUser(null);
-      showSnackbar("User saved successfully", "success");
-      // Trigger refresh after successful form submission
-      handleRefresh();
-    },
-    onError: (error) => {
-      showSnackbar(error, "error");
-    },
-  });
 
   // Memoize selected user IDs for performance
   const selectedUserIds = useMemo(
@@ -347,10 +332,14 @@ const UsersPage: React.FC = () => {
         fullWidth
       >
         <UserForm
-          user={selectedUser}
-          onSubmit={handleSubmit}
+          user={selectedUser || undefined}
+          onSuccess={() => {
+            setIsUserFormOpen(false);
+            setSelectedUser(null);
+            showSnackbar("User saved successfully", "success");
+            handleRefresh();
+          }}
           onCancel={handleCloseUserForm}
-          isLoading={isSubmitting}
         />
       </Dialog>
 

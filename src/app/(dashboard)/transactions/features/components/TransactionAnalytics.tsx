@@ -6,7 +6,9 @@ import {
   CardContent, 
   Typography, 
   CircularProgress,
-  useTheme
+  useTheme,
+  Chip,
+  Alert
 } from '@mui/material';
 import {
   ReceiptLong as TransactionsIcon,
@@ -15,7 +17,8 @@ import {
   Error as FailedIcon,
   AttachMoney as RevenueIcon,
   TrendingUp,
-  TrendingDown
+  TrendingDown,
+  Warning as WarningIcon
 } from '@mui/icons-material';
 import { TransactionsAnalytics as AnalyticsData } from '../types/transaction.types';
 
@@ -36,6 +39,7 @@ interface AnalyticsCardProps {
   change: string;
   loading: boolean;
   config: AnalyticsCardConfig;
+  hasData: boolean;
 }
 
 const AnalyticsCard: React.FC<AnalyticsCardProps> = ({ 
@@ -43,7 +47,8 @@ const AnalyticsCard: React.FC<AnalyticsCardProps> = ({
   value, 
   change, 
   loading, 
-  config 
+  config,
+  hasData
 }) => {
   const theme = useTheme();
   const changeValue = parseFloat(change);
@@ -60,7 +65,9 @@ const AnalyticsCard: React.FC<AnalyticsCardProps> = ({
         '&:hover': {
           transform: 'translateY(-4px)',
           boxShadow: theme.shadows[4]
-        }
+        },
+        position: 'relative',
+        border: !hasData ? `1px dashed ${theme.palette.warning.light}` : 'none'
       }}
     >
       <CardContent>
@@ -72,7 +79,8 @@ const AnalyticsCard: React.FC<AnalyticsCardProps> = ({
               padding: '8px',
               display: 'flex',
               alignItems: 'center',
-              justifyContent: 'center'
+              justifyContent: 'center',
+              opacity: hasData ? 1 : 0.5
             }}
           >
             <Box sx={{ fontSize: 24, color: 'white' }}>
@@ -80,7 +88,7 @@ const AnalyticsCard: React.FC<AnalyticsCardProps> = ({
             </Box>
           </Box>
           
-          {!loading && change && (
+          {!loading && change && hasData && (
             <Box display="flex" alignItems="center">
               {isPositive && (
                 <TrendingUp sx={{ color: '#10B981', mr: 0.5 }} />
@@ -106,25 +114,41 @@ const AnalyticsCard: React.FC<AnalyticsCardProps> = ({
           component="div" 
           sx={{ 
             fontWeight: 700,
-            mb: 1
+            mb: 1,
+            opacity: hasData ? 1 : 0.6
           }}
         >
           {loading ? (
             <CircularProgress size={24} sx={{ color: config.textColor }} />
           ) : (
-            value
+            hasData ? value : 'N/A'
           )}
         </Typography>
 
         <Typography 
           variant="body2" 
           sx={{ 
-            opacity: 0.8,
+            opacity: hasData ? 0.8 : 0.5,
             fontWeight: 500
           }}
         >
           {title}
         </Typography>
+
+        {!hasData && !loading && (
+          <Chip
+            label="No Data"
+            size="small"
+            color="warning"
+            variant="outlined"
+            sx={{
+              position: 'absolute',
+              top: 8,
+              right: 8,
+              fontSize: '0.7rem'
+            }}
+          />
+        )}
       </CardContent>
     </Card>
   );
@@ -149,6 +173,15 @@ export const TransactionAnalytics: React.FC<TransactionAnalyticsProps> = ({
   analytics, 
   isLoading = false 
 }) => {
+  // Check if analytics data is available
+  const hasAnalyticsData = analytics && (
+    analytics.totalCount !== undefined ||
+    analytics.successCount !== undefined ||
+    analytics.pendingCount !== undefined ||
+    analytics.failedCount !== undefined ||
+    analytics.totalRevenue !== undefined
+  );
+
   // Card configuration for different transaction analytics metrics
   const analyticsConfig: Record<string, AnalyticsCardConfig> = {
     totalTransactions: {
@@ -210,35 +243,58 @@ export const TransactionAnalytics: React.FC<TransactionAnalyticsProps> = ({
     totalRevenue: 'revenueChange'
   };
 
+  // Split cards into two rows: 3 on top, 2 on bottom
+  const topRowCards = ['totalTransactions', 'completedTransactions', 'pendingTransactions'];
+  const bottomRowCards = ['failedTransactions', 'totalRevenue'];
+
   return (
     <Box sx={{ mb: 4 }}>
       <Typography variant="h5" component="h2" sx={{ mb: 3, fontWeight: 600 }}>
         Transaction Analytics
       </Typography>
+
+      {/* Warning Alert when no analytics data is available */}
+      {!isLoading && !hasAnalyticsData && (
+        <Alert 
+          severity="warning" 
+          icon={<WarningIcon />}
+          sx={{ 
+            mb: 3,
+            backgroundColor: '#FFFBEB',
+            color: '#92400E',
+            border: '1px solid #F59E0B'
+          }}
+        >
+          No analytics data available for the selected period
+        </Alert>
+      )}
       
-      {/* Using flexbox instead of Grid */}
+      {/* Top Row - 3 Cards */}
       <Box 
         sx={{ 
           display: 'flex',
           flexWrap: 'wrap',
           gap: 3,
-          justifyContent: { xs: 'center', sm: 'space-between' }
+          mb: 3,
+          justifyContent: { xs: 'center', md: 'space-between' }
         }}
       >
-        {Object.entries(analyticsConfig).map(([key, config]) => {
+        {topRowCards.map((key) => {
+          const config = analyticsConfig[key];
           const apiField = fieldMapping[key] || key;
           const changeKey = changeFieldMapping[key] || `${key}Change`;
           
           const value = analytics?.[apiField as keyof AnalyticsData] as number | undefined;
           const changeValue = analytics?.[changeKey as keyof AnalyticsData] as string | undefined || '0';
+          const hasData = value !== undefined && value !== null;
           
           return (
             <Box 
               key={key}
               sx={{ 
-                flex: { xs: '1 1 100%', sm: '1 1 calc(50% - 12px)', md: '1 1 calc(20% - 24px)' },
+                flex: { xs: '1 1 100%', sm: '1 1 calc(50% - 12px)', md: '1 1 calc(33.333% - 16px)' },
                 minWidth: { xs: '100%', sm: '280px', md: 'auto' },
-                maxWidth: { md: '20%' }
+                maxWidth: { md: 'calc(33.333% - 16px)' }
               }}
             >
               <AnalyticsCard
@@ -247,6 +303,47 @@ export const TransactionAnalytics: React.FC<TransactionAnalyticsProps> = ({
                 change={changeValue}
                 loading={isLoading}
                 config={config}
+                hasData={hasData}
+              />
+            </Box>
+          );
+        })}
+      </Box>
+
+      {/* Bottom Row - 2 Cards */}
+      <Box 
+        sx={{ 
+          display: 'flex',
+          flexWrap: 'wrap',
+          gap: 3,
+          justifyContent: { xs: 'center', md: 'flex-start' }
+        }}
+      >
+        {bottomRowCards.map((key) => {
+          const config = analyticsConfig[key];
+          const apiField = fieldMapping[key] || key;
+          const changeKey = changeFieldMapping[key] || `${key}Change`;
+          
+          const value = analytics?.[apiField as keyof AnalyticsData] as number | undefined;
+          const changeValue = analytics?.[changeKey as keyof AnalyticsData] as string | undefined || '0';
+          const hasData = value !== undefined && value !== null;
+          
+          return (
+            <Box 
+              key={key}
+              sx={{ 
+                flex: { xs: '1 1 100%', sm: '1 1 calc(50% - 12px)', md: '1 1 calc(50% - 12px)' },
+                minWidth: { xs: '100%', sm: '280px', md: 'auto' },
+                maxWidth: { md: 'calc(50% - 12px)' }
+              }}
+            >
+              <AnalyticsCard
+                title={config.title}
+                value={config.format(value)}
+                change={changeValue}
+                loading={isLoading}
+                config={config}
+                hasData={hasData}
               />
             </Box>
           );
@@ -262,14 +359,7 @@ export const TransactionAnalytics: React.FC<TransactionAnalyticsProps> = ({
         </Box>
       )}
 
-      {!isLoading && !analytics && (
-        <Box display="flex" justifyContent="center" alignItems="center" py={4}>
-          <Typography variant="body1" color="text.secondary">
-            No analytics data available
-          </Typography>
-        </Box>
-      )}
+     
     </Box>
   );
 };
-

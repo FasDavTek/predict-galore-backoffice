@@ -6,7 +6,6 @@ import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import SportsScoreIcon from "@mui/icons-material/SportsScore";
 import Link from "next/link";
 import { motion } from "framer-motion";
-import Image from "next/image";
 import { useState, useEffect } from "react";
 
 interface Position {
@@ -16,19 +15,51 @@ interface Position {
 
 export default function NotFound() {
   const [shapePositions, setShapePositions] = useState<Position[]>([]);
+  const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
-    // This only runs on the client
-    setShapePositions(
-      [...Array(12)].map(() => ({
+    // Mark that we're on the client
+    setIsClient(true);
+    
+    // Generate positions only on client side
+    const generatePositions = () => {
+      return [...Array(12)].map(() => ({
         left: `${Math.random() * 100}%`,
         top: `${Math.random() * 100}%`,
-      }))
-    );
+      }));
+    };
+
+    // Use requestAnimationFrame to avoid synchronous state updates in effect
+    const frameId = requestAnimationFrame(() => {
+      setShapePositions(generatePositions());
+    });
+
+    return () => {
+      cancelAnimationFrame(frameId);
+    };
   }, []);
 
+  // Predefined positions for SSR/initial render to avoid layout shift
+  const predefinedPositions = [
+    { left: "10%", top: "20%" },
+    { left: "80%", top: "30%" },
+    { left: "30%", top: "70%" },
+    { left: "60%", top: "10%" },
+    { left: "20%", top: "50%" },
+    { left: "70%", top: "80%" },
+    { left: "40%", top: "25%" },
+    { left: "90%", top: "60%" },
+    { left: "15%", top: "85%" },
+    { left: "75%", top: "40%" },
+    { left: "50%", top: "90%" },
+    { left: "25%", top: "15%" },
+  ];
+
+  // Use client-generated positions or fallback to predefined ones
+  const positions = isClient ? shapePositions : predefinedPositions;
+
   return (
-    <Box className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-green-50 via-white to-blue-50 dark:from-gray-900 dark:via-gray-800 dark:to-green-900 px-4 text-center space-y-8 relative overflow-hidden">
+    <Box className="flex flex-col items-center justify-center min-h-screen bg-linear-to-br from-green-50 via-white to-blue-50 dark:from-gray-900 dark:via-gray-800 dark:to-green-900 px-4 text-center space-y-8 relative overflow-hidden">
       
       {/* Background Decorative Elements */}
       <motion.div
@@ -38,7 +69,7 @@ export default function NotFound() {
         transition={{ duration: 0.8 }}
       >
         {/* Floating shapes */}
-        {shapePositions.map((position, i) => (
+        {positions.map((position, i) => (
           <motion.div
             key={i}
             className="absolute w-8 h-8 border-2 border-green-200 dark:border-green-800 rounded-full"
@@ -82,7 +113,7 @@ export default function NotFound() {
           
           {/* Glow Effect */}
           <motion.div
-            className="absolute inset-0 bg-gradient-to-r from-green-500 to-blue-500 blur-xl opacity-20 -z-10"
+            className="absolute inset-0 bg-linear-to-r from-green-500 to-blue-500 blur-xl opacity-20 -z-10"
             animate={{ 
               scale: [1, 1.1, 1],
               opacity: [0.2, 0.3, 0.2]

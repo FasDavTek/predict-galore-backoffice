@@ -134,30 +134,15 @@ const AnalyticsCard: React.FC<AnalyticsCardProps> = ({
   
   if (loading) {
     return (
-      <Card sx={{ 
-        border: 'none', 
-        boxShadow: 'none', 
-        height: '140px',
-        borderRadius: 2
-      }}>
-        <CardContent sx={{ p: 3, height: '100%' }}>
-          <Box sx={{ 
-            display: 'flex', 
-            justifyContent: 'space-between', 
-            alignItems: 'flex-start',
-            height: '100%'
-          }}>
+      <Card sx={{ border: 'none', boxShadow: 'none', height: '140px' }}>
+        <CardContent sx={{ p: 3 }}>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
             <Box sx={{ flex: 1 }}>
-              <Skeleton variant="text" width="70%" height={20} sx={{ mb: 2 }} />
-              <Skeleton variant="text" width="90%" height={32} sx={{ mb: 2 }} />
-              <Skeleton variant="text" width="60%" height={18} />
+              <Skeleton variant="text" width="60%" height={24} />
+              <Skeleton variant="text" width="80%" height={32} sx={{ my: 1 }} />
+              <Skeleton variant="text" width="40%" height={20} />
             </Box>
-            <Skeleton 
-              variant="circular" 
-              width={48} 
-              height={48} 
-              sx={{ flexShrink: 0 }}
-            />
+            <Skeleton variant="circular" width={40} height={40} />
           </Box>
         </CardContent>
       </Card>
@@ -169,127 +154,80 @@ const AnalyticsCard: React.FC<AnalyticsCardProps> = ({
       border: 'none',
       backgroundColor: config.bgColor,
       boxShadow: 'none',
-      borderRadius: 2,
-      height: '140px',
       transition: 'all 0.2s ease-in-out',
       '&:hover': {
         transform: 'translateY(-2px)',
-        boxShadow: '0 8px 24px rgba(0, 0, 0, 0.12)'
+        boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)'
       }
     }}>
-      <CardContent sx={{ 
-        p: 3, 
-        height: '100%',
-        display: 'flex',
-        flexDirection: 'column',
-        justifyContent: 'space-between'
-      }}>
-        {/* Header Section */}
-        <Box sx={{ 
-          display: 'flex', 
-          justifyContent: 'space-between', 
-          alignItems: 'flex-start',
-          mb: 2
-        }}>
-          <Typography sx={{ 
-            color: config.textColor, 
-            fontSize: '0.875rem', 
-            fontWeight: 600, 
-            opacity: 0.9,
-            textTransform: 'uppercase',
-            letterSpacing: '0.5px'
-          }}>
-            {title}
-          </Typography>
+      <CardContent sx={{ p: 3 }}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+          <Box sx={{ flex: 1 }}>
+            <Typography sx={{ 
+              color: config.textColor, 
+              fontSize: '0.875rem', 
+              fontWeight: 500, 
+              mb: 1,
+              opacity: 0.9
+            }}>
+              {title}
+            </Typography>
+            
+            <Typography variant="h5" sx={{ 
+              color: config.textColor, 
+              mb: 2, 
+              fontWeight: 600,
+              fontSize: { xs: '1.5rem', md: '1rem' }
+            }}>
+              {value}
+            </Typography>
+            
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              {isPositive ? (
+                <ArrowUpIcon sx={{ 
+                  color: '#3C9705',
+                  width: 16, 
+                  height: 16 
+                }} />
+              ) : (
+                <ArrowDownIcon sx={{ 
+                  color: '#D92D20',
+                  width: 16, 
+                  height: 16 
+                }} />
+              )}
+              <Typography sx={{ 
+                color: isPositive ? '#3C9705' : '#D92D20',
+                fontSize: '0.875rem', 
+                fontWeight: 500 
+              }}>
+                {change}%
+              </Typography>
+              <Typography sx={{ 
+                color: config.textColor, 
+                fontSize: '0.75rem', 
+                fontWeight: 500,
+                opacity: 0.8
+              }}>
+                vs last period
+              </Typography>
+            </Box>
+          </Box>
           
-          {/* Icon Container */}
           <Box sx={{ 
-            bgcolor: `${config.iconColor}15`,
-            width: 48,
-            height: 48,
-            borderRadius: '12px',
+            bgcolor: `${config.iconColor}20`,
+            width: 40,
+            height: 40,
+            borderRadius: '20px',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             flexShrink: 0,
-            border: `1px solid ${config.iconColor}20`
+            ml: 2
           }}>
-            <Box sx={{ 
-              color: config.iconColor, 
-              fontSize: '1.5rem',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center'
-            }}>
+            <Box sx={{ color: config.iconColor, fontSize: '1.25rem' }}>
               {config.icon}
             </Box>
-          </Box>
-        </Box>
-
-        {/* Main Content */}
-        <Box>
-          {/* Value */}
-          <Typography variant="h4" sx={{ 
-            color: config.textColor, 
-            fontWeight: 700,
-            fontSize: { xs: '1.75rem', sm: '2rem' },
-            lineHeight: 1.2,
-            mb: 1
-          }}>
-            {value}
-          </Typography>
-          
-          {/* Change Indicator */}
-          <Box sx={{ 
-            display: 'flex', 
-            alignItems: 'center', 
-            gap: 1 
-          }}>
-            {/* Trend Icon with Background */}
-            <Box sx={{
-              width: 24,
-              height: 24,
-              borderRadius: '6px',
-              backgroundColor: isPositive ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center'
-            }}>
-              {isPositive ? (
-                <ArrowUpIcon sx={{ 
-                  color: '#10B981',
-                  width: 14, 
-                  height: 14 
-                }} />
-              ) : (
-                <ArrowDownIcon sx={{ 
-                  color: '#EF4444',
-                  width: 14, 
-                  height: 14 
-                }} />
-              )}
-            </Box>
-
-            {/* Change Percentage */}
-            <Typography sx={{ 
-              color: isPositive ? '#10B981' : '#EF4444',
-              fontSize: '0.875rem', 
-              fontWeight: 600,
-              lineHeight: 1
-            }}>
-              {change}%
-            </Typography>
-
-            {/* Comparison Text */}
-            <Typography sx={{ 
-              color: config.textColor, 
-              fontSize: '0.75rem', 
-              fontWeight: 500,
-              opacity: 0.7,
-              lineHeight: 1
-            }}>
-              vs previous
-            </Typography>
           </Box>
         </Box>
       </CardContent>
@@ -297,7 +235,7 @@ const AnalyticsCard: React.FC<AnalyticsCardProps> = ({
   );
 };
 
-const ErrorAnalyticsCard: React.FC = () => {
+const ErrorAnalyticsCard: React.FC<{ onRetry?: () => void }> = ({ onRetry }) => {
   return (
     <Card sx={{ 
       border: 'none',
@@ -316,8 +254,18 @@ const ErrorAnalyticsCard: React.FC = () => {
       }}>
         <WarningIcon sx={{ color: '#DC2626', fontSize: 32, mb: 1 }} />
         <Typography variant="h6" color="#DC2626" gutterBottom>
-          Unable to load analytics data
+          Error: Unable to load analytics data
         </Typography>
+        {onRetry && (
+          <Typography 
+            variant="body2" 
+            color="#DC2626" 
+            sx={{ cursor: 'pointer', textDecoration: 'underline' }}
+            onClick={onRetry}
+          >
+            Click to retry
+          </Typography>
+        )}
       </CardContent>
     </Card>
   );
@@ -405,16 +353,16 @@ export default function DashboardAnalytics({ timeRange, refreshTrigger }: Dashbo
   // Calculate query parameters based on timeRange
   const queryParams = timeRange ? calculateDateRange(timeRange) : undefined;
   
-  const { data, isLoading, error, refetch } = useGetDashboardSummaryQuery(queryParams);
+  const { data, isLoading, error, refetch } = useGetDashboardSummaryQuery(queryParams, {
+    refetchOnMountOrArgChange: true,
+  });
   
   const hasError = !!error;
   const isEmpty = !data?.data;
 
   // Refetch when refreshTrigger changes
   React.useEffect(() => {
-    if (refreshTrigger && refreshTrigger > 0) {
-      refetch();
-    }
+    refetch();
   }, [refreshTrigger, refetch]);
 
   // Analytics configuration based on the actual API response
@@ -455,7 +403,7 @@ export default function DashboardAnalytics({ timeRange, refreshTrigger }: Dashbo
     {
       title: 'Total Revenue',
       bgColor: '#EFF6FF',
-       textColor: '#1E40AF',
+      textColor: '#1E40AF',
       iconColor: '#3B82F6',
       icon: <RevenueIcon />,
       getValue: (data) => data?.payments?.totalAmountCurrent,
@@ -469,7 +417,7 @@ export default function DashboardAnalytics({ timeRange, refreshTrigger }: Dashbo
   if (hasError) {
     return (
       <Box sx={{ mb: 4 }}>
-        <ErrorAnalyticsCard  />
+        <ErrorAnalyticsCard onRetry={refetch} />
       </Box>
     );
   }
@@ -485,26 +433,26 @@ export default function DashboardAnalytics({ timeRange, refreshTrigger }: Dashbo
 
   return (
     <Box sx={{ mb: 4 }}>
-        <Box
-          sx={{
-            display: 'flex',
-            flexDirection: 'row',
-            flexWrap: 'wrap',
-            gap: 2,
-            '& > *': {
-              flex: {
-                xs: '1 1 100%',
-                sm: '1 1 calc(50% - 16px)',
-                md: '1 1 calc(50% - 16px)',
-              },
-              minWidth: {
-                xs: '100%',
-                sm: '200px',
-                md: '220px',
-              },
+      <Box
+        sx={{
+          display: 'flex',
+          flexDirection: 'row',
+          flexWrap: 'wrap',
+          gap: 2,
+          '& > *': {
+            flex: {
+              xs: '1 1 100%',
+              sm: '1 1 calc(50% - 16px)',
+              md: '1 1 calc(50% - 16px)',
             },
-          }}
-        >
+            minWidth: {
+              xs: '100%',
+              sm: '200px',
+              md: '220px',
+            },
+          },
+        }}
+      >
         {analyticsConfig.map((config) => {
           // Safely cast the data to the expected type
           const apiData = data?.data as unknown as DashboardSummaryResponse | undefined;

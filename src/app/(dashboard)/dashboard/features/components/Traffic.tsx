@@ -21,7 +21,7 @@ import {
   Warning as WarningIcon,
 } from "@mui/icons-material";
 import { useGetTrafficQuery } from "../api/dashboardApi";
-import LoadingState from "../../../../../components/LoadingState";
+import LoadingState from "../../../../../shared/components/LoadingState";
 
 // Use the actual dimension values from the API (0, 1, 2)
 type TrafficDimension = 0 | 1 | 2;

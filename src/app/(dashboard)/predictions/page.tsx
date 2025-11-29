@@ -1,3 +1,4 @@
+// src/app/(dashboard)/predictions/page.tsx
 "use client";
 
 import React, { useState, useMemo } from "react";
@@ -7,9 +8,7 @@ import {
   Snackbar,
   Alert,
   Skeleton,
-  Button,
 } from "@mui/material";
-import { ArrowBack as ArrowBackIcon } from "@mui/icons-material";
 
 // Components
 import { PredictionsTable } from "./features/components/PredictionsTable";
@@ -25,8 +24,8 @@ import PredictionsPageHeader, {
 } from "./features/components/PredictionsPageHeader";
 
 // Global State Components
-import { EmptyState } from "@/components/EmptyState";
-import { ErrorState } from "@/components/ErrorState";
+import { EmptyState } from "@/shared/components/EmptyState";
+import { ErrorState } from "@/shared/components/ErrorState";
 
 // Hooks
 import { usePredictions } from "@/app/(dashboard)/predictions/features/hooks/usePredictions";
@@ -37,8 +36,9 @@ import { Prediction } from "@/app/(dashboard)/predictions/features/types/predict
 // Auth state selectors
 import { RootState } from "../../../store/store";
 import { useSelector } from "react-redux";
+import withAuth from "@/hoc/withAuth";
 
-const PredictionsPage: React.FC = () => {
+function PredictionsPage() {
   const [showPredictionForm, setShowPredictionForm] = useState(false);
   const [snackbar, setSnackbar] = useState<{
     open: boolean;
@@ -175,16 +175,6 @@ const PredictionsPage: React.FC = () => {
   if (showPredictionForm) {
     return (
       <Container maxWidth="lg" sx={{ py: 4 }}>
-        <Box sx={{ mb: 3 }}>
-          <Button
-            startIcon={<ArrowBackIcon />}
-            onClick={handleFormCancel}
-            variant="outlined"
-            sx={{ mb: 2 }}
-          >
-            Back to Predictions
-          </Button>
-        </Box>
         <PredictionForm
           onSuccess={handleFormSuccess}
           onCancel={handleFormCancel}
@@ -365,6 +355,7 @@ const PredictionsPage: React.FC = () => {
       </Snackbar>
     </Container>
   );
-};
+}
 
-export default PredictionsPage;
+// Wrap with authentication HOC
+export default withAuth(PredictionsPage);

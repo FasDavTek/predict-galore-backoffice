@@ -93,7 +93,7 @@ const AnalyticsCard: React.FC<AnalyticsCardProps> = ({
               color: config.textColor, 
               mb: 2, 
               fontWeight: 600,
-              fontSize: { xs: '1.5rem', md: '1rem' }
+              fontSize: { xs: '1rem', md: '1rem' }
             }}>
               {value}
             </Typography>

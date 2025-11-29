@@ -19,7 +19,7 @@ import {
   Warning as WarningIcon,
 } from '@mui/icons-material';
 import { Transaction, TransactionStatus, PaymentMethod } from '../types/transaction.types';
-import { TableLoadingState } from '@/components/LoadingState';
+import { TableLoadingState } from '@/shared/components/LoadingState';
 import { formatCurrency, formatPaymentMethod, formatTransactionStatus } from '../utils/transactionTransformers';
 
 interface TransactionsTableProps {

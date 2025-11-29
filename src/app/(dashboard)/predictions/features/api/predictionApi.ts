@@ -21,8 +21,6 @@ import {
   CreatePredictionPayload,
 } from "../types/prediction.types";
 
-import { getFormattedFutureDate } from "../utils/dateUtils";
-
 const BASE_URL = "https://apidev.predictgalore.com";
 
 interface AuthState {
@@ -45,7 +43,7 @@ const loggingBaseQuery: BaseQueryFn<
   const { url, method = "GET" } = args;
 
   // Only log in development
-  if (process.env.NODE_ENV === 'development') {
+  if (process.env.NODE_ENV === "development") {
     console.group(`🚀 API: ${method} ${url}`);
   }
 
@@ -70,23 +68,23 @@ const loggingBaseQuery: BaseQueryFn<
       };
 
       // Don't log 404 errors for prediction-types to reduce noise
-      if (url !== '/api/v1/prediction-types' || result.error.status !== 404) {
+      if (url !== "/api/v1/prediction-types" || result.error.status !== 404) {
         console.error(`❌ API Error (${method} ${url}):`, {
           status: result.error.status,
           data: result.error.data,
-          originalStatus: errorWithOriginalStatus.originalStatus
+          originalStatus: errorWithOriginalStatus.originalStatus,
         });
       }
     }
 
-    if (process.env.NODE_ENV === 'development') {
+    if (process.env.NODE_ENV === "development") {
       console.groupEnd();
     }
     return result;
   } catch (error) {
     console.error(`💥 Fetch Error (${method} ${url}):`, error);
-    
-    if (process.env.NODE_ENV === 'development') {
+
+    if (process.env.NODE_ENV === "development") {
       console.groupEnd();
     }
 
@@ -281,94 +279,70 @@ export const predictionApi = createApi({
       providesTags: ["Leagues"],
     }),
 
-    getLeaguesWithFixtures: builder.query<
-      LeaguesApiResponse,
-      { sportId: number }
-    >({
-      query: ({ sportId }) => ({
-        url: "/api/v1/leagues",
-        params: { sportId },
-      }),
-      transformResponse: async (
-        response: LeaguesApiResponse,
-        meta: TransformResponseMeta | undefined
-      ) => {
-        if (!response.data || !Array.isArray(response.data)) {
-          return response;
-        }
+    
+getUpcomingFixtures: builder.query<
+  FixturesApiResponse,
+  { 
+    leagueId: number; 
+    from?: string; 
+    to?: string;
+    page?: number;
+    pageSize?: number;
+  }
+>({
+  query: ({ leagueId, from, to, page, pageSize }) => {
+    const params: Record<string, string | number> = {
+      leagueId: leagueId,
+    };
+    
+    if (from) params.from = from;
+    if (to) params.to = to;
+    if (page) params.page = page;
+    if (pageSize) params.pageSize = pageSize;
 
-        // Remove duplicates first
-        const uniqueLeaguesMap = new Map();
-        response.data.forEach((league) => {
-          if (!uniqueLeaguesMap.has(league.name)) {
-            uniqueLeaguesMap.set(league.name, league);
-          }
-        });
-        const uniqueLeagues = Array.from(uniqueLeaguesMap.values());
-
-        // Check which leagues have fixtures
-        const leaguesWithFixtures = [];
-        const tomorrow = getFormattedFutureDate(1);
-
-        // Check fixtures for each league (limit to first 10 for performance)
-        const leaguesToCheck = uniqueLeagues.slice(0, 10);
-
-        for (const league of leaguesToCheck) {
-          try {
-            const fixtureUrl = `${BASE_URL}/api/v1/fixtures/upcoming?leagueId=${league.id}&from=${tomorrow}`;
-
-            const fixtureResponse = await fetch(fixtureUrl, {
-              headers: {
-                authorization:
-                  meta?.request?.headers.get("authorization") || "",
-                "Content-Type": "application/json",
-              },
-            });
-
-            if (fixtureResponse.ok) {
-              const fixtureData = await fixtureResponse.json();
-              if (fixtureData.data && fixtureData.data.length > 0) {
-                leaguesWithFixtures.push({
-                  ...league,
-                  fixtureCount: fixtureData.data.length,
-                });
-              }
-            }
-          } catch {
-            // Silently continue if fixture check fails
-            continue;
+    return {
+      url: `/api/v1/fixtures/upcoming`,
+      params,
+    };
+  },
+  forceRefetch: ({ currentArg, previousArg }) => {
+    return currentArg?.leagueId !== previousArg?.leagueId || 
+           currentArg?.from !== previousArg?.from;
+  },
+  transformResponse: (response: FixturesApiResponse) => {
+    // Ensure data is always an array, even if the API returns different structure
+    let fixturesData = [];
+    
+    if (response.data) {
+      if (Array.isArray(response.data)) {
+        fixturesData = response.data;
+      } else if (response.data && typeof response.data === 'object') {
+        // Handle different possible response structures with proper type checking
+        const data = response.data as Record<string, unknown>;
+        
+        if ('items' in data && Array.isArray(data.items)) {
+          // Handle paginated response
+          fixturesData = data.items;
+        } else if ('fixtures' in data && Array.isArray(data.fixtures)) {
+          // Handle nested fixtures property
+          fixturesData = data.fixtures;
+        } else {
+          // Try to find any array property in the response data
+          const arrayProperties = Object.values(data).filter(Array.isArray);
+          if (arrayProperties.length > 0) {
+            fixturesData = arrayProperties[0];
           }
         }
+      }
+    }
 
-        return {
-          ...response,
-          data: leaguesWithFixtures,
-        };
-      },
-      providesTags: ["Leagues"],
-    }),
-
-    getUpcomingFixtures: builder.query<
-      FixturesApiResponse,
-      { leagueId: number; from?: string }
-    >({
-      query: ({ leagueId, from }) => {
-        const fromDate = from || getFormattedFutureDate(1);
-
-        return {
-          url: "/api/v1/fixtures/upcoming",
-          params: { leagueId, from: fromDate },
-        };
-      },
-      forceRefetch: ({ currentArg, previousArg }) => {
-        return currentArg?.leagueId !== previousArg?.leagueId;
-      },
-      transformResponse: (response: FixturesApiResponse) => ({
-        ...response,
-        data: response.data || [],
-      }),
-      providesTags: ["Fixtures"],
-    }),
+    return {
+      ...response,
+      data: fixturesData,
+    };
+  },
+  providesTags: ["Fixtures"],
+}),
 
     getPredictionTypes: builder.query<PredictionTypesApiResponse, void>({
       query: () => ({
@@ -376,7 +350,7 @@ export const predictionApi = createApi({
       }),
       // Handle 404 gracefully with fallback data
       transformResponse: (
-        response: PredictionTypesApiResponse, 
+        response: PredictionTypesApiResponse,
         meta: TransformResponseMeta | undefined
       ): PredictionTypesApiResponse | PredictionTypesFallbackResponse => {
         if (meta?.response?.status === 404) {
@@ -390,7 +364,7 @@ export const predictionApi = createApi({
               { id: 5, name: "Correct Score", category: "score" },
             ],
             success: true,
-            message: "Using fallback prediction types"
+            message: "Using fallback prediction types",
           };
         }
         return response;
@@ -431,7 +405,6 @@ export const {
   useExportPredictionsMutation,
   useGetSportsQuery,
   useGetLeaguesQuery,
-  useGetLeaguesWithFixturesQuery,
   useGetUpcomingFixturesQuery,
   useGetPredictionTypesQuery,
   useAskHuddleMutation,

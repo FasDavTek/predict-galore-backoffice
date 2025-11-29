@@ -16,7 +16,7 @@ import {
 import { useGetEngagementQuery } from "../api/dashboardApi";
 import * as echarts from 'echarts';
 import ReactECharts from 'echarts-for-react';
-import LoadingState from "../../../../../components/LoadingState";
+import LoadingState from "../../../../../shared/components/LoadingState";
 
 // Define TimeRange type here or import it
 export type TimeRange = 'default' | 'today' | 'thisWeek' | 'thisMonth' | 'lastMonth' | 'thisYear';

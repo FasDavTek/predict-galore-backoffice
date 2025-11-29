@@ -30,7 +30,7 @@ import { AuthCard } from '@/app/(auth)/features/components/AuthCard';
 import { ErrorMessage } from '@/app/(auth)/features/components/ErrorMessage';
 import { PasswordStrengthIndicator } from '../features/components/PasswordStrengthIndicator';
 import { registerFormValidation, RegisterFormData, CountryCode } from '../features/validations/auth';
-import { useAppDispatch } from '@/hooks/redux';
+import { useAppDispatch } from '@/shared/hooks/redux';
 import { useRegisterMutation, useCheckEmailQuery } from '../features/api/authApi';
 import { setToken, setAuthUser, setAuthStatus } from '../features/slices/authSlice';
 import { AuthStatus } from '@/app/(auth)/features/types/authTypes';

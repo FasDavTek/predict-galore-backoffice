@@ -30,9 +30,16 @@ interface ApiError {
 interface AskHuddleProps {
   open: boolean;
   onClose: () => void;
+  disableBackdropClick?: boolean;
+  disableEscapeKeyDown?: boolean;
 }
 
-const AskHuddle: React.FC<AskHuddleProps> = ({ open, onClose }) => {
+export const AskHuddle: React.FC<AskHuddleProps> = ({ 
+  open, 
+  onClose,
+  disableBackdropClick = false,
+  disableEscapeKeyDown = false 
+}) => {
   const [prompt, setPrompt] = useState("");
   const [conversation, setConversation] = useState<HuddleMessage[]>([]);
 
@@ -121,6 +128,17 @@ const AskHuddle: React.FC<AskHuddleProps> = ({ open, onClose }) => {
     return "An error occurred";
   };
 
+  // Handle drawer close with prevention logic
+const handleDrawerClose = (event: object, reason: "backdropClick" | "escapeKeyDown") => {
+    if (reason === "backdropClick" && disableBackdropClick) {
+      return; // Prevent closing on backdrop click
+    }
+    if (reason === "escapeKeyDown" && disableEscapeKeyDown) {
+      return; // Prevent closing on escape key
+    }
+    handleClose();
+  };
+
   // Handle drawer close with state reset
   const handleClose = () => {
     // Reset state synchronously when closing
@@ -133,7 +151,7 @@ const AskHuddle: React.FC<AskHuddleProps> = ({ open, onClose }) => {
     <Drawer
       anchor="right"
       open={open}
-      onClose={handleClose}
+      onClose={handleDrawerClose}
       sx={{
         "& .MuiDrawer-paper": {
           width: 400,
@@ -370,5 +388,3 @@ const AskHuddle: React.FC<AskHuddleProps> = ({ open, onClose }) => {
     </Drawer>
   );
 };
-
-export default AskHuddle;

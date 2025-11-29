@@ -12,6 +12,7 @@ import {
   CircularProgress,
   Link,
   Typography,
+  Alert,
 } from "@mui/material";
 import {
   Person as PersonIcon,
@@ -24,12 +25,12 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import { toast } from "react-toastify";
 import { AuthCard } from "@/app/(auth)/features/components/AuthCard";
-import { ErrorMessage } from "@/app/(auth)/features/components/ErrorMessage";
+// import { ErrorMessage } from "@/app/(auth)/features/components/ErrorMessage";
 import {
   loginFormValidation,
   LoginFormData,
 } from "../features/validations/auth";
-import { useAppDispatch, useAppSelector } from "@/hooks/redux";
+import { useAppDispatch, useAppSelector } from "@/shared/hooks/redux";
 import { useLoginMutation } from "../features/api/authApi";
 import {
   setToken,
@@ -58,7 +59,7 @@ export default function LoginPage() {
 
   const [mounted, setMounted] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const [apiError, setApiError] = useState<ApiError | null>(null);
+  const [apiError, setApiError] = useState<string | null>(null);
 
   const [login, { isLoading: isLoggingIn }] = useLoginMutation();
 
@@ -67,6 +68,7 @@ export default function LoginPage() {
     handleSubmit,
     formState: { errors, isValid },
     setError,
+    clearErrors,
   } = useForm<LoginFormData>({
     resolver: zodResolver(loginFormValidation),
     mode: "onChange",
@@ -88,6 +90,7 @@ export default function LoginPage() {
 
   const onSubmit = async (data: LoginFormData) => {
     setApiError(null);
+    clearErrors("root");
 
     try {
       const result = await login(data).unwrap();
@@ -104,46 +107,101 @@ export default function LoginPage() {
         router.push("/dashboard");
       }
     } catch (error: unknown) {
-      // Improved error handling
-      console.error("Login Error Details:", {
-        error,
-        type: typeof error,
-        stringified: JSON.stringify(error, null, 2),
-      });
-
-      const apiError = error as ApiError;
-      setApiError(apiError);
-
-      // Extract error message from various possible locations
-      const errorMessage =
-        apiError?.data?.message ||
-        apiError?.data?.error ||
-        apiError?.data?.detail ||
-        apiError?.error ||
-        apiError?.message ||
-        "An unexpected error occurred during login";
-
-      // Handle field-specific errors
-      if (apiError.data?.fieldErrors) {
-        Object.entries(apiError.data.fieldErrors).forEach(
-          ([field, message]) => {
-            setError(field as keyof LoginFormData, {
-              type: "server",
-              message: message as string,
-            });
+      // Better error extraction without freezing the UI
+      let errorMessage = "An unexpected error occurred during login";
+      
+      // Safely extract error message without JSON.stringify
+      if (error && typeof error === 'object') {
+        const apiError = error as ApiError;
+        
+        // Extract from nested data object
+        if (apiError.data?.message) {
+          errorMessage = apiError.data.message;
+        } else if (apiError.data?.error) {
+          errorMessage = apiError.data.error;
+        } else if (apiError.data?.detail) {
+          errorMessage = apiError.data.detail;
+        } 
+        // Extract from top-level error object
+        else if (apiError.error) {
+          errorMessage = apiError.error;
+        } else if (apiError.message) {
+          errorMessage = apiError.message;
+        }
+        // Handle string errors
+        else if ('toString' in error) {
+          const errorString = error.toString();
+          if (errorString !== '[object Object]') {
+            errorMessage = errorString;
           }
-        );
-      } else {
-        // Set general error if no field-specific errors
-        setError("root", {
-          type: "server",
-          message: errorMessage,
-        });
+        }
+      } else if (typeof error === 'string') {
+        errorMessage = error;
       }
 
-      // Show toast notification
-      toast.error(errorMessage);
+      // Set the error state for display
+      setApiError(errorMessage);
+
+      // Handle field-specific errors
+      if (error && typeof error === 'object') {
+        const apiError = error as ApiError;
+        if (apiError.data?.fieldErrors) {
+          Object.entries(apiError.data.fieldErrors).forEach(
+            ([field, message]) => {
+              setError(field as keyof LoginFormData, {
+                type: "server",
+                message: message as string,
+              });
+            }
+          );
+        }
+      }
+
+      // Set general error
+      setError("root", {
+        type: "server",
+        message: errorMessage,
+      });
+
+      // Show user-friendly toast notification
+      toast.error(getUserFriendlyErrorMessage(errorMessage));
     }
+  };
+
+  // Convert technical error messages to user-friendly ones
+  const getUserFriendlyErrorMessage = (errorMessage: string): string => {
+    const lowerCaseMessage = errorMessage.toLowerCase();
+    
+    if (lowerCaseMessage.includes('invalid credentials') || 
+        lowerCaseMessage.includes('invalid username') || 
+        lowerCaseMessage.includes('invalid password')) {
+      return "Invalid username or password. Please check your credentials and try again.";
+    }
+    
+    if (lowerCaseMessage.includes('network') || lowerCaseMessage.includes('fetch')) {
+      return "Network error. Please check your internet connection and try again.";
+    }
+    
+    if (lowerCaseMessage.includes('timeout')) {
+      return "Request timed out. Please try again in a moment.";
+    }
+    
+    if (lowerCaseMessage.includes('too many requests')) {
+      return "Too many login attempts. Please wait a few minutes before trying again.";
+    }
+    
+    if (lowerCaseMessage.includes('account') && lowerCaseMessage.includes('locked')) {
+      return "Your account has been temporarily locked due to too many failed attempts. Please try again later or contact support.";
+    }
+    
+    if (lowerCaseMessage.includes('server error') || lowerCaseMessage.includes('500')) {
+      return "Server error. Please try again in a few moments.";
+    }
+    
+    // Return original message if no specific match, but truncate if too long
+    return errorMessage.length > 100 
+      ? `${errorMessage.substring(0, 100)}...` 
+      : errorMessage;
   };
 
   const isLoading = isLoggingIn;
@@ -153,7 +211,16 @@ export default function LoginPage() {
       title="Log In"
       subtitle="Enter your credentials to access your account"
     >
-      {apiError && <ErrorMessage error={apiError} />}
+      {/* Display API error as Alert */}
+      {apiError && (
+        <Alert 
+          severity="error" 
+          sx={{ mb: 2 }}
+          onClose={() => setApiError(null)}
+        >
+          {getUserFriendlyErrorMessage(apiError)}
+        </Alert>
+      )}
 
       <Box
         component="form"
@@ -207,7 +274,7 @@ export default function LoginPage() {
         {/* Display root/server error */}
         {errors.root && (
           <Typography color="error" variant="body2" sx={{ mb: 2 }}>
-            {errors.root.message}
+            {getUserFriendlyErrorMessage(errors.root.message || "")}
           </Typography>
         )}
 

@@ -1,3 +1,4 @@
+// src/app/(dashboard)/users/page.tsx
 "use client";
 
 import React, { useState, useMemo } from "react";
@@ -22,8 +23,8 @@ import { UsersPageLoadingSkeleton } from "@/app/(dashboard)/users/features/compo
 import UsersPageHeader, { TimeRange } from "./features/components/UsersPageHeader";
 
 // Global State Components
-import { EmptyState } from "@/components/EmptyState";
-import { ErrorState } from "@/components/ErrorState";
+import { EmptyState } from "@/shared/components/EmptyState";
+import { ErrorState } from "@/shared/components/ErrorState";
 
 // Hooks
 import { useUsers } from "@/app/(dashboard)/users/features/hooks/useUsers";
@@ -34,8 +35,9 @@ import { User } from "@/app/(dashboard)/users/features/types/user.types";
 // Auth state selectors
 import { RootState } from "../../../store/store";
 import { useSelector } from "react-redux";
+import withAuth from "@/hoc/withAuth";
 
-const UsersPage: React.FC = () => {
+function UsersPage() {
   const [isUserFormOpen, setIsUserFormOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [selectedUsers, setSelectedUsers] = useState<User[]>([]);
@@ -359,6 +361,7 @@ const UsersPage: React.FC = () => {
       </Snackbar>
     </Container>
   );
-};
+}
 
-export default UsersPage;
+// Wrap with authentication HOC
+export default withAuth(UsersPage);

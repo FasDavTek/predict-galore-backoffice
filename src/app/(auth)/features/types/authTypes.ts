@@ -51,8 +51,6 @@ export interface User {
   phoneNumber?: string;
   createdAt?: string; 
   updatedAt?: string; 
-  
-  // Additional properties from API response
   fullName?: string | null;
   mobile?: string;
   adminType?: string | null;

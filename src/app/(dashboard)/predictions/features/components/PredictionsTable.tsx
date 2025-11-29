@@ -27,7 +27,7 @@ import {
   Warning as WarningIcon,
 } from '@mui/icons-material';
 import { Prediction } from '../types/prediction.types';
-import { TableLoadingState } from '@/components/LoadingState';
+import { TableLoadingState } from '@/shared/components/LoadingState';
 import { getStatusColor, getTypeColor, formatProcessingTime } from '../utils/predictionTransformers';
 
 interface PredictionsTableProps {

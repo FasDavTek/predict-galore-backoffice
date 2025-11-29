@@ -55,7 +55,7 @@ export default function GlobalError({
   };
 
   return (
-    <Box className="flex items-center justify-center min-h-screen bg-gradient-to-br from-red-50 via-white to-green-50 dark:from-gray-900 dark:via-gray-800 dark:to-red-900 px-4 relative overflow-hidden">
+    <Box className="flex items-center justify-center min-h-screen bg-linear-to-br from-red-50 via-white to-green-50 dark:from-gray-900 dark:via-gray-800 dark:to-red-900 px-4 relative overflow-hidden">
       
       {/* Background Animated Elements */}
       <motion.div
@@ -312,7 +312,7 @@ export default function GlobalError({
                     <Box className="mt-2 p-3 bg-gray-50 dark:bg-gray-900 rounded-lg overflow-x-auto">
                       <Typography
                         variant="caption"
-                        className="font-mono text-xs whitespace-pre-wrap break-words"
+                        className="font-mono text-xs whitespace-pre-wrap wrap-break-word"
                         component="pre"
                       >
                         <strong>Message:</strong> {error.message}

@@ -305,7 +305,7 @@ export const UserAnalytics: React.FC<UserAnalyticsProps> = ({
             flex: {
               xs: "1 1 100%",
               sm: "1 1 calc(50% - 16px)",
-              md: "1 1 calc(25% - 16px)",
+              md: "1 1 calc(50% - 16px)",
             },
             minWidth: {
               xs: "100%",

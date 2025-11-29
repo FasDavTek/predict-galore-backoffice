@@ -23,7 +23,7 @@ import {
   ChevronRight as ChevronRightIcon,
 } from "@mui/icons-material";
 import { useGetActivityQuery } from "../api/dashboardApi";
-import LoadingState from "../../../../../components/LoadingState";
+import LoadingState from "../../../../../shared/components/LoadingState";
 
 type ActivityLimit = "default" | 5 | 10 | 25 | 50 | 100 | "all";
 

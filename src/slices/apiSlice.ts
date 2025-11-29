@@ -1,6 +1,6 @@
 // src/slices/api/apiSlice.ts - Central API configuration hub
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
-import { RootState } from '../../store/store'; 
+import { RootState } from '../store/store'; 
 
 export const apiSlice = createApi({
   reducerPath: 'api',

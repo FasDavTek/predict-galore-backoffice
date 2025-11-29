@@ -1,5 +1,5 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
-import { AuthState, AuthStatus, User, ApiError } from '@/app/(auth)/features/types/authTypes';
+import { AuthState, AuthStatus, User, } from '@/app/(auth)/features/types/authTypes';
 
 const getInitialToken = (): string | null => {
   if (typeof window === 'undefined') return null;

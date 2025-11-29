@@ -4,11 +4,49 @@
 import { Box, Typography } from "@mui/material";
 import { motion } from "framer-motion";
 import Image from "next/image";
+import { useState, useEffect } from "react";
 
 export default function Loading() {
+  const [floatingShapes, setFloatingShapes] = useState<Array<{left: string; top: string}>>([]);
+  const [isClient, setIsClient] = useState(false);
+
+  useEffect(() => {
+    setIsClient(true);
+    
+    // Generate random positions on client side only
+    const generateShapes = () => {
+      return [...Array(8)].map(() => ({
+        left: `${Math.random() * 100}%`,
+        top: `${Math.random() * 100}%`,
+      }));
+    };
+
+    const frameId = requestAnimationFrame(() => {
+      setFloatingShapes(generateShapes());
+    });
+
+    return () => {
+      cancelAnimationFrame(frameId);
+    };
+  }, []);
+
+  // Predefined positions for SSR/initial render
+  const predefinedShapes = [
+    { left: "20%", top: "30%" },
+    { left: "70%", top: "20%" },
+    { left: "40%", top: "70%" },
+    { left: "80%", top: "60%" },
+    { left: "25%", top: "50%" },
+    { left: "60%", top: "35%" },
+    { left: "35%", top: "15%" },
+    { left: "75%", top: "80%" },
+  ];
+
+  const shapes = isClient ? floatingShapes : predefinedShapes;
+
   return (
     <Box
-      className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-green-50 via-white to-green-100 dark:from-gray-900 dark:via-gray-800 dark:to-green-900 text-center space-y-8"
+      className="flex flex-col items-center justify-center min-h-screen bg-linear-to-br from-green-50 via-white to-green-100 dark:from-gray-900 dark:via-gray-800 dark:to-green-900 text-center space-y-8"
     >
       {/* Main Logo Container */}
       <motion.div
@@ -133,7 +171,7 @@ export default function Loading() {
           transition={{ delay: 1, duration: 0.5 }}
         >
           <motion.div
-            className="h-full bg-gradient-to-r from-green-500 to-green-600 rounded-full"
+            className="h-full bg-linear-to-r from-green-500 to-green-600 rounded-full"
             initial={{ scaleX: 0 }}
             animate={{ scaleX: 1 }}
             transition={{
@@ -168,14 +206,11 @@ export default function Loading() {
         transition={{ delay: 0.3 }}
       >
         {/* Floating shapes */}
-        {[...Array(8)].map((_, i) => (
+        {shapes.map((position, i) => (
           <motion.div
             key={i}
             className="absolute w-6 h-6 border-2 border-green-300 dark:border-green-700 rounded-full"
-            style={{
-              left: `${Math.random() * 100}%`,
-              top: `${Math.random() * 100}%`,
-            }}
+            style={position}
             animate={{
               y: [0, -20, 0],
               opacity: [0.3, 0.7, 0.3],

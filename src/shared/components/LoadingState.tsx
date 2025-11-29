@@ -8,10 +8,6 @@ import {
   Skeleton,
   Paper,
 } from '@mui/material';
-import {
-  HourglassEmpty as HourglassEmptyIcon,
-  Refresh as RefreshIcon,
-} from '@mui/icons-material';
 
 export interface LoadingStateProps {
   /**

@@ -1,4 +1,10 @@
+// src/app/(dashboard)/users/features/api/userApi.ts
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
+import type {
+  BaseQueryFn,
+  FetchArgs,
+  FetchBaseQueryError,
+} from '@reduxjs/toolkit/query';
 import { 
   UsersApiResponse, 
   UserApiResponse, 
@@ -17,21 +23,74 @@ interface RootState {
   };
 }
 
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL;
+const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://apidev.predictgalore.com';
+
+// Define proper types for the base query
+type LoggingBaseQueryArgs = FetchArgs;
+
+// Custom base query with reduced logging - same implementation as settings API
+const loggingBaseQuery: BaseQueryFn<
+  LoggingBaseQueryArgs,
+  unknown,
+  FetchBaseQueryError
+> = async (args, api, extraOptions) => {
+  const { url, method = "GET" } = args;
+
+  // Only log in development
+  if (process.env.NODE_ENV === 'development') {
+    console.group(`🚀 API: ${method} ${url}`);
+  }
+
+  try {
+    const result = await fetchBaseQuery({
+      baseUrl: BASE_URL,
+      prepareHeaders: (headers: Headers, { getState }: { getState: () => unknown }) => {
+        const state = getState() as RootState;
+        const token = state.auth.token;
+        if (token) {
+          headers.set("authorization", `Bearer ${token}`);
+        }
+        headers.set("Content-Type", "application/json");
+        return headers;
+      },
+    })(args, api, extraOptions);
+
+    // Only log errors, not successful responses to reduce noise
+    if (result.error) {
+      const errorWithOriginalStatus = result.error as FetchBaseQueryError & {
+        originalStatus?: number;
+      };
+
+      console.error(`❌ API Error (${method} ${url}):`, {
+        status: result.error.status,
+        data: result.error.data,
+        originalStatus: errorWithOriginalStatus.originalStatus
+      });
+    }
+
+    if (process.env.NODE_ENV === 'development') {
+      console.groupEnd();
+    }
+    return result;
+  } catch (error) {
+    console.error(`💥 Fetch Error (${method} ${url}):`, error);
+    
+    if (process.env.NODE_ENV === 'development') {
+      console.groupEnd();
+    }
+
+    return {
+      error: {
+        status: "FETCH_ERROR",
+        error: error instanceof Error ? error.message : "Unknown fetch error",
+      } as FetchBaseQueryError,
+    };
+  }
+};
 
 export const userApi = createApi({
   reducerPath: 'userApi',
-  baseQuery: fetchBaseQuery({
-    baseUrl: BASE_URL,
-    prepareHeaders: (headers, { getState }) => {
-      const state = getState() as RootState;
-      const token = state.auth.token;
-      if (token) {
-        headers.set('authorization', `Bearer ${token}`);
-      }
-      return headers;
-    },
-  }),
+  baseQuery: loggingBaseQuery,
   tagTypes: ['User', 'UsersAnalytics'], 
   endpoints: (builder) => ({
     getUsers: builder.query<UsersApiResponse, UsersFilter>({
@@ -63,7 +122,9 @@ export const userApi = createApi({
     }),
 
     getUserById: builder.query<UserApiResponse, string>({
-      query: (userId) => `/admin/users/${userId}`,
+      query: (userId) => ({
+        url: `/admin/users/${userId}`,
+      }),
       // Transform individual user response
       transformResponse: (response: UserApiResponse) => {
         if (response.data) {
@@ -107,7 +168,9 @@ export const userApi = createApi({
     }),
 
     getUsersAnalytics: builder.query<UsersAnalyticsResponse, void>({
-      query: () => '/api/v1/admin/users/summary',
+      query: () => ({
+        url: '/api/v1/admin/users/summary',
+      }),
       providesTags: ['UsersAnalytics'],
     }),
 

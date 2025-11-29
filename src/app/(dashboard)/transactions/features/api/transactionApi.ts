@@ -1,5 +1,10 @@
 // src/app/(dashboard)/transactions/features/api/transactionApi.ts
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
+import type {
+  BaseQueryFn,
+  FetchArgs,
+  FetchBaseQueryError,
+} from '@reduxjs/toolkit/query';
 import { 
   TransactionsApiResponse, 
   TransactionApiResponse, 
@@ -17,21 +22,74 @@ interface RootState {
   };
 }
 
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL;
+const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://apidev.predictgalore.com';
+
+// Define proper types for the base query
+type LoggingBaseQueryArgs = FetchArgs;
+
+// Custom base query with reduced logging - same implementation as settings API
+const loggingBaseQuery: BaseQueryFn<
+  LoggingBaseQueryArgs,
+  unknown,
+  FetchBaseQueryError
+> = async (args, api, extraOptions) => {
+  const { url, method = "GET" } = args;
+
+  // Only log in development
+  if (process.env.NODE_ENV === 'development') {
+    console.group(`🚀 API: ${method} ${url}`);
+  }
+
+  try {
+    const result = await fetchBaseQuery({
+      baseUrl: BASE_URL,
+      prepareHeaders: (headers: Headers, { getState }: { getState: () => unknown }) => {
+        const state = getState() as RootState;
+        const token = state.auth.token;
+        if (token) {
+          headers.set("authorization", `Bearer ${token}`);
+        }
+        headers.set("Content-Type", "application/json");
+        return headers;
+      },
+    })(args, api, extraOptions);
+
+    // Only log errors, not successful responses to reduce noise
+    if (result.error) {
+      const errorWithOriginalStatus = result.error as FetchBaseQueryError & {
+        originalStatus?: number;
+      };
+
+      console.error(`❌ API Error (${method} ${url}):`, {
+        status: result.error.status,
+        data: result.error.data,
+        originalStatus: errorWithOriginalStatus.originalStatus
+      });
+    }
+
+    if (process.env.NODE_ENV === 'development') {
+      console.groupEnd();
+    }
+    return result;
+  } catch (error) {
+    console.error(`💥 Fetch Error (${method} ${url}):`, error);
+    
+    if (process.env.NODE_ENV === 'development') {
+      console.groupEnd();
+    }
+
+    return {
+      error: {
+        status: "FETCH_ERROR",
+        error: error instanceof Error ? error.message : "Unknown fetch error",
+      } as FetchBaseQueryError,
+    };
+  }
+};
 
 export const transactionApi = createApi({
   reducerPath: 'transactionApi',
-  baseQuery: fetchBaseQuery({
-    baseUrl: BASE_URL,
-    prepareHeaders: (headers, { getState }) => {
-      const state = getState() as RootState;
-      const token = state.auth.token;
-      if (token) {
-        headers.set('authorization', `Bearer ${token}`);
-      }
-      return headers;
-    },
-  }),
+  baseQuery: loggingBaseQuery,
   tagTypes: ['Transaction', 'TransactionsAnalytics'],
   endpoints: (builder) => ({
     getTransactions: builder.query<TransactionsApiResponse, TransactionsFilter>({
@@ -68,7 +126,9 @@ export const transactionApi = createApi({
     }),
 
     getTransactionById: builder.query<TransactionApiResponse, string>({
-      query: (transactionId) => `/api/v1/transactions/${transactionId}`,
+      query: (transactionId) => ({
+        url: `/api/v1/transactions/${transactionId}`,
+      }),
       transformResponse: (response: RawTransactionApiResponse): TransactionApiResponse => {
         if (response.data) {
           const transformedData = transformApiTransactionToAppTransaction(response.data);

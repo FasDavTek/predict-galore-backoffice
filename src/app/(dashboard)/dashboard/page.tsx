@@ -1,3 +1,4 @@
+// src/app/(dashboard)/dashboard/page.tsx
 "use client";
 
 import React, { useEffect, useState } from "react";
@@ -10,8 +11,9 @@ import { DashboardPageLoadingSkeleton } from "@/app/(dashboard)/dashboard/featur
 import { RootState } from "../../../store/store";
 import { useSelector } from "react-redux";
 import DashboardAnalytics from "@/app/(dashboard)/dashboard/features/components/DashboardAnalytics";
+import withAuth from "@/hoc/withAuth";
 
-export default function DashboardPage() {
+function DashboardPage() {
   const [isClientSide, setIsClientSide] = useState(false);
   
   // Global time range state for all dashboard components
@@ -109,3 +111,6 @@ export default function DashboardPage() {
     </>
   );
 }
+
+// Wrap with authentication HOC
+export default withAuth(DashboardPage);

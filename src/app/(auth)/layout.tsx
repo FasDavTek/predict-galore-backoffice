@@ -48,16 +48,18 @@ export default function AuthLayout({ children }: AuthLayoutProps) {
         bgcolor: 'background.paper',
       }}
     >
+      {/* Left Sidebar - Hidden on mobile/tablet, visible on desktop (lg and up) */}
       <Box
         sx={{
-          width: { xs: '100%', lg: '40%' },
+          width: { xs: '0%', lg: '40%' },
           minHeight: '100vh',
           height: 'auto',
           bgcolor: '#162E08',
           padding: 4,
-          display: 'flex',
+          display: { xs: 'none', lg: 'flex' },
           flexDirection: 'column',
           gap: 4,
+          overflow: 'hidden',
         }}
       >
         <Image
@@ -129,15 +131,16 @@ export default function AuthLayout({ children }: AuthLayoutProps) {
         </Card>
       </Box>
 
+      {/* Main Content - Full width on mobile/tablet, 60% on desktop */}
       <Box
         sx={{
-          width: { xs: '0%', lg: '60%' },
+          width: { xs: '100%', lg: '60%' },
           minHeight: '100vh',
           height: 'auto',
-          display: { xs: 'none', lg: 'flex' },
+          display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          padding: 4,
+          padding: { xs: 2, sm: 4 },
         }}
       >
         {children}

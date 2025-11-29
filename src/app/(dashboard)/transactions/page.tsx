@@ -1,3 +1,4 @@
+// src/app/(dashboard)/transactions/page.tsx
 "use client";
 
 import React, { useState, useMemo } from "react";
@@ -20,8 +21,8 @@ import { TransactionsPageLoadingSkeleton } from "./features/components/Transacti
 import TransactionsPageHeader, { TimeRange } from "./features/components/TransactionsPageHeader";
 
 // Global State Components
-import { EmptyState } from "@/components/EmptyState";
-import { ErrorState } from "@/components/ErrorState";
+import { EmptyState } from "@/shared/components/EmptyState";
+import { ErrorState } from "@/shared/components/ErrorState";
 
 // Hooks
 import { useTransactions } from "./features/hooks/useTransactions";
@@ -33,8 +34,9 @@ import { Transaction } from "./features/types/transaction.types";
 // Auth state selectors
 import { RootState } from "../../../store/store";
 import { useSelector } from "react-redux";
+import withAuth from "@/hoc/withAuth";
 
-const TransactionsPage: React.FC = () => {
+function TransactionsPage() {
   const [selectedTransactions, setSelectedTransactions] = useState<Transaction[]>([]);
   const [snackbar, setSnackbar] = useState<{
     open: boolean;
@@ -313,6 +315,7 @@ const TransactionsPage: React.FC = () => {
       </Snackbar>
     </Container>
   );
-};
+}
 
-export default TransactionsPage;
+// Wrap with authentication HOC
+export default withAuth(TransactionsPage);

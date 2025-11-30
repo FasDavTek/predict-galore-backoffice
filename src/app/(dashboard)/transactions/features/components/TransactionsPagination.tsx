@@ -1,0 +1,148 @@
+import React from 'react';
+import {
+  Box,
+  Pagination,
+  Typography,
+  Select,
+  MenuItem,
+  FormControl,
+  InputLabel,
+  Stack,
+  useTheme,
+  useMediaQuery,
+  IconButton,
+  PaginationItem,
+  SelectChangeEvent,
+} from '@mui/material';
+import {
+  KeyboardArrowLeft as PreviousIcon,
+  KeyboardArrowRight as NextIcon,
+} from '@mui/icons-material';
+import { PaginationMeta } from '../types/transaction.types';
+
+interface TransactionsPaginationProps {
+  pagination: PaginationMeta;
+  onPageChange: (page: number) => void;
+  onPageSizeChange?: (pageSize: number) => void;
+  pageSizeOptions?: number[];
+}
+
+export const TransactionsPagination: React.FC<TransactionsPaginationProps> = ({
+  pagination,
+  onPageChange,
+  onPageSizeChange,
+  pageSizeOptions = [10, 25, 50, 100],
+}) => {
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+
+  const { page, pageSize, total, totalPages } = pagination;
+
+  const handlePageChange = (event: React.ChangeEvent<unknown>, newPage: number) => {
+    onPageChange(newPage);
+  };
+
+  const handlePageSizeChange = (event: SelectChangeEvent<number>) => {
+    const newSize = Number(event.target.value);
+    onPageSizeChange?.(newSize);
+    onPageChange(1); // Reset to page 1 when page size changes
+  };
+
+  // Calculate display range for "Showing X-Y of Z transactions"
+  const getDisplayRange = () => {
+    const start = (page - 1) * pageSize + 1;
+    const end = Math.min(page * pageSize, total);
+    return { start, end };
+  };
+
+  const { start, end } = getDisplayRange();
+
+  if (total === 0) return null;
+
+  return (
+    <Box sx={{ py: 3 }}>
+      <Stack direction={isMobile ? 'column' : 'row'} spacing={isMobile ? 2 : 0}
+        justifyContent="space-between" alignItems={isMobile ? 'stretch' : 'center'}>
+        
+        {/* Results count display */}
+        <Box>
+          <Typography variant="body2" color="text.secondary">
+            Showing <Typography component="span" variant="body2" fontWeight="bold" color="text.primary">
+              {start}-{end}
+            </Typography> of{' '}
+            <Typography component="span" variant="body2" fontWeight="bold" color="text.primary">
+              {total.toLocaleString()}
+            </Typography> transactions
+          </Typography>
+        </Box>
+
+        <Stack direction={isMobile ? 'column' : 'row'} spacing={2}
+          alignItems={isMobile ? 'stretch' : 'center'}>
+          
+          {/* Page size selector */}
+          {onPageSizeChange && (
+            <FormControl size="small" sx={{ minWidth: 120 }}>
+              <InputLabel>Rows per page</InputLabel>
+              <Select 
+                value={pageSize} 
+                label="Rows per page" 
+                onChange={handlePageSizeChange}
+              >
+                {pageSizeOptions.map((option) => (
+                  <MenuItem key={option} value={option}>{option} per page</MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          )}
+
+          {/* Pagination */}
+          <Pagination
+            count={totalPages}
+            page={page}
+            onChange={handlePageChange}
+            color="primary"
+            size={isMobile ? "small" : "medium"}
+            showFirstButton
+            showLastButton
+            siblingCount={isMobile ? 0 : 1}
+            boundaryCount={isMobile ? 1 : 2}
+            renderItem={(item) => {
+              if (isMobile && item.type === 'page') return null;
+              
+              if (item.type === 'previous' || item.type === 'next') {
+                return (
+                  <IconButton 
+                    onClick={item.onClick} 
+                    disabled={item.disabled}
+                    sx={{ borderRadius: 1, '&.Mui-disabled': { opacity: 0.5 } }}
+                  >
+                    {item.type === 'previous' ? <PreviousIcon /> : <NextIcon />}
+                  </IconButton>
+                );
+              }
+              
+              return <PaginationItem {...item} component="button" />;
+            }}
+            sx={{
+              '& .MuiPaginationItem-root': { fontWeight: 600, borderRadius: 2 },
+              '& .MuiPaginationItem-page.Mui-selected': {
+                backgroundColor: 'primary.main', 
+                color: 'white',
+                '&:hover': { backgroundColor: 'primary.dark' },
+              },
+            }}
+          />
+        </Stack>
+      </Stack>
+
+      {/* Mobile-only page indicator */}
+      {isMobile && (
+        <Box sx={{ textAlign: 'center', mt: 1 }}>
+          <Typography variant="caption" color="text.secondary">
+            Page {page} of {totalPages}
+          </Typography>
+        </Box>
+      )}
+    </Box>
+  );
+};

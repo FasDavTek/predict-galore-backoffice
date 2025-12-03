@@ -39,7 +39,6 @@ export enum ResetPasswordStep {
   COMPLETED = 3
 }
 
-
 export interface User {
   id: string;
   email: string;
@@ -94,10 +93,25 @@ export interface ChangePasswordData {
   confirmPassword: string;
 }
 
+// Define specific error data types
+export interface ValidationError {
+  field: string;
+  message: string;
+}
+
+export interface ErrorData {
+  errors?: ValidationError[];
+  error?: string;
+  statusCode?: number;
+  timestamp?: string;
+  path?: string;
+  [key: string]: unknown; // For any additional properties
+}
+
 export interface ApiError {
   message: string;
   status?: number;
-  data?: any;
+  data?: ErrorData;
   endpoint?: string;
   method?: string;
 }

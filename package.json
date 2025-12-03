@@ -35,6 +35,7 @@
     "react-search-highlight": "^0.1.6",
     "react-timezone-select": "^3.2.8",
     "react-toastify": "^11.0.5",
+    "recharts": "^3.5.1",
     "zod": "^4.1.12"
   },
   "devDependencies": {

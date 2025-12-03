@@ -5,6 +5,7 @@ import React, { useState, useMemo } from "react";
 import {
   Box,
   Container,
+  Dialog,
   Snackbar,
   Alert,
   Skeleton,
@@ -12,29 +13,22 @@ import {
 
 // Components
 import { PredictionsTable } from "./features/components/PredictionsTable";
-import { PredictionFilters } from "./features/components/PredictionFilters";
 import { PredictionAnalytics } from "./features/components/PredictionAnalytics";
 import { PredictionForm } from "./features/components/PredictionForm";
-import { PredictionsPagination } from "./features/components/PredictionsPagination";
-import { PredictionsToolbar } from "./features/components/PredictionsToolbar";
-import { SelectedPredictionPreview } from "./features/components/SelectedPredictionPreview";
+import PredictionsPageHeader, { TimeRange } from "./features/components/PredictionsPageHeader";
 import { PredictionsPageLoadingSkeleton } from "./features/components/PredictionsPageLoadingSkeleton";
-import PredictionsPageHeader, {
-  TimeRange,
-} from "./features/components/PredictionsPageHeader";
 
 // Global State Components
-import { EmptyState } from "@/shared/components/EmptyState";
 import { ErrorState } from "@/shared/components/ErrorState";
 
 // Hooks
-import { usePredictions } from "@/app/(dashboard)/predictions/features/hooks/usePredictions";
+import { usePredictions } from "./features/hooks/usePredictions";
 
 // Types
-import { Prediction } from "@/app/(dashboard)/predictions/features/types/prediction.types";
+import { Prediction } from "./features/types/prediction.types";
 
-// Auth state selectors
-import { RootState } from "../../../store/store";
+// Auth
+import { RootState } from "@/store/store";
 import { useSelector } from "react-redux";
 import withAuth from "@/hoc/withAuth";
 
@@ -76,6 +70,7 @@ function PredictionsPage() {
     handleCancelPrediction,
     handleExportPredictions,
     handleToggleSelection,
+    handleSelectAll,
     handleClearAllSelection,
     refetchPredictions,
     isExporting,
@@ -87,6 +82,14 @@ function PredictionsPage() {
       selectedPredictionIds.includes(prediction.id)
     );
   }, [predictions, selectedPredictionIds]);
+
+  // If handleRemoveFromSelection doesn't exist in your hook, create it locally
+  const handleRemoveFromSelection = (predictionId: string) => {
+    // This is the same as toggling selection - remove if selected
+    if (selectedPredictionIds.includes(predictionId)) {
+      handleToggleSelection(predictionId);
+    }
+  };
 
   // Handle refresh button click
   const handleRefresh = () => {
@@ -109,16 +112,18 @@ function PredictionsPage() {
     setSnackbar({ open: true, message, severity });
   };
 
-  const handlePredictionSelect = () => {
-    // Selection is handled by the usePredictions hook via selectedPredictionIds and handleToggleSelection
-    // This function exists to satisfy the interface but doesn't need to do anything
+  const handlePredictionSelect = (prediction: Prediction) => {
+    // Handle prediction selection if needed
+    console.log('Selected prediction:', prediction);
   };
 
-  const handlePredictionEdit = () => {
-    setShowPredictionForm(true);
+  const handlePredictionEdit = (prediction: Prediction) => {
+    // Handle prediction edit
+    console.log('Edit prediction:', prediction);
+    showSnackbar(`Edit prediction ${prediction.name}`, "success");
   };
 
-  const handlePredictionDelete = async (prediction: Prediction) => {
+  const handlePredictionDelete = async (prediction: Prediction): Promise<void> => {
     const confirmed = window.confirm(
       `Are you sure you want to delete "${prediction.name}"?`
     );
@@ -134,7 +139,7 @@ function PredictionsPage() {
     }
   };
 
-  const handlePredictionCancel = async (prediction: Prediction) => {
+  const handlePredictionCancel = async (prediction: Prediction): Promise<void> => {
     const confirmed = window.confirm(
       `Are you sure you want to cancel "${prediction.name}"?`
     );
@@ -230,114 +235,56 @@ function PredictionsPage() {
       {/* Analytics - Pass refresh trigger  */}
       <PredictionAnalytics refreshTrigger={refreshTrigger} />
 
-      {/* Selected Predictions Preview */}
-      <SelectedPredictionPreview
+      {/* Consolidated PredictionsTable Component */}
+      <PredictionsTable
+        // Data
+        predictions={predictions}
+        pagination={pagination || undefined} // Handle null case
+        isLoading={isLoading}
+        hasError={hasError}
+        
+        // Filters
+        currentFilters={currentFilters}
+        localSearch={localSearch}
+        
+        // Selection
         selectedPredictions={selectedPredictionsData}
+        selectedPredictionIds={selectedPredictionIds}
+        
+        // Handlers
         onPredictionSelect={handlePredictionSelect}
         onPredictionEdit={handlePredictionEdit}
         onPredictionDelete={handlePredictionDelete}
         onPredictionCancel={handlePredictionCancel}
-        onClearSelection={handleClearAllSelection}
-        onRemovePrediction={handleToggleSelection}
+        onAddPrediction={handleAddPrediction}
+        onExportPredictions={handleExportPredictions}
+        onRefresh={handleRefresh}
+        onSearchChange={handleSearchChange}
+        onFilterChange={handleFilterChange}
+        onClearFilters={handleClearFilters}
+        onPageChange={handlePageChange}
+        onToggleSelection={handleToggleSelection}
+        onSelectAll={handleSelectAll}
+        onClearAllSelection={handleClearAllSelection}
+        onRemoveFromSelection={handleRemoveFromSelection}
+        
+        // States
+        isExporting={isExporting}
+        isRefreshing={isRefreshing}
       />
 
-      <Box className="flex flex-col gap-3">
-        {/* Filters and Toolbar */}
-        <Box className="flex flex-row justify-between">
-          {/* Filters */}
-          <PredictionFilters
-            searchTerm={localSearch}
-            statusFilter={currentFilters.status}
-            typeFilter={currentFilters.type}
-            accuracyFilter={currentFilters.accuracy}
-            onSearchChange={handleSearchChange}
-            onStatusChange={(status) => handleFilterChange({ status })}
-            onTypeChange={(type) => handleFilterChange({ type })}
-            onAccuracyChange={(accuracy) => handleFilterChange({ accuracy })}
-            onClearFilters={handleClearFilters}
-          />
-
-          {/* Toolbar - Use handleRefresh  */}
-          <PredictionsToolbar
-            selectedCount={selectedPredictionIds.length}
-            onAddPrediction={handleAddPrediction}
-            onExportPredictions={handleExportPredictions}
-            onRefresh={handleRefresh}
-            isExporting={isExporting}
-            isLoading={isLoading}
-          />
-        </Box>
-
-        {/* Content Area */}
-        {predictions.length === 0 && !isLoading ? (
-          <EmptyState
-            variant={
-              localSearch ||
-              currentFilters.status ||
-              currentFilters.type ||
-              currentFilters.accuracy
-                ? "search"
-                : "data"
-            }
-            title={
-              localSearch ||
-              currentFilters.status ||
-              currentFilters.type ||
-              currentFilters.accuracy
-                ? "No Predictions Found"
-                : "No Predictions Yet"
-            }
-            description={
-              localSearch ||
-              currentFilters.status ||
-              currentFilters.type ||
-              currentFilters.accuracy
-                ? "Try adjusting your search criteria or filters to find what you're looking for."
-                : "Get started by creating your first prediction."
-            }
-            primaryAction={{
-              label: "Create Prediction",
-              onClick: handleAddPrediction,
-            }}
-            secondaryAction={
-              localSearch ||
-              currentFilters.status ||
-              currentFilters.type ||
-              currentFilters.accuracy
-                ? {
-                    label: "Clear Filters",
-                    onClick: handleClearFilters,
-                  }
-                : undefined
-            }
-            height={300}
-          />
-        ) : (
-          <>
-            {/* Predictions Table */}
-            <PredictionsTable
-              predictions={predictions}
-              selectedPredictionIds={selectedPredictionIds}
-              onPredictionSelect={handlePredictionSelect}
-              onPredictionEdit={handlePredictionEdit}
-              onPredictionDelete={handlePredictionDelete}
-              onPredictionCancel={handlePredictionCancel}
-              onToggleSelection={handleToggleSelection}
-              isLoading={isLoading}
-              hasError={hasError}
-              onRetry={handleRefresh}
-            />
-
-            {/* Pagination */}
-            {pagination && pagination.total > 0 && (
-              <PredictionsPagination
-                pagination={pagination}
-                onPageChange={handlePageChange}
-              />
-            )}
-          </>
-        )}
-      </Box>
+      {/* Prediction Form Dialog */}
+      <Dialog
+        open={showPredictionForm}
+        onClose={handleFormCancel}
+        maxWidth="md"
+        fullWidth
+      >
+        <PredictionForm
+          onSuccess={handleFormSuccess}
+          onCancel={handleFormCancel}
+        />
+      </Dialog>
 
       {/* Snackbar */}
       <Snackbar
@@ -357,5 +304,4 @@ function PredictionsPage() {
   );
 }
 
-// Wrap with authentication HOC
 export default withAuth(PredictionsPage);

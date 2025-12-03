@@ -13,7 +13,6 @@ import {
   Logout as LogoutIcon,
 } from "@mui/icons-material";
 
-
 interface User {
   firstName?: string;
   lastName?: string;
@@ -22,19 +21,20 @@ interface User {
 }
 
 interface UserMenuProps {
-  user: User;
+  user: User | null;
   onLogout: () => void;
 }
 
 const UserMenu = ({ user, onLogout }: UserMenuProps) => {
-
   const [userAnchorEl, setUserAnchorEl] = useState<null | HTMLElement>(null);
 
+  // Provide default values to avoid hydration mismatch
   const { firstName = '', lastName = '', email = '', adminType = '' } = user || {};
 
+  // Calculate initials with fallback
   const userInitials = (
     (firstName?.charAt(0) || "") + (lastName?.charAt(0) || "")
-  ).toUpperCase() || "US";
+  ).toUpperCase() || "?";
 
   const fullName = `${firstName} ${lastName}`.trim() || "User";
 
@@ -46,7 +46,34 @@ const UserMenu = ({ user, onLogout }: UserMenuProps) => {
     setUserAnchorEl(null);
   };
 
-
+  // Show a skeleton/placeholder while user data is loading
+  if (!user) {
+    return (
+      <Box
+        sx={{
+          display: "flex",
+          alignItems: "center",
+          gap: 1.5,
+          pl: 2,
+          borderLeft: "1px solid",
+          borderColor: "divider",
+        }}
+      >
+        <Avatar
+          sx={{
+            width: 36,
+            height: 36,
+            bgcolor: "grey.300",
+            color: "grey.600",
+            fontSize: 14,
+            fontWeight: 600,
+          }}
+        >
+          ?
+        </Avatar>
+      </Box>
+    );
+  }
 
   return (
     <Box
@@ -83,7 +110,7 @@ const UserMenu = ({ user, onLogout }: UserMenuProps) => {
           {fullName}
         </Typography>
         <Typography variant="caption" sx={{ color: "text.secondary" }}>
-          {adminType || "Administrator"}
+          {adminType}
         </Typography>
       </Box>
       
@@ -127,12 +154,6 @@ const UserMenu = ({ user, onLogout }: UserMenuProps) => {
             {email}
           </Typography>
         </Box>
-        
-        <Divider sx={{ my: 1 }} />
-        
-      
-        
-        
         
         <Divider sx={{ my: 1 }} />
         

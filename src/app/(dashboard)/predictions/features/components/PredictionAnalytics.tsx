@@ -18,12 +18,13 @@ import {
 import { useGetPredictionsAnalyticsQuery } from '../api/predictionApi';
 import { PredictionAnalytics as PredictionAnalyticsType } from '../types/prediction.types';
 
+// ==================== TYPES ====================
+
 interface AnalyticsCardConfig {
   title: string;
   bgColor: string;
   textColor: string;
   iconColor: string;
-  icon: React.ReactElement;
   format: (value: number | undefined) => string;
 }
 
@@ -33,11 +34,260 @@ interface AnalyticsCardProps {
   change?: string;
   loading?: boolean;
   config: AnalyticsCardConfig;
+  icon: React.ReactElement;
 }
 
 interface PredictionAnalyticsProps {
   refreshTrigger?: number;
 }
+
+// ==================== CONSTANTS ====================
+
+const BORDER_COLOR_MAP: Record<string, string> = {
+  '#F0F9FF': '#0EA5E920',
+  '#ECFDF5': '#10B98120',
+  '#FEF2F2': '#EF444420',
+  '#FFFBEB': '#F59E0B20',
+};
+
+const ANALYTICS_CONFIGS: Record<string, AnalyticsCardConfig> = {
+  totalPredictions: {
+    title: 'Total Predictions',
+    bgColor: '#F0F9FF',
+    textColor: '#0369A1',
+    iconColor: '#0EA5E9',
+    format: (value: number | undefined) => value?.toLocaleString() || 'N/A'
+  },
+  completedPredictions: {
+    title: 'Completed',
+    bgColor: '#ECFDF5',
+    textColor: '#065F46',
+    iconColor: '#10B981',
+    format: (value: number | undefined) => value?.toLocaleString() || 'N/A'
+  },
+  failedPredictions: {
+    title: 'Failed',
+    bgColor: '#FEF2F2',
+    textColor: '#991B1B',
+    iconColor: '#EF4444',
+    format: (value: number | undefined) => value?.toLocaleString() || 'N/A'
+  },
+  averageProcessingTime: {
+    title: 'Avg Processing Time',
+    bgColor: '#FFFBEB',
+    textColor: '#92400E',
+    iconColor: '#F59E0B',
+    format: (value: number | undefined) => value ? `${Math.round(value)}s` : 'N/A'
+  }
+};
+
+const ANALYTICS_ICONS: Record<string, React.ReactElement> = {
+  totalPredictions: <AnalyticsIcon />,
+  completedPredictions: <CheckIcon />,
+  failedPredictions: <ErrorIcon />,
+  averageProcessingTime: <ScheduleIcon />
+};
+
+const ALL_CARDS = ['totalPredictions', 'completedPredictions', 'failedPredictions', 'averageProcessingTime'];
+
+// ==================== UTILITY FUNCTIONS ====================
+
+const getBorderColor = (bgColor: string, iconColor: string): string => {
+  return BORDER_COLOR_MAP[bgColor] || `${iconColor}20`;
+};
+
+// ==================== SUB-COMPONENTS ====================
+
+const AnalyticsCardSkeleton: React.FC = () => (
+  <Card sx={{ border: 'none', boxShadow: 'none', height: '140px' }}>
+    <CardContent sx={{ p: 3 }}>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+        <Box sx={{ flex: 1 }}>
+          <Skeleton variant="text" width="60%" height={24} />
+          <Skeleton variant="text" width="80%" height={32} sx={{ my: 1 }} />
+          <Skeleton variant="text" width="40%" height={20} />
+        </Box>
+        <Skeleton variant="circular" width={40} height={40} />
+      </Box>
+    </CardContent>
+  </Card>
+);
+
+const ChangeIndicator: React.FC<{ change: string }> = ({ change }) => {
+  const isPositive = parseFloat(change) >= 0;
+  
+  return (
+    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+      {isPositive ? (
+        <ArrowUpIcon sx={{ 
+          color: '#3C9705',
+          width: 16, 
+          height: 16 
+        }} />
+      ) : (
+        <ArrowDownIcon sx={{ 
+          color: '#D92D20',
+          width: 16, 
+          height: 16 
+        }} />
+      )}
+      <Typography sx={{ 
+        color: isPositive ? '#3C9705' : '#D92D20',
+        fontSize: '0.875rem', 
+        fontWeight: 500 
+      }}>
+        {change}%
+      </Typography>
+      <Typography sx={{ 
+        fontSize: '0.75rem', 
+        fontWeight: 500,
+        opacity: 0.8
+      }}>
+        vs last period
+      </Typography>
+    </Box>
+  );
+};
+
+const IconContainer: React.FC<{ iconColor: string; icon: React.ReactElement }> = ({ iconColor, icon }) => (
+  <Box sx={{ 
+    bgcolor: `${iconColor}20`,
+    width: 40,
+    height: 40,
+    borderRadius: '20px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+    ml: 2
+  }}>
+    <Box sx={{ color: iconColor, fontSize: '1.25rem' }}>
+      {icon}
+    </Box>
+  </Box>
+);
+
+const AnalyticsCardContent: React.FC<{
+  title: string;
+  value: string;
+  change: string;
+  config: AnalyticsCardConfig;
+  icon: React.ReactElement;
+}> = ({ title, value, change, config, icon }) => (
+  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+    <Box sx={{ flex: 1 }}>
+      <Typography sx={{ 
+        color: config.textColor, 
+        fontSize: '0.875rem', 
+        fontWeight: 500, 
+        mb: 1,
+        opacity: 0.9
+      }}>
+        {title}
+      </Typography>
+      
+      <Typography variant="h5" sx={{ 
+        color: config.textColor, 
+        mb: 2, 
+        fontWeight: 600,
+        fontSize: { xs: '1rem', md: '1rem' }
+      }}>
+        {value}
+      </Typography>
+      
+      <ChangeIndicator change={change} />
+    </Box>
+    
+    <IconContainer iconColor={config.iconColor} icon={icon} />
+  </Box>
+);
+
+// ==================== STATE COMPONENTS ====================
+
+const ErrorAnalyticsCard: React.FC<{ onRetry?: () => void }> = ({ onRetry }) => (
+  <Card sx={{ 
+    border: '1px solid #FECACA',
+    backgroundColor: '#FEF2F2',
+    boxShadow: 'none',
+    height: '140px',
+    position: 'relative',
+    overflow: 'hidden',
+    '&::before': {
+      content: '""',
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      right: 0,
+      height: '2px',
+      background: 'linear-gradient(90deg, #EF4444, #FECACA)',
+    }
+  }}>
+    <CardContent sx={{ 
+      p: 3, 
+      height: '100%', 
+      display: 'flex', 
+      flexDirection: 'column', 
+      justifyContent: 'center',
+      alignItems: 'center',
+      textAlign: 'center'
+    }}>
+      <WarningIcon sx={{ color: '#DC2626', fontSize: 32, mb: 1 }} />
+      <Typography variant="h6" color="#DC2626" gutterBottom>
+        Error: Unable to load analytics data
+      </Typography>
+      {onRetry && (
+        <Typography 
+          variant="body2" 
+          color="#DC2626" 
+          sx={{ cursor: 'pointer', textDecoration: 'underline' }}
+          onClick={onRetry}
+        >
+          Click to retry
+        </Typography>
+      )}
+    </CardContent>
+  </Card>
+);
+
+const EmptyAnalyticsState: React.FC = () => (
+  <Card sx={{ 
+    border: '1px solid #E2E8F0',
+    backgroundColor: '#F8FAFC',
+    boxShadow: 'none',
+    height: '140px',
+    position: 'relative',
+    overflow: 'hidden',
+    '&::before': {
+      content: '""',
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      right: 0,
+      height: '2px',
+      background: 'linear-gradient(90deg, #CBD5E1, #F1F5F9)',
+    }
+  }}>
+    <CardContent sx={{ 
+      p: 3, 
+      height: '100%', 
+      display: 'flex', 
+      flexDirection: 'column', 
+      justifyContent: 'center',
+      alignItems: 'center',
+      textAlign: 'center'
+    }}>
+      <WarningIcon sx={{ color: 'grey.400', fontSize: 32, mb: 1 }} />
+      <Typography variant="h6" color="text.secondary" gutterBottom>
+        No Analytics Data
+      </Typography>
+      <Typography variant="body2" color="text.secondary" sx={{ opacity: 0.8 }}>
+        Analytics data will appear here once available
+      </Typography>
+    </CardContent>
+  </Card>
+);
+
+// ==================== MAIN COMPONENTS ====================
 
 const AnalyticsCard: React.FC<AnalyticsCardProps> = ({ 
   title, 
@@ -45,215 +295,137 @@ const AnalyticsCard: React.FC<AnalyticsCardProps> = ({
   change = '0%', 
   loading = false, 
   config,
+  icon,
 }) => {
-  const isPositive = parseFloat(change) >= 0;
-  
+  const borderColor = getBorderColor(config.bgColor, config.iconColor);
+
   if (loading) {
-    return (
-      <Card sx={{ border: 'none', boxShadow: 'none', height: '140px' }}>
-        <CardContent sx={{ p: 3 }}>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-            <Box sx={{ flex: 1 }}>
-              <Skeleton variant="text" width="60%" height={24} />
-              <Skeleton variant="text" width="80%" height={32} sx={{ my: 1 }} />
-              <Skeleton variant="text" width="40%" height={20} />
-            </Box>
-            <Skeleton variant="circular" width={40} height={40} />
-          </Box>
-        </CardContent>
-      </Card>
-    );
+    return <AnalyticsCardSkeleton />;
   }
 
   return (
     <Card sx={{ 
-      border: 'none',
+      border: `1px solid ${borderColor}`,
+        borderTop: `2px solid ${borderColor}`,
+      borderLeft: `4px solid ${config.iconColor}40`,
       backgroundColor: config.bgColor,
       boxShadow: 'none',
       transition: 'all 0.2s ease-in-out',
+      overflow: 'hidden',
+      position: 'relative',
       '&:hover': {
         transform: 'translateY(-2px)',
-        boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)'
+        boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
+        borderColor: `${config.iconColor}60`,
+      },
+      '&::before': {
+        content: '""',
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        height: '2px',
+        background: `linear-gradient(90deg, ${config.iconColor}20, ${config.iconColor}00)`,
       }
     }}>
       <CardContent sx={{ p: 3 }}>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-          <Box sx={{ flex: 1 }}>
-            <Typography sx={{ 
-              color: config.textColor, 
-              fontSize: '0.875rem', 
-              fontWeight: 500, 
-              mb: 1,
-              opacity: 0.9
-            }}>
-              {title}
-            </Typography>
-            
-            <Typography variant="h5" sx={{ 
-              color: config.textColor, 
-              mb: 2, 
-              fontWeight: 600,
-              fontSize: { xs: '1rem', md: '1rem' }
-            }}>
-              {value}
-            </Typography>
-            
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              {isPositive ? (
-                <ArrowUpIcon sx={{ 
-                  color: '#3C9705',
-                  width: 16, 
-                  height: 16 
-                }} />
-              ) : (
-                <ArrowDownIcon sx={{ 
-                  color: '#D92D20',
-                  width: 16, 
-                  height: 16 
-                }} />
-              )}
-              <Typography sx={{ 
-                color: isPositive ? '#3C9705' : '#D92D20',
-                fontSize: '0.875rem', 
-                fontWeight: 500 
-              }}>
-                {change}%
-              </Typography>
-              <Typography sx={{ 
-                color: config.textColor, 
-                fontSize: '0.75rem', 
-                fontWeight: 500,
-                opacity: 0.8
-              }}>
-                vs last period
-              </Typography>
-            </Box>
-          </Box>
-          
-          <Box sx={{ 
-            bgcolor: `${config.iconColor}20`,
-            width: 40,
-            height: 40,
-            borderRadius: '20px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            flexShrink: 0,
-            ml: 2
-          }}>
-            <Box sx={{ color: config.iconColor, fontSize: '1.25rem' }}>
-              {config.icon}
-            </Box>
-          </Box>
-        </Box>
+        <AnalyticsCardContent 
+          title={title}
+          value={value}
+          change={change}
+          config={config}
+          icon={icon}
+        />
       </CardContent>
     </Card>
   );
 };
 
-const ErrorAnalyticsCard: React.FC<{ onRetry?: () => void }> = ({ onRetry }) => {
-  return (
-    <Card sx={{ 
-      border: 'none',
-      backgroundColor: '#FEF2F2',
-      boxShadow: 'none',
-      height: '140px'
-    }}>
-      <CardContent sx={{ 
-        p: 3, 
-        height: '100%', 
-        display: 'flex', 
-        flexDirection: 'column', 
-        justifyContent: 'center',
-        alignItems: 'center',
-        textAlign: 'center'
-      }}>
-        <WarningIcon sx={{ color: '#DC2626', fontSize: 32, mb: 1 }} />
-        <Typography variant="h6" color="#DC2626" gutterBottom>
-          Error: Unable to load analytics data
-        </Typography>
-        {onRetry && (
-          <Typography 
-            variant="body2" 
-            color="#DC2626" 
-            sx={{ cursor: 'pointer', textDecoration: 'underline' }}
-            onClick={onRetry}
-          >
-            Click to retry
-          </Typography>
-        )}
-      </CardContent>
-    </Card>
+// ==================== HELPER FUNCTIONS ====================
+
+const getAnalyticsValue = (key: keyof PredictionAnalyticsType, analytics?: PredictionAnalyticsType): number | undefined => {
+  return analytics?.[key];
+};
+
+const getChangeValue = (key: string, analytics?: PredictionAnalyticsType): string => {
+  const changeKey = `${key.replace('Predictions', '')}Change` as keyof PredictionAnalyticsType;
+  const changeValue = analytics?.[changeKey];
+  return changeValue?.toString() || '0';
+};
+
+const hasAnalyticsData = (analytics?: PredictionAnalyticsType): boolean => {
+  return !!analytics && (
+    analytics.totalPredictions !== undefined ||
+    analytics.completedPredictions !== undefined ||
+    analytics.failedPredictions !== undefined ||
+    analytics.averageProcessingTime !== undefined
   );
 };
+
+// ==================== MAIN COMPONENT ====================
 
 export const PredictionAnalytics: React.FC<PredictionAnalyticsProps> = ({ refreshTrigger = 0 }) => {
   const { data: analyticsResponse, isLoading, error, refetch } = useGetPredictionsAnalyticsQuery(undefined, {
     refetchOnMountOrArgChange: true,
   });
 
-  // Refetch when refreshTrigger changes
   React.useEffect(() => {
     refetch();
   }, [refreshTrigger, refetch]);
 
   const analytics = analyticsResponse?.data;
 
-  const analyticsConfig: Record<string, AnalyticsCardConfig> = {
-    totalPredictions: {
-      title: 'Total Predictions',
-      bgColor: '#F0F9FF',
-      textColor: '#0369A1',
-      iconColor: '#0EA5E9',
-      icon: <AnalyticsIcon />,
-      format: (value: number | undefined) => value?.toLocaleString() || 'N/A'
-    },
-    completedPredictions: {
-      title: 'Completed',
-      bgColor: '#ECFDF5',
-      textColor: '#065F46',
-      iconColor: '#10B981',
-      icon: <CheckIcon />,
-      format: (value: number | undefined) => value?.toLocaleString() || 'N/A'
-    },
-    failedPredictions: {
-      title: 'Failed',
-      bgColor: '#FEF2F2',
-      textColor: '#991B1B',
-      iconColor: '#EF4444',
-      icon: <ErrorIcon />,
-      format: (value: number | undefined) => value?.toLocaleString() || 'N/A'
-    },
-    averageProcessingTime: {
-      title: 'Avg Processing Time',
-      bgColor: '#FFFBEB',
-      textColor: '#92400E',
-      iconColor: '#F59E0B',
-      icon: <ScheduleIcon />,
-      format: (value: number | undefined) => value ? `${Math.round(value)}s` : 'N/A'
-    }
-  };
-
-  const hasError = !!error;
-  const isLoadingData = isLoading;
-
-  // Helper function to safely get values from analytics data
-  const getAnalyticsValue = (key: keyof PredictionAnalyticsType): number | undefined => {
-    return analytics?.[key];
-  };
-
-  // Helper function to safely get change values
-  const getChangeValue = (key: string): string => {
-    const changeKey = `${key.replace('Predictions', '')}Change` as keyof PredictionAnalyticsType;
-    const changeValue = analytics?.[changeKey];
-    return changeValue?.toString() || '0';
-  };
-
-  // If there's an error, show a single error card
-  if (hasError) {
+  if (error) {
     return (
       <Box sx={{ mb: 4 }}>
         <ErrorAnalyticsCard onRetry={refetch} />
+      </Box>
+    );
+  }
+
+  if (!hasAnalyticsData(analytics) && !isLoading) {
+    return (
+      <Box sx={{ mb: 4 }}>
+        <EmptyAnalyticsState />
+      </Box>
+    );
+  }
+
+  if (isLoading) {
+    return (
+      <Box sx={{ mb: 4 }}>
+        <Box
+          sx={{
+            display: 'flex',
+            flexDirection: 'row',
+            flexWrap: 'wrap',
+            gap: 2,
+            '& > *': {
+              flex: {
+                xs: '1 1 100%',
+                sm: '1 1 calc(50% - 16px)',
+                md: '1 1 calc(50% - 16px)',
+              },
+              minWidth: {
+                xs: '100%',
+                sm: '200px',
+                md: '220px',
+              },
+            },
+          }}
+        >
+          {ALL_CARDS.map((key) => (
+            <AnalyticsCard
+              key={key}
+              title={ANALYTICS_CONFIGS[key].title}
+              value=""
+              change="0"
+              loading={true}
+              config={ANALYTICS_CONFIGS[key]}
+              icon={ANALYTICS_ICONS[key]}
+            />
+          ))}
+        </Box>
       </Box>
     );
   }
@@ -280,20 +452,22 @@ export const PredictionAnalytics: React.FC<PredictionAnalyticsProps> = ({ refres
           },
         }}
       >
-        {Object.entries(analyticsConfig).map(([key, config]) => {
+        {ALL_CARDS.map((key) => {
+          const config = ANALYTICS_CONFIGS[key];
           const analyticsKey = key as keyof PredictionAnalyticsType;
-          const changeValue = getChangeValue(key);
+          const value = getAnalyticsValue(analyticsKey, analytics);
+          const changeValue = getChangeValue(key, analytics);
           
           return (
-            <Box key={key}>
-              <AnalyticsCard
-                title={config.title}
-                value={config.format(getAnalyticsValue(analyticsKey))}
-                change={changeValue}
-                loading={isLoadingData}
-                config={config}
-              />
-            </Box>
+            <AnalyticsCard
+              key={key}
+              title={config.title}
+              value={config.format(value)}
+              change={changeValue}
+              loading={false}
+              config={config}
+              icon={ANALYTICS_ICONS[key]}
+            />
           );
         })}
       </Box>

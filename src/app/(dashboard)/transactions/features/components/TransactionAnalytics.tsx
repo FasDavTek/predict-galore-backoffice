@@ -1,251 +1,529 @@
 // src/app/(dashboard)/transactions/features/components/TransactionAnalytics.tsx
-import React from 'react';
-import { 
-  Box, 
-  Card, 
-  CardContent, 
-  Typography, 
-  CircularProgress,
-  useTheme,
-  Chip,
-  Alert
-} from '@mui/material';
+import React from "react";
 import {
+  Box,
+  Card,
+  CardContent,
+  Typography,
+  Skeleton,
+} from "@mui/material";
+import {
+  TrendingUp as ArrowUpIcon,
+  TrendingDown as ArrowDownIcon,
   ReceiptLong as TransactionsIcon,
   CheckCircle as CompletedIcon,
   Schedule as PendingIcon,
   Error as FailedIcon,
   AttachMoney as RevenueIcon,
-  TrendingUp,
-  TrendingDown,
-  Warning as WarningIcon
-} from '@mui/icons-material';
-import { TransactionsAnalytics as AnalyticsData } from '../types/transaction.types';
+  Warning as WarningIcon,
+} from "@mui/icons-material";
+import { TransactionsAnalytics as AnalyticsData } from "../types/transaction.types";
 
-// Define the analytics card config interface
+// ==================== TYPES ====================
+
 interface AnalyticsCardConfig {
   title: string;
   bgColor: string;
   textColor: string;
   iconColor: string;
-  icon: React.ReactElement;
   format: (value: number | undefined) => string;
 }
 
-// AnalyticsCard component
 interface AnalyticsCardProps {
   title: string;
   value: string;
   change: string;
-  loading: boolean;
+  loading?: boolean;
   config: AnalyticsCardConfig;
-  hasData: boolean;
+  icon: React.ReactElement;
 }
 
-const AnalyticsCard: React.FC<AnalyticsCardProps> = ({ 
-  title, 
-  value, 
-  change, 
-  loading, 
-  config,
-  hasData
-}) => {
-  const theme = useTheme();
+interface TransactionAnalyticsProps {
+  analytics?: AnalyticsData;
+  isLoading?: boolean;
+  dateRange?: { fromUtc?: string; toUtc?: string };
+  error?: boolean;
+  onRetry?: () => void;
+}
+
+// ==================== CONSTANTS ====================
+
+const BORDER_COLOR_MAP: Record<string, string> = {
+  "#F0F9FF": "#0EA5E920",
+  "#ECFDF5": "#10B98120",
+  "#FFFBEB": "#F59E0B20",
+  "#FEF2F2": "#EF444420",
+  "#EFF6FF": "#3B82F620",
+};
+
+const ANALYTICS_CONFIGS: Record<string, AnalyticsCardConfig> = {
+  totalTransactions: {
+    title: "Total Transactions",
+    bgColor: "#F0F9FF",
+    textColor: "#0369A1",
+    iconColor: "#0EA5E9",
+    format: (value: number | undefined) => value?.toLocaleString() || "N/A",
+  },
+  completedTransactions: {
+    title: "Successful",
+    bgColor: "#ECFDF5",
+    textColor: "#065F46",
+    iconColor: "#10B981",
+    format: (value: number | undefined) => value?.toLocaleString() || "N/A",
+  },
+  pendingTransactions: {
+    title: "Pending",
+    bgColor: "#FFFBEB",
+    textColor: "#92400E",
+    iconColor: "#F59E0B",
+    format: (value: number | undefined) => value?.toLocaleString() || "N/A",
+  },
+  failedTransactions: {
+    title: "Failed",
+    bgColor: "#FEF2F2",
+    textColor: "#991B1B",
+    iconColor: "#EF4444",
+    format: (value: number | undefined) => value?.toLocaleString() || "N/A",
+  },
+  totalRevenue: {
+    title: "Total Revenue",
+    bgColor: "#EFF6FF",
+    textColor: "#1E40AF",
+    iconColor: "#3B82F6",
+    format: (value: number | undefined) => {
+      if (value === undefined || value === null) return "N/A";
+      return new Intl.NumberFormat("en-NG", {
+        style: "currency",
+        currency: "NGN",
+      }).format(value);
+    },
+  },
+};
+
+const ANALYTICS_ICONS: Record<string, React.ReactElement> = {
+  totalTransactions: <TransactionsIcon />,
+  completedTransactions: <CompletedIcon />,
+  pendingTransactions: <PendingIcon />,
+  failedTransactions: <FailedIcon />,
+  totalRevenue: <RevenueIcon />,
+};
+
+const FIELD_MAPPING: Record<string, keyof AnalyticsData> = {
+  totalTransactions: "totalCount",
+  completedTransactions: "successCount",
+  pendingTransactions: "pendingCount",
+  failedTransactions: "failedCount",
+  totalRevenue: "totalRevenue",
+};
+
+const CHANGE_FIELD_MAPPING: Record<string, keyof AnalyticsData> = {
+  totalTransactions: "totalChange",
+  completedTransactions: "successChange",
+  pendingTransactions: "pendingChange",
+  failedTransactions: "failedChange",
+  totalRevenue: "revenueChange",
+};
+
+const ALL_CARDS = [
+  "totalTransactions",
+  "completedTransactions",
+  "pendingTransactions",
+  "failedTransactions",
+  "totalRevenue",
+];
+
+// ==================== UTILITY FUNCTIONS ====================
+
+const getBorderColor = (bgColor: string, iconColor: string): string => {
+  return BORDER_COLOR_MAP[bgColor] || `${iconColor}20`;
+};
+
+// ==================== SUB-COMPONENTS ====================
+
+const AnalyticsCardSkeleton: React.FC = () => (
+  <Card sx={{ border: "none", boxShadow: "none", height: "140px" }}>
+    <CardContent sx={{ p: 3 }}>
+      <Box sx={{ display: "flex", justifyContent: "space-between" }}>
+        <Box sx={{ flex: 1 }}>
+          <Skeleton variant="text" width="60%" height={24} />
+          <Skeleton variant="text" width="80%" height={32} sx={{ my: 1 }} />
+          <Skeleton variant="text" width="40%" height={20} />
+        </Box>
+        <Skeleton variant="circular" width={40} height={40} />
+      </Box>
+    </CardContent>
+  </Card>
+);
+
+const ChangeIndicator: React.FC<{ change: string }> = ({ change }) => {
   const changeValue = parseFloat(change);
   const isPositive = changeValue > 0;
   const isNegative = changeValue < 0;
+  const hasChangeData = !isNaN(changeValue);
 
   return (
-    <Card 
-      sx={{ 
-        backgroundColor: config.bgColor,
-        color: config.textColor,
-        height: '100%',
-        transition: 'transform 0.2s, box-shadow 0.2s',
-        '&:hover': {
-          transform: 'translateY(-4px)',
-          boxShadow: theme.shadows[4]
-        },
-        position: 'relative',
-        border: !hasData ? `1px dashed ${theme.palette.warning.light}` : 'none'
-      }}
-    >
-      <CardContent>
-        <Box display="flex" alignItems="center" justifyContent="space-between" mb={2}>
-          <Box
+    <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+      {hasChangeData && (
+        <>
+          {isPositive ? (
+            <ArrowUpIcon sx={{ color: "#3C9705", width: 16, height: 16 }} />
+          ) : (
+            <ArrowDownIcon sx={{ color: "#D92D20", width: 16, height: 16 }} />
+          )}
+          <Typography
             sx={{
-              backgroundColor: config.iconColor,
-              borderRadius: '50%',
-              padding: '8px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              opacity: hasData ? 1 : 0.5
+              color: isPositive
+                ? "#3C9705"
+                : isNegative
+                ? "#D92D20"
+                : "inherit",
+              fontSize: "0.875rem",
+              fontWeight: 500,
             }}
           >
-            <Box sx={{ fontSize: 24, color: 'white' }}>
-              {config.icon}
-            </Box>
-          </Box>
-          
-          {!loading && change && hasData && (
-            <Box display="flex" alignItems="center">
-              {isPositive && (
-                <TrendingUp sx={{ color: '#10B981', mr: 0.5 }} />
-              )}
-              {isNegative && (
-                <TrendingDown sx={{ color: '#EF4444', mr: 0.5 }} />
-              )}
-              <Typography 
-                variant="body2" 
-                sx={{ 
-                  color: isPositive ? '#10B981' : isNegative ? '#EF4444' : 'inherit',
-                  fontWeight: 600
-                }}
-              >
-                {change}%
-              </Typography>
-            </Box>
-          )}
-        </Box>
+            {change}%
+          </Typography>
+        </>
+      )}
+      <Typography
+        sx={{
+          fontSize: "0.75rem",
+          fontWeight: 500,
+          opacity: 0.8,
+        }}
+      >
+        vs last period
+      </Typography>
+    </Box>
+  );
+};
 
-        <Typography 
-          variant="h4" 
-          component="div" 
-          sx={{ 
-            fontWeight: 700,
-            mb: 1,
-            opacity: hasData ? 1 : 0.6
-          }}
+const IconContainer: React.FC<{
+  iconColor: string;
+  icon: React.ReactElement;
+}> = ({ iconColor, icon }) => (
+  <Box
+    sx={{
+      bgcolor: `${iconColor}20`,
+      width: 40,
+      height: 40,
+      borderRadius: "20px",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      flexShrink: 0,
+      ml: 2,
+    }}
+  >
+    <Box sx={{ color: iconColor, fontSize: "1.25rem" }}>{icon}</Box>
+  </Box>
+);
+
+const AnalyticsCardContent: React.FC<{
+  title: string;
+  value: string;
+  change: string;
+  config: AnalyticsCardConfig;
+  icon: React.ReactElement;
+}> = ({ title, value, change, config, icon }) => (
+  <Box
+    sx={{
+      display: "flex",
+      justifyContent: "space-between",
+      alignItems: "flex-start",
+    }}
+  >
+    <Box sx={{ flex: 1 }}>
+      <Typography
+        sx={{
+          color: config.textColor,
+          fontSize: "0.875rem",
+          fontWeight: 500,
+          mb: 1,
+          opacity: 0.9,
+        }}
+      >
+        {title}
+      </Typography>
+
+      <Typography
+        variant="h5"
+        sx={{
+          color: config.textColor,
+          mb: 2,
+          fontWeight: 600,
+          fontSize: { xs: "1rem", md: "1rem" },
+        }}
+      >
+        {value}
+      </Typography>
+
+      <ChangeIndicator change={change} />
+    </Box>
+
+    <IconContainer iconColor={config.iconColor} icon={icon} />
+  </Box>
+);
+
+// ==================== STATE COMPONENTS ====================
+
+const ErrorAnalyticsCard: React.FC<{ onRetry?: () => void }> = ({
+  onRetry,
+}) => (
+  <Card
+    sx={{
+      border: "1px solid #FECACA",
+      backgroundColor: "#FEF2F2",
+      boxShadow: "none",
+      height: "140px",
+      position: "relative",
+      overflow: "hidden",
+      "&::before": {
+        content: '""',
+        position: "absolute",
+        top: 0,
+        left: 0,
+        right: 0,
+        height: "2px",
+        background: "linear-gradient(90deg, #EF4444, #FECACA)",
+      },
+    }}
+  >
+    <CardContent
+      sx={{
+        p: 3,
+        height: "100%",
+        display: "flex",
+        flexDirection: "column",
+        justifyContent: "center",
+        alignItems: "center",
+        textAlign: "center",
+      }}
+    >
+      <WarningIcon sx={{ color: "#DC2626", fontSize: 32, mb: 1 }} />
+      <Typography variant="h6" color="#DC2626" gutterBottom>
+        Error: Unable to load analytics data
+      </Typography>
+      {onRetry && (
+        <Typography
+          variant="body2"
+          color="#DC2626"
+          sx={{ cursor: "pointer", textDecoration: "underline" }}
+          onClick={onRetry}
         >
-          {loading ? (
-            <CircularProgress size={24} sx={{ color: config.textColor }} />
-          ) : (
-            hasData ? value : 'N/A'
-          )}
+          Click to retry
         </Typography>
+      )}
+    </CardContent>
+  </Card>
+);
 
-        <Typography 
-          variant="body2" 
-          sx={{ 
-            opacity: hasData ? 0.8 : 0.5,
-            fontWeight: 500
-          }}
+// NEW: EmptyAnalyticsState component (same as UserAnalytics)
+const EmptyAnalyticsState: React.FC = () => {
+  return (
+    <Card
+      sx={{
+        border: "1px solid #E2E8F0",
+        backgroundColor: "#F8FAFC",
+        boxShadow: "none",
+        height: "140px",
+        position: "relative",
+        overflow: "hidden",
+        "&::before": {
+          content: '""',
+          position: "absolute",
+          top: 0,
+          left: 0,
+          right: 0,
+          height: "2px",
+          background: "linear-gradient(90deg, #CBD5E1, #F1F5F9)",
+        },
+      }}
+    >
+      <CardContent
+        sx={{
+          p: 3,
+          height: "100%",
+          display: "flex",
+          flexDirection: "column",
+          justifyContent: "center",
+          alignItems: "center",
+          textAlign: "center",
+        }}
+      >
+        <WarningIcon sx={{ color: "grey.400", fontSize: 32, mb: 1 }} />
+        <Typography variant="h6" color="text.secondary" gutterBottom>
+          No Analytics Data
+        </Typography>
+        <Typography
+          variant="body2"
+          color="text.secondary"
+          sx={{ opacity: 0.8 }}
         >
-          {title}
+          Analytics data will appear here once available
         </Typography>
-
-        {!hasData && !loading && (
-          <Chip
-            label="No Data"
-            size="small"
-            color="warning"
-            variant="outlined"
-            sx={{
-              position: 'absolute',
-              top: 8,
-              right: 8,
-              fontSize: '0.7rem'
-            }}
-          />
-        )}
       </CardContent>
     </Card>
   );
 };
 
-// Format currency function
-const formatCurrency = (amount: number, currency: string = 'NGN'): string => {
-  return new Intl.NumberFormat('en-NG', {
-    style: 'currency',
-    currency: currency,
-  }).format(amount);
+// ==================== MAIN COMPONENTS ====================
+
+const AnalyticsCard: React.FC<AnalyticsCardProps> = ({
+  title,
+  value,
+  change = "0",
+  loading = false,
+  config,
+  icon,
+}) => {
+  const borderColor = getBorderColor(config.bgColor, config.iconColor);
+
+  if (loading) {
+    return <AnalyticsCardSkeleton />;
+  }
+
+  return (
+    <Card
+      sx={{
+        border: `1px solid ${borderColor}`,
+        borderTop: `2px solid ${borderColor}`,
+        borderLeft: `4px solid ${config.iconColor}40`,
+        backgroundColor: config.bgColor,
+        boxShadow: "none",
+        transition: "all 0.2s ease-in-out",
+        overflow: "hidden",
+        position: "relative",
+        "&:hover": {
+          transform: "translateY(-2px)",
+          boxShadow: "0 4px 12px rgba(0, 0, 0, 0.1)",
+          borderColor: `${config.iconColor}60`,
+        },
+        "&::before": {
+          content: '""',
+          position: "absolute",
+          top: 0,
+          left: 0,
+          right: 0,
+          height: "2px",
+          background: `linear-gradient(90deg, ${config.iconColor}20, ${config.iconColor}00)`,
+        },
+      }}
+    >
+      <CardContent sx={{ p: 3 }}>
+        <AnalyticsCardContent
+          title={title}
+          value={value}
+          change={change}
+          config={config}
+          icon={icon}
+        />
+      </CardContent>
+    </Card>
+  );
 };
 
-// Main TransactionAnalytics component
-interface TransactionAnalyticsProps {
-  analytics?: AnalyticsData;
-  isLoading?: boolean;
-  dateRange?: { fromUtc?: string; toUtc?: string };
-}
+// ==================== HELPER FUNCTIONS ====================
 
-export const TransactionAnalytics: React.FC<TransactionAnalyticsProps> = ({ 
-  analytics, 
-  isLoading = false 
-}) => {
-  // Check if analytics data is available
-  const hasAnalyticsData = analytics && (
-    analytics.totalCount !== undefined ||
-    analytics.successCount !== undefined ||
-    analytics.pendingCount !== undefined ||
-    analytics.failedCount !== undefined ||
-    analytics.totalRevenue !== undefined
+const getAnalyticsValue = (
+  key: string,
+  analytics?: AnalyticsData
+): number | undefined => {
+  const apiField = FIELD_MAPPING[key];
+  if (!apiField || !analytics) return undefined;
+  return analytics[apiField] as number | undefined;
+};
+
+const getChangeValue = (key: string, analytics?: AnalyticsData): string => {
+  const changeKey = CHANGE_FIELD_MAPPING[key];
+  if (!changeKey || !analytics) return "0";
+
+  const changeValue = analytics[changeKey];
+  if (typeof changeValue === "string") {
+    return changeValue;
+  } else if (typeof changeValue === "number") {
+    return changeValue.toString();
+  }
+  return "0";
+};
+
+const hasAnalyticsData = (analytics?: AnalyticsData): boolean => {
+  return (
+    !!analytics &&
+    (analytics.totalCount !== undefined ||
+      analytics.successCount !== undefined ||
+      analytics.pendingCount !== undefined ||
+      analytics.failedCount !== undefined ||
+      analytics.totalRevenue !== undefined)
   );
+};
 
-  // Card configuration for different transaction analytics metrics
-  const analyticsConfig: Record<string, AnalyticsCardConfig> = {
-    totalTransactions: {
-      title: 'Total Transactions',
-      bgColor: '#F0F9FF',
-      textColor: '#0369A1',
-      iconColor: '#0EA5E9',
-      icon: <TransactionsIcon />,
-      format: (value: number | undefined) => value?.toLocaleString() || '0'
-    },
-    completedTransactions: {
-      title: 'Successful',
-      bgColor: '#ECFDF5',
-      textColor: '#065F46',
-      iconColor: '#10B981',
-      icon: <CompletedIcon />,
-      format: (value: number | undefined) => value?.toLocaleString() || '0'
-    },
-    pendingTransactions: {
-      title: 'Pending',
-      bgColor: '#FFFBEB',
-      textColor: '#92400E',
-      iconColor: '#F59E0B',
-      icon: <PendingIcon />,
-      format: (value: number | undefined) => value?.toLocaleString() || '0'
-    },
-    failedTransactions: {
-      title: 'Failed',
-      bgColor: '#FEF2F2',
-      textColor: '#991B1B',
-      iconColor: '#EF4444',
-      icon: <FailedIcon />,
-      format: (value: number | undefined) => value?.toLocaleString() || '0'
-    },
-    totalRevenue: {
-      title: 'Total Revenue',
-      bgColor: '#EFF6FF',
-      textColor: '#1E40AF',
-      iconColor: '#3B82F6',
-      icon: <RevenueIcon />,
-      format: (value: number | undefined) => formatCurrency(value || 0)
-    }
-  };
+// ==================== MAIN COMPONENT ====================
 
-  // Map our UI keys to actual API field names
-  const fieldMapping: Record<string, string> = {
-    totalTransactions: 'totalCount',
-    completedTransactions: 'successCount',
-    pendingTransactions: 'pendingCount',
-    failedTransactions: 'failedCount',
-    totalRevenue: 'totalRevenue'
-  };
+export const TransactionAnalytics: React.FC<TransactionAnalyticsProps> = ({
+  analytics,
+  isLoading = false,
+  error = false,
+  onRetry,
+}) => {
+  if (error) {
+    return (
+      <Box sx={{ mb: 4 }}>
+        <ErrorAnalyticsCard onRetry={onRetry} />
+      </Box>
+    );
+  }
 
-  const changeFieldMapping: Record<string, string> = {
-    totalTransactions: 'totalChange',
-    completedTransactions: 'successChange',
-    pendingTransactions: 'pendingChange',
-    failedTransactions: 'failedChange',
-    totalRevenue: 'revenueChange'
-  };
+  // CHANGED: Use the same empty state as UserAnalytics
+  if (!hasAnalyticsData(analytics) && !isLoading) {
+    return (
+      <Box sx={{ mb: 4 }}>
+        <EmptyAnalyticsState />
+      </Box>
+    );
+  }
 
-  // Split cards into two rows: 3 on top, 2 on bottom
-  const topRowCards = ['totalTransactions', 'completedTransactions', 'pendingTransactions'];
-  const bottomRowCards = ['failedTransactions', 'totalRevenue'];
+  if (isLoading) {
+    return (
+      <Box sx={{ mb: 4 }}>
+        <Typography variant="h5" component="h2" sx={{ mb: 3, fontWeight: 600 }}>
+          Transaction Analytics
+        </Typography>
+        <Box
+          sx={{
+            display: "flex",
+            flexDirection: "row",
+            flexWrap: "wrap",
+            gap: 2,
+            "& > *": {
+              flex: {
+                xs: "1 1 100%",
+                sm: "1 1 calc(50% - 16px)",
+                md: "1 1 calc(33.333% - 16px)",
+              },
+              minWidth: {
+                xs: "100%",
+                sm: "200px",
+                md: "220px",
+              },
+            },
+          }}
+        >
+          {ALL_CARDS.map((key) => (
+            <AnalyticsCard
+              key={key}
+              title={ANALYTICS_CONFIGS[key].title}
+              value=""
+              change="0"
+              loading={true}
+              config={ANALYTICS_CONFIGS[key]}
+              icon={ANALYTICS_ICONS[key]}
+            />
+          ))}
+        </Box>
+      </Box>
+    );
+  }
 
   return (
     <Box sx={{ mb: 4 }}>
@@ -253,113 +531,44 @@ export const TransactionAnalytics: React.FC<TransactionAnalyticsProps> = ({
         Transaction Analytics
       </Typography>
 
-      {/* Warning Alert when no analytics data is available */}
-      {!isLoading && !hasAnalyticsData && (
-        <Alert 
-          severity="warning" 
-          icon={<WarningIcon />}
-          sx={{ 
-            mb: 3,
-            backgroundColor: '#FFFBEB',
-            color: '#92400E',
-            border: '1px solid #F59E0B'
-          }}
-        >
-          No analytics data available for the selected period
-        </Alert>
-      )}
-      
-      {/* Top Row - 3 Cards */}
-      <Box 
-        sx={{ 
-          display: 'flex',
-          flexWrap: 'wrap',
-          gap: 3,
-          mb: 3,
-          justifyContent: { xs: 'center', md: 'space-between' }
+      <Box
+        sx={{
+          display: "flex",
+          flexDirection: "row",
+          flexWrap: "wrap",
+          gap: 2,
+          "& > *": {
+            flex: {
+              xs: "1 1 100%",
+              sm: "1 1 calc(50% - 16px)",
+              md: "1 1 calc(33.333% - 16px)",
+            },
+            minWidth: {
+              xs: "100%",
+              sm: "200px",
+              md: "220px",
+            },
+          },
         }}
       >
-        {topRowCards.map((key) => {
-          const config = analyticsConfig[key];
-          const apiField = fieldMapping[key] || key;
-          const changeKey = changeFieldMapping[key] || `${key}Change`;
-          
-          const value = analytics?.[apiField as keyof AnalyticsData] as number | undefined;
-          const changeValue = analytics?.[changeKey as keyof AnalyticsData] as string | undefined || '0';
-          const hasData = value !== undefined && value !== null;
-          
+        {ALL_CARDS.map((key) => {
+          const config = ANALYTICS_CONFIGS[key];
+          const value = getAnalyticsValue(key, analytics);
+          const changeValue = getChangeValue(key, analytics);
+
           return (
-            <Box 
+            <AnalyticsCard
               key={key}
-              sx={{ 
-                flex: { xs: '1 1 100%', sm: '1 1 calc(50% - 12px)', md: '1 1 calc(33.333% - 16px)' },
-                minWidth: { xs: '100%', sm: '280px', md: 'auto' },
-                maxWidth: { md: 'calc(33.333% - 16px)' }
-              }}
-            >
-              <AnalyticsCard
-                title={config.title}
-                value={config.format(value)}
-                change={changeValue}
-                loading={isLoading}
-                config={config}
-                hasData={hasData}
-              />
-            </Box>
+              title={config.title}
+              value={config.format(value)}
+              change={changeValue}
+              loading={false}
+              config={config}
+              icon={ANALYTICS_ICONS[key]}
+            />
           );
         })}
       </Box>
-
-      {/* Bottom Row - 2 Cards */}
-      <Box 
-        sx={{ 
-          display: 'flex',
-          flexWrap: 'wrap',
-          gap: 3,
-          justifyContent: { xs: 'center', md: 'flex-start' }
-        }}
-      >
-        {bottomRowCards.map((key) => {
-          const config = analyticsConfig[key];
-          const apiField = fieldMapping[key] || key;
-          const changeKey = changeFieldMapping[key] || `${key}Change`;
-          
-          const value = analytics?.[apiField as keyof AnalyticsData] as number | undefined;
-          const changeValue = analytics?.[changeKey as keyof AnalyticsData] as string | undefined || '0';
-          const hasData = value !== undefined && value !== null;
-          
-          return (
-            <Box 
-              key={key}
-              sx={{ 
-                flex: { xs: '1 1 100%', sm: '1 1 calc(50% - 12px)', md: '1 1 calc(50% - 12px)' },
-                minWidth: { xs: '100%', sm: '280px', md: 'auto' },
-                maxWidth: { md: 'calc(50% - 12px)' }
-              }}
-            >
-              <AnalyticsCard
-                title={config.title}
-                value={config.format(value)}
-                change={changeValue}
-                loading={isLoading}
-                config={config}
-                hasData={hasData}
-              />
-            </Box>
-          );
-        })}
-      </Box>
-
-      {isLoading && !analytics && (
-        <Box display="flex" justifyContent="center" alignItems="center" py={4}>
-          <CircularProgress />
-          <Typography variant="body1" sx={{ ml: 2 }}>
-            Loading analytics...
-          </Typography>
-        </Box>
-      )}
-
-     
     </Box>
   );
 };

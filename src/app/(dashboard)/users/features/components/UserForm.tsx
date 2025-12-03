@@ -285,33 +285,6 @@ const onSubmit: SubmitHandler<UserFormValues> = async (data) => {
               </Typography>
             </Breadcrumbs>
 
-            <Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 2 }}>
-              <Avatar
-                sx={{
-                  bgcolor: "primary.main",
-                  width: 56,
-                  height: 56,
-                  fontSize: "1.25rem",
-                }}
-              >
-                {isEditing && user ? generateUserInitials(user.firstName, user.lastName) : userInitials}
-              </Avatar>
-              <Box>
-                <Typography
-                  variant="h4"
-                  component="h1"
-                  fontWeight="600"
-                  gutterBottom
-                >
-                  {isEditing && user ? `Edit ${user.firstName} ${user.lastName}` : "Create New User"}
-                </Typography>
-                <Typography variant="body1" color="text.secondary">
-                  {isEditing
-                    ? "Update user information and account settings"
-                    : "Add a new user to the platform with profile and account settings"}
-                </Typography>
-              </Box>
-            </Box>
           </Box>
 
           {/* Progress Stepper */}
@@ -555,40 +528,6 @@ const ProfileInformationStep: React.FC<ProfileInformationStepProps> = ({
         />
       </Box>
 
-      {/* Profile Preview */}
-      <Card sx={{ mt: 3, border: "1px solid", borderColor: "primary.light" }}>
-        <CardContent>
-          <Typography variant="subtitle1" gutterBottom sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-            <PersonIcon fontSize="small" />
-            Profile Preview
-          </Typography>
-          <Box sx={{ display: "flex", alignItems: "center", gap: 2, mt: 2 }}>
-            <Avatar
-              sx={{
-                bgcolor: "primary.main",
-                width: 60,
-                height: 60,
-                fontSize: "1.25rem",
-              }}
-            >
-              {generateUserInitials(firstName, lastName)}
-            </Avatar>
-            <Box>
-              <Typography variant="h6">
-                {firstName} {lastName}
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                {email}
-              </Typography>
-              {phone && (
-                <Typography variant="body2" color="text.secondary">
-                  {phone}
-                </Typography>
-              )}
-            </Box>
-          </Box>
-        </CardContent>
-      </Card>
     </Box>
   );
 };

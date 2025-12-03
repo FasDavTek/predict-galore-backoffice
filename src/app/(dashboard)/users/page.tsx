@@ -13,27 +13,22 @@ import {
 
 // Components
 import { UsersTable } from "./features/components/UsersTable";
-import { UserFilters } from "./features/components/UserFilters";
 import { UserAnalytics } from "./features/components/UserAnalytics";
 import { UserForm } from "./features/components/UserForm";
-import { UsersPagination } from "./features/components/UsersPagination";
-import { UsersToolbar } from "./features/components/UsersToolbar";
-import { SelectedUserPreview } from "./features/components/SelectedUserPreview";
-import { UsersPageLoadingSkeleton } from "@/app/(dashboard)/users/features/components/UsersPageLoadingSkeleton";
 import UsersPageHeader, { TimeRange } from "./features/components/UsersPageHeader";
+import { UsersPageLoadingSkeleton } from "./features/components/UsersPageLoadingSkeleton";
 
 // Global State Components
-import { EmptyState } from "@/shared/components/EmptyState";
 import { ErrorState } from "@/shared/components/ErrorState";
 
 // Hooks
-import { useUsers } from "@/app/(dashboard)/users/features/hooks/useUsers";
+import { useUsers } from "./features/hooks/useUsers";
 
-// Types
-import { User } from "@/app/(dashboard)/users/features/types/user.types";
+// Types - Only import from your types file
+import { User } from "./features/types/user.types";
 
-// Auth state selectors
-import { RootState } from "../../../store/store";
+// Auth
+import { RootState } from "@/store/store";
 import { useSelector } from "react-redux";
 import withAuth from "@/hoc/withAuth";
 
@@ -98,7 +93,7 @@ function UsersPage() {
     // Set a timeout to hide the loading skeleton after a minimum duration
     setTimeout(() => {
       setIsRefreshing(false);
-    }, 1000); // Minimum 1 second loading state for better UX
+    }, 1000);
   };
 
   const showSnackbar = (message: string, severity: "success" | "error") => {
@@ -114,7 +109,7 @@ function UsersPage() {
     setIsUserFormOpen(true);
   };
 
-  const handleUserDelete = async (user: User) => {
+  const handleUserDelete = async (user: User): Promise<void> => {
     const confirmed = window.confirm(
       `Are you sure you want to delete ${user.fullName}?`
     );
@@ -220,111 +215,42 @@ function UsersPage() {
       {/* Analytics */}
       <UserAnalytics refreshTrigger={refreshTrigger} />
 
-      {/* Selected Users Preview */}
-      <SelectedUserPreview
+      {/* Consolidated UsersTable Component */}
+      <UsersTable
+        // Data
+        users={users}
+        pagination={pagination}
+        isLoading={isLoading}
+        hasError={!!error}
+        
+        // Filters
+        currentFilters={currentFilters}
+        localSearch={localSearch}
+        
+        // Selection
         selectedUsers={selectedUsers}
+        selectedUserIds={selectedUserIds}
+        
+        // Handlers
         onUserSelect={handleUserSelect}
         onUserEdit={handleUserEdit}
         onUserDelete={handleUserDelete}
-        onClearSelection={handleClearAllSelection}
-        onRemoveUser={handleRemoveUserFromSelection}
+        onAddUser={handleAddUser}
+        onExportUsers={() => handleExportUsers()}
+        onRefresh={handleRefresh}
+        onSearchChange={handleSearchChange}
+        onFilterChange={handleFilterChange}
+        onClearFilters={handleClearFilters}
+        onPageChange={handlePageChange}
+        onToggleSelection={handleToggleSelection}
+        onSelectAll={handleSelectAll}
+        onClearAllSelection={handleClearAllSelection}
+        onRemoveFromSelection={handleRemoveUserFromSelection}
+        
+        // States
+        isExporting={false} // Add actual export state if needed
+        isRefreshing={isRefreshing}
       />
-
-      <Box className="flex flex-col gap-3">
-        {/* Filters and Toolbar */}
-        <Box className="flex flex-row justify-between">
-          {/* Filters */}
-          <UserFilters
-            searchTerm={localSearch}
-            statusFilter={currentFilters.status}
-            planFilter={currentFilters.plan}
-            roleFilter={currentFilters.role}
-            onSearchChange={handleSearchChange}
-            onStatusChange={(status) => handleFilterChange({ status })}
-            onPlanChange={(plan) => handleFilterChange({ plan })}
-            onRoleChange={(role) => handleFilterChange({ role })}
-            onClearFilters={handleClearFilters}
-          />
-
-          {/* Toolbar */}
-          <UsersToolbar
-            selectedCount={selectedUsers.length}
-            onAddUser={handleAddUser}
-            onExportUsers={() => handleExportUsers()}
-            onRefresh={handleRefresh}
-            isLoading={isLoading}
-          />
-        </Box>
-
-        {/* Content Area */}
-        {users.length === 0 && !isLoading ? (
-          <EmptyState
-            variant={
-              localSearch ||
-              currentFilters.status ||
-              currentFilters.plan ||
-              currentFilters.role
-                ? "search"
-                : "data"
-            }
-            title={
-              localSearch ||
-              currentFilters.status ||
-              currentFilters.plan ||
-              currentFilters.role
-                ? "No Users Found"
-                : "No Users Yet"
-            }
-            description={
-              localSearch ||
-              currentFilters.status ||
-              currentFilters.plan ||
-              currentFilters.role
-                ? "Try adjusting your search criteria or filters to find what you're looking for."
-                : "Get started by adding your first user to the platform."
-            }
-            primaryAction={{
-              label: "Add User",
-              onClick: handleAddUser,
-            }}
-            secondaryAction={
-              localSearch ||
-              currentFilters.status ||
-              currentFilters.plan ||
-              currentFilters.role
-                ? {
-                    label: "Clear Filters",
-                    onClick: handleClearFilters,
-                  }
-                : undefined
-            }
-            height={300}
-          />
-        ) : (
-          <>
-            {/* Users Table */}
-            <UsersTable
-              users={users}
-              selectedUserIds={selectedUserIds}
-              onUserSelect={handleUserSelect}
-              onUserEdit={handleUserEdit}
-              onUserDelete={handleUserDelete}
-              onToggleSelection={handleToggleSelection}
-              onSelectAll={handleSelectAll}
-              isLoading={isLoading}
-              hasError={!!error}
-            />
-
-            {/* Pagination */}
-            {pagination && pagination.total > 0 && (
-              <UsersPagination
-                pagination={pagination}
-                onPageChange={handlePageChange}
-              />
-            )}
-          </>
-        )}
-      </Box>
 
       {/* Add/Edit User Dialog */}
       <Dialog
@@ -363,5 +289,4 @@ function UsersPage() {
   );
 }
 
-// Wrap with authentication HOC
 export default withAuth(UsersPage);

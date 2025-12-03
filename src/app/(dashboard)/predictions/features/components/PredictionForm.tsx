@@ -485,12 +485,7 @@ const HeaderSection: React.FC = () => (
       </Typography>
     </Breadcrumbs>
 
-    <Typography variant="h4" component="h1" fontWeight="600" gutterBottom>
-      Create Prediction
-    </Typography>
-    <Typography variant="body1" color="text.secondary">
-      Create a new sports prediction with detailed analysis and market picks
-    </Typography>
+
   </Box>
 );
 

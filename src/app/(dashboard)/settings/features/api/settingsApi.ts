@@ -31,20 +31,53 @@ interface RootState {
   };
 }
 
+interface ApiErrorData {
+  message?: string;
+  status?: string;
+  statusCode?: string;
+  error?: string;
+  details?: unknown;
+}
+
+interface ApiSuccessData {
+  message?: string;
+  status?: string;
+  data?: unknown;
+  success?: boolean;
+}
+
+interface SuccessLoggingData {
+  method: string;
+  url: string;
+  duration: number;
+  response: ApiSuccessData;
+}
+
+interface DetailedLogData {
+  endpoint: string;
+  method: string;
+  timestamp: string;
+  duration: number;
+  requestData?: unknown;
+  responseData?: unknown;
+  errorData?: unknown;
+}
+
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://apidev.predictgalore.com';
 
 type LoggingBaseQueryArgs = FetchArgs;
 
-// Enhanced error formatter with better error handling
+// Enhanced error formatter with detailed error logging
 const formatApiError = (error: FetchBaseQueryError, method: string, url: string): string => {
   const { status, data } = error;
   
   if (data && typeof data === 'object' && data !== null) {
-    const apiError = data as { message?: string; status?: string; statusCode?: string };
+    const apiError = data as ApiErrorData;
     const parts = [
       apiError.message,
       apiError.status && `Status: ${apiError.status}`,
-      apiError.statusCode && `Code: ${apiError.statusCode}`
+      apiError.statusCode && `Code: ${apiError.statusCode}`,
+      apiError.error && `Error: ${apiError.error}`
     ].filter(Boolean);
     
     return `❌ ${method} ${url} - ${parts.join(' | ')}`;
@@ -53,21 +86,107 @@ const formatApiError = (error: FetchBaseQueryError, method: string, url: string)
   return `❌ ${method} ${url} - Status: ${status || 'UNKNOWN'}`;
 };
 
-// Enhanced base query with better error handling and retry logic
+// Enhanced success formatter
+const formatApiSuccess = (loggingData: SuccessLoggingData): string => {
+  const { method, url, duration, response } = loggingData;
+  
+  const parts = [
+    response.message,
+    response.status && `Status: ${response.status}`,
+    `Duration: ${duration}ms`
+  ].filter(Boolean);
+  
+  // Add data summary for specific endpoints
+  let dataSummary = '';
+  if (url.includes('/profile')) {
+    dataSummary = 'Profile data retrieved';
+  } else if (url.includes('/team') || url.includes('/users')) {
+    const items = response.data;
+    if (Array.isArray(items)) {
+      dataSummary = `Items: ${items.length}`;
+    }
+  } else if (url.includes('/permissions')) {
+    dataSummary = 'Permissions data processed';
+  } else if (url.includes('/roles')) {
+    dataSummary = 'Roles data processed';
+  }
+  
+  if (dataSummary) {
+    parts.push(dataSummary);
+  }
+  
+  return `✅ ${method} ${url} - ${parts.join(' | ')}`;
+};
+
+// Type guard to check if data has array structure
+const isArrayData = (data: unknown): data is unknown[] => {
+  return Array.isArray(data);
+};
+
+// Type guard for API response structure
+const isApiResponse = (data: unknown): data is ApiSuccessData => {
+  return typeof data === 'object' && data !== null;
+};
+
+// Safe JSON stringify for logging
+const safeStringify = (obj: unknown, space?: number): string => {
+  try {
+    return JSON.stringify(obj, null, space);
+  } catch {
+    return '[Unserializable Object]';
+  }
+};
+
+// Log detailed request/response data
+const logDetailedData = (logData: DetailedLogData): void => {
+  const { endpoint, method, timestamp, duration, requestData, responseData, errorData } = logData;
+  
+  console.group(`🔍 ${method} ${endpoint} - Detailed Log`);
+  console.log('📅 Timestamp:', timestamp);
+  console.log('⏱️ Duration:', `${duration}ms`);
+  
+  if (requestData) {
+    console.log('📤 Request Data:', requestData);
+    console.log('📤 Request Data (JSON):', safeStringify(requestData, 2));
+  }
+  
+  if (responseData) {
+    console.log('📥 Response Data:', responseData);
+    console.log('📥 Response Data (JSON):', safeStringify(responseData, 2));
+  }
+  
+  if (errorData) {
+    console.log('🚨 Error Data:', errorData);
+    console.log('🚨 Error Data (JSON):', safeStringify(errorData, 2));
+  }
+  
+  console.groupEnd();
+};
+
+// Enhanced base query with detailed logging
 const loggingBaseQuery: BaseQueryFn<
   LoggingBaseQueryArgs,
   unknown,
   FetchBaseQueryError
 > = async (args, api, extraOptions) => {
-  const { url, method = 'GET' } = args;
+  const { url, method = 'GET', body } = args;
   const isDevelopment = process.env.NODE_ENV === 'development';
 
-  const startGroup = () => isDevelopment && console.group(`🚀 ${method} ${url}`);
-  const endGroup = () => isDevelopment && console.groupEnd();
+  // Only log the specific endpoint being called
+  const logRequest = () => {
+    if (isDevelopment) {
+      console.log(`🚀 ${method} ${url}`);
+      if (body && (method === 'POST' || method === 'PUT' || method === 'PATCH')) {
+        console.log('📤 Request Payload:', body);
+      }
+    }
+  };
 
-  startGroup();
+  const startTime = Date.now();
 
   try {
+    logRequest();
+
     const result = await fetchBaseQuery({
       baseUrl: BASE_URL,
       prepareHeaders: (headers: Headers, { getState }) => {
@@ -83,26 +202,114 @@ const loggingBaseQuery: BaseQueryFn<
       },
     })(args, api, extraOptions);
 
+    const duration = Date.now() - startTime;
+    const timestamp = new Date().toISOString();
+
     if (result.error) {
-      const errorMessage = formatApiError(result.error, method, url);
+      const errorMessage = formatApiError(result.error, method, url || '');
       console.error(errorMessage);
+      
+      // Log detailed error information
+      logDetailedData({
+        endpoint: url || '',
+        method,
+        timestamp,
+        duration,
+        requestData: body || undefined,
+        errorData: result.error
+      });
       
       // Handle specific error cases
       if (result.error.status === 400 && url?.includes('/auth/user/me')) {
         console.warn('Profile endpoint returned 400 - possible authentication issue');
       }
+    } else {
+      // Log success with details
+      const responseData = isApiResponse(result.data) ? result.data : { data: result.data };
+      const successMessage = formatApiSuccess({
+        method,
+        url: url || '',
+        duration,
+        response: responseData
+      });
+      console.log(successMessage);
+      
+      // Log detailed success information
+      logDetailedData({
+        endpoint: url || '',
+        method,
+        timestamp,
+        duration,
+        requestData: body || undefined,
+        responseData: result.data
+      });
+      
+      // Detailed success logging for specific operations
+      if (isDevelopment) {
+        if (method === 'POST' || method === 'PUT' || method === 'DELETE') {
+          console.log(`📝 ${method} Operation Completed - ${url}`, {
+            duration: `${duration}ms`,
+            timestamp,
+            requestData: body || 'No body',
+            responseData: result.data
+          });
+        }
+        
+        // Log specific data for GET requests on important endpoints
+        if (method === 'GET' && result.data) {
+          const apiData = isApiResponse(result.data) ? result.data.data : result.data;
+          
+          if (url?.includes('/team') || url?.includes('/users')) {
+            if (isArrayData(apiData)) {
+              console.log(`👥 Team Members Count: ${apiData.length}`);
+              console.log('👥 Team Members Data:', apiData);
+            }
+          } else if (url?.includes('/permissions')) {
+            if (isArrayData(apiData)) {
+              console.log(`🔐 Permissions Count: ${apiData.length}`);
+              console.log('🔐 Permissions Data:', apiData);
+            }
+          } else if (url?.includes('/roles')) {
+            if (isArrayData(apiData)) {
+              console.log(`🎭 Roles Count: ${apiData.length}`);
+              console.log('🎭 Roles Data:', apiData);
+            }
+          } else if (url?.includes('/profile')) {
+            console.log('👤 Profile Data:', apiData);
+          } else if (url?.includes('/integrations')) {
+            if (isArrayData(apiData)) {
+              console.log(`🔗 Integrations Count: ${apiData.length}`);
+              console.log('🔗 Integrations Data:', apiData);
+            }
+          }
+        }
+      }
     }
 
-    endGroup();
     return result;
   } catch (error) {
+    const duration = Date.now() - startTime;
+    const timestamp = new Date().toISOString();
     const errorMessage = `💥 ${method} ${url} - ${
       error instanceof Error ? error.message : 'Unknown fetch error'
-    }`;
+    } (${duration}ms)`;
+    
     console.error(errorMessage);
     
-    endGroup();
-
+    // Log detailed error information for fetch errors
+    logDetailedData({
+      endpoint: url || '',
+      method,
+      timestamp,
+      duration,
+      requestData: body || undefined,
+      errorData: {
+        type: 'FETCH_ERROR',
+        message: error instanceof Error ? error.message : 'Unknown fetch error',
+        stack: error instanceof Error ? error.stack : undefined
+      }
+    });
+    
     return {
       error: {
         status: 'FETCH_ERROR',
@@ -121,11 +328,9 @@ export const settingsApi = createApi({
     getProfile: builder.query<ApiResponse<UserProfile>, void>({
       query: () => ({ 
         url: '/api/v1/auth/user/me',
-        // Add timeout and retry logic
         timeout: 10000,
       }),
       providesTags: ['Profile'],
-      // Retry on certain errors but not on 400s
       extraOptions: { maxRetries: 2 },
     }),
 
@@ -224,7 +429,7 @@ export const settingsApi = createApi({
 
     // Team endpoints
     getTeamMembers: builder.query<ApiResponse<TeamMember[]>, void>({
-      query: () => ({ url: '/api/v1/teams' }),
+      query: () => ({ url: '/api/v1/admin/users' }),
       providesTags: ['Team'],
     }),
 
@@ -315,7 +520,7 @@ export const settingsApi = createApi({
 // Export hooks
 export const {
   useGetProfileQuery,
-  useGetAdminProfileQuery, // New fallback hook
+  useGetAdminProfileQuery,
   useUpdateProfileMutation,
   useChangePasswordMutation,
   useToggleTwoFactorMutation,

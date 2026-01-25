@@ -114,10 +114,13 @@ export function useLeagues(filters?: { sportId?: number }) {
 // Get upcoming fixtures hook
 export function useUpcomingFixtures(filters?: { leagueId?: number; fromDate?: string }) {
   return useQuery({
-    queryKey: ['fixtures', filters],
+    queryKey: ['fixtures', filters?.leagueId, filters?.fromDate],
     queryFn: async () => {
+      if (!filters?.leagueId || !filters?.fromDate) return [];
       return await PredictionsService.getUpcomingFixtures(filters);
     },
+    enabled: !!filters?.leagueId && !!filters?.fromDate,
+    staleTime: 0,
   });
 }
 

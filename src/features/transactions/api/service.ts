@@ -4,7 +4,10 @@
 
 import { api } from '@/shared/api';
 import { API_CONFIG } from '@/shared/api';
-import { transformApiTransactionsToAppTransactions } from '../lib/transformers';
+import {
+  transformApiTransactionsToAppTransactions,
+  type ApiTransactionResponse,
+} from '../lib/transformers';
 import type {
   TransactionsFilter,
   UpdateTransactionData,
@@ -28,15 +31,20 @@ export class TransactionsService {
       API_CONFIG.endpoints.transactions.list,
       filters as Record<string, unknown> | undefined
     );
-    // Handle real API structure: response.data contains page, pageSize, total, resultItems
-    const apiData = response.data;
+    // API returns { success, message, data: { page, pageSize, total, items } }
+    const raw = response as { success?: boolean; data?: { page?: number; pageSize?: number; total?: number; items?: unknown[] } };
+    const apiData = raw?.data ?? {};
+    const items = Array.isArray(apiData.items) ? apiData.items : [];
+    const total = apiData.total ?? 0;
+    const pageSize = apiData.pageSize ?? 20;
+    const totalPages = pageSize > 0 ? Math.ceil(total / pageSize) : 0;
     return {
-      transactions: transformApiTransactionsToAppTransactions(apiData.resultItems || []),
+      transactions: transformApiTransactionsToAppTransactions(items as ApiTransactionResponse[]),
       pagination: {
-        page: apiData.currentPage,
-        limit: apiData.pageSize,
-        total: apiData.totalItems,
-        totalPages: apiData.totalPages,
+        page: apiData.page ?? 1,
+        limit: pageSize,
+        total,
+        totalPages,
       },
     };
   }

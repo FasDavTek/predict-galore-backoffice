@@ -41,7 +41,7 @@ import {
   useUpcomingFixtures,
 } from '@/features/predictions';
 import { League, Fixture } from '@/features/predictions';
-import { formatDateForAPI } from '@/features/predictions';
+import { formatDateForAPI, startOfToday } from '@/features/predictions';
 import { designTokens } from '@/shared/styles/tokens';
 import { useAuth } from '@/features/auth';
 
@@ -67,7 +67,7 @@ export const PredictionForm: React.FC<PredictionFormProps> = ({ onSuccess, onCan
     message: '',
     severity: 'success' as 'success' | 'error',
   });
-  const [fixtureFromDate, setFixtureFromDate] = useState<Date | null>(new Date());
+  const [fixtureFromDate, setFixtureFromDate] = useState<Date | null>(() => startOfToday());
   const [askHuddleOpen, setAskHuddleOpen] = useState(false);
   const [imageError, setImageError] = useState(false);
 
@@ -113,18 +113,19 @@ export const PredictionForm: React.FC<PredictionFormProps> = ({ onSuccess, onCan
   );
 
   const formattedFromDate = useMemo(
-    () => formatDateForAPI(fixtureFromDate || new Date()),
+    () => formatDateForAPI(fixtureFromDate ?? startOfToday()),
     [fixtureFromDate]
   );
 
-  const { data: fixturesData, isLoading: isFixturesLoading } = useUpcomingFixtures(
-    leagueId
-      ? {
-          leagueId: Number(leagueId),
-          fromDate: formattedFromDate,
-        }
-      : undefined
+  const fixturesFilters = useMemo(
+    () =>
+      leagueId
+        ? { leagueId: Number(leagueId), fromDate: formattedFromDate }
+        : undefined,
+    [leagueId, formattedFromDate]
   );
+
+  const { data: fixturesData, isLoading: isFixturesLoading } = useUpcomingFixtures(fixturesFilters);
 
   const sports = useMemo(() => sportsData || [], [sportsData]);
   const leagues = useMemo(() => leaguesData || [], [leaguesData]);
@@ -166,7 +167,7 @@ export const PredictionForm: React.FC<PredictionFormProps> = ({ onSuccess, onCan
 
   const handleDateChange = useCallback(
     (newDate: Date | null) => {
-      setFixtureFromDate(newDate);
+      setFixtureFromDate(newDate ?? startOfToday());
       setValue('fixtureId', '');
     },
     [setValue]
@@ -301,7 +302,7 @@ export const PredictionForm: React.FC<PredictionFormProps> = ({ onSuccess, onCan
         onSuccess?.();
         reset();
         setActiveStep(0);
-        setFixtureFromDate(new Date());
+        setFixtureFromDate(startOfToday());
       }, 1500);
     } catch (error) {
       let errorMessage = 'Failed to create prediction';

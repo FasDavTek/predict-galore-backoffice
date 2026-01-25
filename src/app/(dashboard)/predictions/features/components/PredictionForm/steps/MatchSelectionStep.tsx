@@ -20,7 +20,7 @@ import {
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { Autocomplete } from '@mui/material';
 
-import { Sport, League, Fixture } from '@/features/predictions';
+import { Sport, League, Fixture, startOfToday } from '@/features/predictions';
 import { FieldErrors, UseFormReturn } from 'react-hook-form';
 import { SportsPredictionFormValues } from '@/features/predictions';
 
@@ -114,17 +114,20 @@ export const MatchSelectionStep: React.FC<MatchSelectionStepProps> = ({
               onLeagueChange(newValue ? String(newValue.id) : '');
             }}
             disabled={!sportId || isLoading.leagues}
-            renderOption={(props, option: League) => (
-              <Box
-                component="li"
-                {...props}
-                sx={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 2,
-                  py: 1,
-                }}
-              >
+            renderOption={(props, option: League) => {
+              const { key, ...rest } = props;
+              return (
+                <Box
+                  key={key}
+                  component="li"
+                  {...rest}
+                  sx={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 2,
+                    py: 1,
+                  }}
+                >
                 {option.emblem ? (
                   <Avatar
                     src={option.emblem}
@@ -160,7 +163,8 @@ export const MatchSelectionStep: React.FC<MatchSelectionStepProps> = ({
                   )}
                 </Box>
               </Box>
-            )}
+            );
+            }}
             renderInput={(params) => {
               const selectedLeague = leagues.find((league) => String(league.id) === leagueId);
               return (
@@ -263,6 +267,7 @@ export const MatchSelectionStep: React.FC<MatchSelectionStepProps> = ({
                   }}
                   disabled={!leagueId || isLoading.fixtures}
                   renderOption={(props, option: Fixture) => {
+                    const { key, ...rest } = props;
                     const date = new Date(option.kickoffUtc);
                     const dateStr = date.toLocaleDateString();
                     const timeStr = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -307,8 +312,9 @@ export const MatchSelectionStep: React.FC<MatchSelectionStepProps> = ({
 
                     return (
                       <Box
+                        key={key}
                         component="li"
-                        {...props}
+                        {...rest}
                         sx={{
                           display: 'flex',
                           flexDirection: 'column',
@@ -504,11 +510,14 @@ export const MatchSelectionStep: React.FC<MatchSelectionStepProps> = ({
               <DatePicker
                 value={fixtureFromDate}
                 onChange={onDateChange}
+                minDate={startOfToday()}
+                disablePast
                 slotProps={{
                   textField: {
                     fullWidth: true,
                     size: 'medium',
-                    helperText: '',
+                    label: 'Fixtures from',
+                    helperText: 'Today or any future date',
                     placeholder: 'Select date',
                     // Match the exact TextField styling from the Fixture dropdown
                     sx: {

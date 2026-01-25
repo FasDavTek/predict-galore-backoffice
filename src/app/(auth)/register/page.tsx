@@ -1,101 +1,39 @@
 'use client';
 
-import React, { useState } from 'react';
-import {
-  TextField,
-  Button,
-  Box,
-  Checkbox,
-  FormControlLabel,
-  InputAdornment,
-  IconButton,
-  Typography,
-  Link,
-  CircularProgress,
-  Autocomplete,
-} from '@mui/material';
-import {
-  Mail as MailIcon,
-  Lock as LockIcon,
-  Visibility as VisibilityIcon,
-  VisibilityOff as VisibilityOffIcon,
-  Person as PersonIcon,
-  Phone as PhoneIcon,
-} from '@mui/icons-material';
-import { useForm, UseFormRegister, UseFormSetValue, FieldErrors, useWatch, Control } from 'react-hook-form';
+import React, { useState, useCallback, useMemo, memo } from 'react';
+import TextField from '@mui/material/TextField';
+import Button from '@mui/material/Button';
+import Box from '@mui/material/Box';
+import Checkbox from '@mui/material/Checkbox';
+import FormControlLabel from '@mui/material/FormControlLabel';
+import InputAdornment from '@mui/material/InputAdornment';
+import IconButton from '@mui/material/IconButton';
+import Typography from '@mui/material/Typography';
+import Link from '@mui/material/Link';
+import CircularProgress from '@mui/material/CircularProgress';
+import MailIcon from '@mui/icons-material/Mail';
+import LockIcon from '@mui/icons-material/Lock';
+import VisibilityIcon from '@mui/icons-material/Visibility';
+import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
+import PersonIcon from '@mui/icons-material/Person';
+import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useRouter } from 'next/navigation';
-import { toast } from 'react-toastify';
+import toast from 'react-hot-toast';
 import { AuthCard } from '@/app/(auth)/features/components/AuthCard';
 import { ErrorMessage } from '@/app/(auth)/features/components/ErrorMessage';
 import { PasswordStrengthIndicator } from '../features/components/PasswordStrengthIndicator';
-import { registerFormValidation, RegisterFormData, CountryCode } from '../features/validations/auth';
-import { useAppDispatch } from '@/shared/hooks/redux';
-import { useRegisterMutation, useCheckEmailQuery } from '../features/api/authApi';
-import { setToken, setAuthUser, setAuthStatus } from '../features/slices/authSlice';
-import { AuthStatus } from '@/app/(auth)/features/types/authTypes';
+import { PhoneNumberInput } from '../features/components/PhoneNumberInput';
+import {
+  registerFormValidation,
+  RegisterFormData,
+} from '@/features/auth/validations/auth';
+import Stack from '@mui/material/Stack';
+import { designTokens } from '@/shared/styles/tokens';
+import { createLogger } from '@/shared/api';
+import { useRegister, useCheckEmailQuery, useAuth } from '@/features/auth';
 
-const countryCodes: CountryCode[] = [
-  { code: '+1', name: 'United States', flag: '🇺🇸' },
-  { code: '+44', name: 'United Kingdom', flag: '🇬🇧' },
-  { code: '+61', name: 'Australia', flag: '🇦🇺' },
-  { code: '+49', name: 'Germany', flag: '🇩🇪' },
-  { code: '+33', name: 'France', flag: '🇫🇷' },
-];
-
-interface PhoneNumberInputProps {
-  register: UseFormRegister<RegisterFormData>;
-  errors: FieldErrors<RegisterFormData>;
-  setValue: UseFormSetValue<RegisterFormData>;
-  control: Control<RegisterFormData>;
-}
-
-const PhoneNumberInput: React.FC<PhoneNumberInputProps> = ({
-  register,
-  errors,
-  setValue,
-  control,
-}) => {
-  const countryCodeValue = useWatch({ control, name: 'countryCode' });
-  const selectedCountry = countryCodes.find(c => c.code === countryCodeValue) || countryCodes[0];
-
-  return (
-    <Box sx={{ display: 'flex', gap: 2, mb: 3 }}>
-      <Autocomplete
-        options={countryCodes}
-        getOptionLabel={(option) => `${option.flag} ${option.code}`}
-        value={selectedCountry}
-        onChange={(_event, newValue) => {
-          if (newValue) setValue('countryCode', newValue.code);
-        }}
-        renderInput={(params) => (
-          <TextField
-            {...params}
-            label="Code"
-            error={!!errors.countryCode}
-            helperText={errors.countryCode?.message}
-            sx={{ width: 140 }}
-          />
-        )}
-        disableClearable
-      />
-      <TextField
-        fullWidth
-        label="Phone Number"
-        {...register('phoneNumber')}
-        error={!!errors.phoneNumber}
-        helperText={errors.phoneNumber?.message}
-        InputProps={{
-          startAdornment: (
-            <InputAdornment position="start">
-              <PhoneIcon color="disabled" />
-            </InputAdornment>
-          ),
-        }}
-      />
-    </Box>
-  );
-};
+const logger = createLogger('Auth:Register');
 
 interface ApiError {
   data?: {
@@ -105,16 +43,17 @@ interface ApiError {
   status?: number;
 }
 
-export default function RegisterPage() {
+function RegisterPage() {
   const router = useRouter();
-  const dispatch = useAppDispatch();
-  
+  const { login } = useAuth();
+
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [agreeToTerms, setAgreeToTerms] = useState(false);
   const [apiError, setApiError] = useState<ApiError | null>(null);
 
-  const [registerUser, { isLoading: isRegistering }] = useRegisterMutation();
+  const registerMutation = useRegister();
+  const isRegistering = registerMutation.isPending;
 
   const {
     register,
@@ -125,7 +64,7 @@ export default function RegisterPage() {
   } = useForm<RegisterFormData>({
     resolver: zodResolver(registerFormValidation),
     mode: 'onChange',
-    defaultValues: {
+    defaultValues: useMemo(() => ({
       firstName: '',
       lastName: '',
       email: '',
@@ -134,7 +73,7 @@ export default function RegisterPage() {
       password: '',
       confirmPassword: '',
       userTypeId: 1,
-    },
+    }), []),
   });
 
   // Use useWatch hook
@@ -146,7 +85,19 @@ export default function RegisterPage() {
     skip: !email || !!errors.email,
   });
 
-  const onSubmit = async (data: RegisterFormData) => {
+  const toggleShowPassword = useCallback(() => {
+    setShowPassword((prev) => !prev);
+  }, []);
+
+  const toggleShowConfirmPassword = useCallback(() => {
+    setShowConfirmPassword((prev) => !prev);
+  }, []);
+
+  const handleAgreeToTermsChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setAgreeToTerms(e.target.checked);
+  }, []);
+
+  const onSubmit = useCallback(async (data: RegisterFormData) => {
     if (!agreeToTerms) {
       toast.error('You must agree to the terms and conditions');
       return;
@@ -169,52 +120,56 @@ export default function RegisterPage() {
         password: data.password,
       };
 
-      const result = await registerUser(registrationData).unwrap();
-      
-      if (result.token) {
-        dispatch(setToken(result.token));
-        dispatch(setAuthStatus(AuthStatus.AUTHENTICATED));
-        
-        if (result.user) {
-          dispatch(setAuthUser(result.user));
-        }
+      const result = await registerMutation.mutateAsync(registrationData);
+
+      if (result.token && result.user) {
+        // Transform API response user to full User type
+        const fullUser = {
+          ...result.user,
+          permissions: [],
+          userTypeId: data.userTypeId,
+          fullName: `${result.user.firstName} ${result.user.lastName}`,
+        };
+        login(result.token, fullUser);
       }
 
       toast.success('Registration successful! Please verify your email.');
       router.push(`/verify-email?email=${encodeURIComponent(data.email)}`);
     } catch (error: unknown) {
-      console.error('Registration error:', error);
+      logger.error('Registration failed', { error });
       setApiError(error as ApiError);
       toast.error('Registration failed. Please try again.');
     }
-  };
+  }, [agreeToTerms, emailCheck, registerMutation, login, router]);
+
+  const emailHelperText = useMemo(() => {
+    return errors.email?.message || (emailCheck && !emailCheck.available ? 'Email is already registered' : '');
+  }, [errors.email, emailCheck]);
 
   return (
-    <Box sx={{
-      overflowY: 'auto',
-      maxHeight: '70vh',
-      scrollbarWidth: 'none',
-      '&::-webkit-scrollbar': { 
-        display: 'none'
-      },
-      pr: 1,
-    }}
+    <Box
+      sx={{
+        overflowY: 'auto',
+        maxHeight: '70vh',
+        scrollbarWidth: 'none',
+        '&::-webkit-scrollbar': {
+          display: 'none',
+        },
+        pr: 1,
+      }}
     >
-      <AuthCard
-        title="Create an Account"
-        subtitle="Join our platform to get started"
-      >
+      <AuthCard title="Create an Account" subtitle="Join our platform to get started">
         {apiError && <ErrorMessage error={apiError} />}
 
-        <Box 
-          component="form" 
-          onSubmit={handleSubmit(onSubmit)} 
-          sx={{ 
+        <Box
+          component="form"
+          onSubmit={handleSubmit(onSubmit)}
+          sx={{
             width: '100%',
           }}
         >
           {/* Name Fields */}
-          <Box sx={{ display: 'flex', gap: 2, mb: 3 }}>
+          <Stack direction="row" spacing={designTokens.spacing.itemGap} sx={{ mb: designTokens.spacing.sectionGap }}>
             <TextField
               fullWidth
               label="First Name"
@@ -243,7 +198,7 @@ export default function RegisterPage() {
                 ),
               }}
             />
-          </Box>
+          </Stack>
 
           {/* Email Field */}
           <TextField
@@ -252,10 +207,7 @@ export default function RegisterPage() {
             type="email"
             {...register('email')}
             error={!!errors.email || (emailCheck && !emailCheck.available)}
-            helperText={
-              errors.email?.message || 
-              (emailCheck && !emailCheck.available ? 'Email is already registered' : '')
-            }
+            helperText={emailHelperText}
             sx={{ mb: 3 }}
             InputProps={{
               startAdornment: (
@@ -292,7 +244,7 @@ export default function RegisterPage() {
               endAdornment: (
                 <InputAdornment position="end">
                   <IconButton
-                    onClick={() => setShowPassword(!showPassword)}
+                    onClick={toggleShowPassword}
                     edge="end"
                     color="inherit"
                   >
@@ -322,7 +274,7 @@ export default function RegisterPage() {
               endAdornment: (
                 <InputAdornment position="end">
                   <IconButton
-                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    onClick={toggleShowConfirmPassword}
                     edge="end"
                     color="inherit"
                   >
@@ -338,7 +290,7 @@ export default function RegisterPage() {
             control={
               <Checkbox
                 checked={agreeToTerms}
-                onChange={(e) => setAgreeToTerms(e.target.checked)}
+                onChange={handleAgreeToTermsChange}
                 color="primary"
               />
             }
@@ -365,11 +317,7 @@ export default function RegisterPage() {
             disabled={isRegistering || !isValid || !agreeToTerms}
             sx={{ height: 48, mb: 3 }}
           >
-            {isRegistering ? (
-              <CircularProgress size={24} color="inherit" />
-            ) : (
-              'Create Account'
-            )}
+            {isRegistering ? <CircularProgress size={24} color="inherit" /> : 'Create Account'}
           </Button>
 
           {/* Login Link */}
@@ -386,3 +334,5 @@ export default function RegisterPage() {
     </Box>
   );
 }
+
+export default memo(RegisterPage);

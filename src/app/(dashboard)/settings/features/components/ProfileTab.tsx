@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Typography,
@@ -8,215 +8,102 @@ import {
   CircularProgress,
   Alert,
   Skeleton,
-  Card,
-  CardContent,
-  Avatar,
-} from "@mui/material";
-import TimezoneSelect, { ITimezone } from 'react-timezone-select';
+} from '@mui/material';
+import TimezoneSelect from 'react-timezone-select';
+import { useProfileSettings, useUpdateProfile } from '@/features/settings';
+import type { UpdateProfileData } from '@/features/settings';
 
-// Hooks
-import { useSettings } from "../hooks/useSettings";
+interface TabComponentProps {
+  showNotification: (message: string, severity: 'success' | 'error' | 'warning') => void;
+}
 
-// Types
-import { TabComponentProps, ProfileFormData, SettingsTimezone } from "../types";
+interface ProfileFormData {
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string;
+  timezone: string;
+}
 
-// Utils
-import { generateUserInitials } from "../utils/settingsTransformers";
+type UpdateProfilePayload = UpdateProfileData;
 
 // Skeleton Loading Component
 const ProfileSkeleton = () => (
-  <Box component="form">
+  <Box>
     <div className="grid grid-cols-1 md:grid-cols-12 gap-8">
       <Box className="md:col-span-4">
         <Skeleton variant="text" width="60%" height={40} />
         <Skeleton variant="text" width="90%" height={24} />
-        <Skeleton variant="text" width="80%" height={24} />
       </Box>
       <Box className="md:col-span-8">
-        <Box display="flex" gap={2} mb={3}>
-          <Skeleton variant="rectangular" width="100%" height={56} />
-          <Skeleton variant="rectangular" width="100%" height={56} />
-        </Box>
-        <Box mb={3}>
-          <Skeleton variant="rectangular" width="100%" height={56} />
-        </Box>
+        <Skeleton variant="rectangular" width="100%" height={56} sx={{ mb: 2 }} />
+        <Skeleton variant="rectangular" width="100%" height={56} sx={{ mb: 2 }} />
+        <Skeleton variant="rectangular" width="100%" height={56} />
       </Box>
     </div>
     <Divider sx={{ my: 4 }} />
     <div className="grid grid-cols-1 md:grid-cols-12 gap-8">
       <Box className="md:col-span-4">
         <Skeleton variant="text" width="60%" height={40} />
-        <Skeleton variant="text" width="90%" height={24} />
       </Box>
       <Box className="md:col-span-8">
-        <Box mb={3}>
-          <Skeleton variant="rectangular" width="100%" height={56} />
-        </Box>
+        <Skeleton variant="rectangular" width="100%" height={56} />
       </Box>
     </div>
-    <Box mt={4} display="flex" justifyContent="flex-end" gap={2}>
-      <Skeleton variant="rectangular" width={120} height={36} />
-    </Box>
   </Box>
 );
 
-/**
- * ProfileTab - Handles user profile information and timezone settings
- */
 export const ProfileTab: React.FC<TabComponentProps> = ({ showNotification }) => {
-  const {
-    profile,
-    isProfileLoading,
-    profileError,
-    updateProfile,
-    isUpdatingProfile,
-    refetchProfile, 
-  } = useSettings();
+  // API hooks
+  const { data: profileResponse, isLoading, error, refetch } = useProfileSettings();
+  const updateProfileMutation = useUpdateProfile();
+  const isUpdating = updateProfileMutation.isPending;
 
+  // State
   const [isEditing, setIsEditing] = useState(false);
-  const [hasProfileError, setHasProfileError] = useState(false);
-  const [isRefetching, setIsRefetching] = useState(false);
-  
-  // Initialize form data with defaults
-  const getDefaultFormData = useCallback((): ProfileFormData => {
-    return {
-      firstName: '',
-      lastName: '',
-      email: '',
-      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-      phone: '',
-    };
-  }, []);
-
-  // Initialize form state
-  const [formState, setFormState] = useState(() => {
-    const defaultData = getDefaultFormData();
-
-    if (profile) {
-      return {
-        formData: {
-          firstName: profile.firstName || '',
-          lastName: profile.lastName || '',
-          email: profile.email || '',
-          timezone: profile.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone,
-          phone: profile.phone || '',
-        },
-        originalData: {
-          firstName: profile.firstName || '',
-          lastName: profile.lastName || '',
-          email: profile.email || '',
-          timezone: profile.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone,
-          phone: profile.phone || '',
-        }
-      };
-    }
-
-    return {
-      formData: defaultData,
-      originalData: defaultData
-    };
+  const [formData, setFormData] = useState<ProfileFormData>({
+    firstName: '',
+    lastName: '',
+    email: '',
+    phone: '',
+    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
   });
+  const [originalData, setOriginalData] = useState<ProfileFormData>({ ...formData });
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  const { formData, originalData } = formState;
-  const [updateError, setUpdateError] = useState<string | null>(null);
-
-  // Update form data when profile loads - using requestAnimationFrame to avoid sync updates
+  // Initialize form with profile data
   useEffect(() => {
-    if (profile && !isProfileLoading && !isRefetching) {
-      const updateFormData = () => {
-        const newFormData = {
-          firstName: profile.firstName || '',
-          lastName: profile.lastName || '',
-          email: profile.email || '',
-          timezone: profile.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone,
-          phone: profile.phone || '',
+    if (profileResponse) {
+      // Profile data structure from backend: UserProfile with basicDetails nested object
+      const basicDetails = profileResponse.basicDetails;
+
+      if (basicDetails) {
+        const newFormData: ProfileFormData = {
+          firstName: basicDetails.firstName || '',
+          lastName: basicDetails.lastName || '',
+          email: basicDetails.email || '',
+          phone: basicDetails.phoneNumber || '',
+          timezone: Intl.DateTimeFormat().resolvedOptions().timeZone, // Not provided in current API
         };
-        
-        setFormState({
-          formData: newFormData,
-          originalData: newFormData
-        });
-        setHasProfileError(false);
-      };
 
-      // Use requestAnimationFrame to avoid synchronous state updates
-      const frameId = requestAnimationFrame(updateFormData);
-      return () => cancelAnimationFrame(frameId);
+        setFormData(newFormData);
+        setOriginalData(newFormData);
+      }
     }
-  }, [profile, isProfileLoading, isRefetching]);
-
-  // Handle profile errors - using requestAnimationFrame
-  useEffect(() => {
-    if (profileError && !isRefetching) {
-      const setError = () => {
-        setHasProfileError(true);
-      };
-      
-      const frameId = requestAnimationFrame(setError);
-      console.error('Profile loading error:', profileError);
-      
-      return () => cancelAnimationFrame(frameId);
-    }
-  }, [profileError, isRefetching]);
-
-  // Handle refetch profile data
-  const handleRefetchProfile = async () => {
-    if (!refetchProfile) {
-      console.warn('refetchProfile function not available in useSettings hook');
-      return;
-    }
-
-    setIsRefetching(true);
-    setHasProfileError(false);
-    
-    try {
-      await refetchProfile();
-      showNotification('Profile data refreshed successfully!', 'success');
-    } catch (error) {
-      console.error('Failed to refetch profile:', error);
-      showNotification('Failed to refresh profile data', 'error');
-    } finally {
-      setIsRefetching(false);
-    }
-  };
+  }, [profileResponse]);
 
   // Handle input changes
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setFormState(prev => ({
-      ...prev,
-      formData: {
-        ...prev.formData,
-        [name]: value
-      }
-    }));
-    setUpdateError(null);
+      setFormData((prev: ProfileFormData) => ({ ...prev, [name]: value }));
+    setErrorMessage(null);
   };
 
   // Handle timezone change
-  const handleTimezoneChange = (timezone: ITimezone) => {
-    const tz = timezone as SettingsTimezone;
-    setFormState(prev => ({
-      ...prev,
-      formData: {
-        ...prev.formData,
-        timezone: tz.value || Intl.DateTimeFormat().resolvedOptions().timeZone
-      }
-    }));
-    setUpdateError(null);
-  };
-
-  // Toggle edit mode
-  const toggleEdit = () => {
-    if (isEditing) {
-      // Cancel editing - revert to original data
-      setFormState(prev => ({
-        ...prev,
-        formData: prev.originalData
-      }));
-      setUpdateError(null);
-    }
-    setIsEditing(!isEditing);
+  const handleTimezoneChange = (timezone: string | { value: string }) => {
+    const tzString = typeof timezone === 'string' ? timezone : timezone.value;
+      setFormData((prev: ProfileFormData) => ({ ...prev, timezone: tzString }));
+    setErrorMessage(null);
   };
 
   // Check if form has changes
@@ -234,124 +121,71 @@ export const ProfileTab: React.FC<TabComponentProps> = ({ showNotification }) =>
     e.preventDefault();
 
     if (!formData.firstName.trim() || !formData.lastName.trim()) {
-      setUpdateError('First name and last name are required');
+      setErrorMessage('First name and last name are required');
       return;
     }
 
-    const payload = {
+    const payload: UpdateProfilePayload = {
       firstName: formData.firstName.trim(),
       lastName: formData.lastName.trim(),
-      email: originalData.email,
-      timezone: formData.timezone || originalData.timezone,
-      phone: formData.phone?.trim() || undefined,
+      timezone: formData.timezone,
+      phone: formData.phone?.trim() || '',
     };
 
     try {
-      const success = await updateProfile(payload);
-      if (success) {
-        showNotification('Profile updated successfully!', 'success');
-        // Update original data to match current form data
-        setFormState(prev => ({
-          ...prev,
-          originalData: prev.formData
-        }));
-        setIsEditing(false);
-        setUpdateError(null);
-        
-        // Optionally refetch profile data to ensure consistency
-        if (refetchProfile) {
-          setTimeout(() => {
-            refetchProfile();
-          }, 500);
-        }
-      } else {
-        setUpdateError('Failed to update profile. Please try again.');
-      }
-    } catch (error) {
-      setUpdateError('Failed to update profile. Please try again.');
-      console.error("Profile update error:", error);
+      await updateProfileMutation.mutateAsync(payload);
+
+      showNotification('Profile updated successfully!', 'success');
+      setOriginalData(formData);
+      setIsEditing(false);
+      setErrorMessage(null);
+      refetch();
+    } catch (err: unknown) {
+      const errorMsg = err instanceof Error ? err.message : 'Failed to update profile';
+      setErrorMessage(errorMsg);
     }
   };
 
-  // Show loading state when refetching
-  if ((isProfileLoading || isRefetching) && !profile) {
-    return <ProfileSkeleton />;
-  }
+  // Loading state
+  if (isLoading) return <ProfileSkeleton />;
 
-  // Show error state with refetch option
-  if (hasProfileError && !profile) {
+  // Error state
+  if (error) {
     return (
-      <Box>
-        <Alert 
-          severity="error" 
-          sx={{ my: 2 }}
-          action={
-            <Button 
-              color="inherit" 
-              size="small" 
-              onClick={handleRefetchProfile}
-              disabled={isRefetching}
-              startIcon={isRefetching ? <CircularProgress size={16} /> : null}
-            >
-              {isRefetching ? 'Refetching...' : 'Refetch Profile'}
-            </Button>
-          }
-        >
-          Failed to load profile data. {profileError}
-        </Alert>
-        <Box sx={{ mt: 2, p: 3, border: '1px dashed', borderColor: 'divider', borderRadius: 1 }}>
-          <Typography variant="body2" color="text.secondary">
-            You can still edit your profile information, but some data may not be saved correctly.
-          </Typography>
-          <Button 
-            variant="outlined" 
-            sx={{ mt: 2 }}
-            onClick={() => setIsEditing(true)}
-            disabled={isRefetching}
-          >
-            Edit Profile Anyway
-          </Button>
-        </Box>
-      </Box>
+      <Alert severity="error" sx={{ my: 2 }}>
+        Failed to load profile data: {error instanceof Error ? error.message : 'Unknown error'}
+        <Button size="small" onClick={() => refetch()} sx={{ ml: 2 }}>
+          Retry
+        </Button>
+      </Alert>
     );
   }
 
-  const userInitials = generateUserInitials(formData.firstName, formData.lastName);
+  // Show message if profile data is not available (but still render form)
+  const hasProfileData = profileResponse && profileResponse.basicDetails;
 
   return (
     <Box component="form" onSubmit={handleSubmit}>
-      {/* Personal Information Section */}
+      {!hasProfileData && (
+        <Alert severity="warning" sx={{ mb: 3 }}>
+          Profile data is not available. Please try refreshing.
+          <Button size="small" onClick={() => refetch()} sx={{ ml: 2 }}>
+            Refresh
+          </Button>
+        </Alert>
+      )}
+
+      {/* Personal Information */}
       <div className="grid grid-cols-1 md:grid-cols-12 gap-8">
-        {/* Left Column - Header and Description */}
         <Box className="md:col-span-4">
           <Typography variant="h6" gutterBottom>
             Personal Information
           </Typography>
-          <Typography variant="body2" color="text.secondary" paragraph>
+          <Typography variant="body2" color="text.secondary">
             Update your personal details here.
-            {hasProfileError && (
-              <Alert severity="warning" sx={{ mt: 1 }}>
-                Profile data may be incomplete due to loading issues.
-              </Alert>
-            )}
           </Typography>
-          
-          {/* Refetch button for manual refresh */}
-          {profile && (
-            <Button
-              variant="outlined"
-              size="small"
-              onClick={handleRefetchProfile}
-              disabled={isRefetching}
-              startIcon={isRefetching ? <CircularProgress size={16} /> : null}
-              sx={{ mt: 1 }}
-            >
-              {isRefetching ? 'Refreshing...' : 'Refresh Data'}
-            </Button>
-          )}
         </Box>
 
-        {/* Right Column - Form Fields */}
         <Box className="md:col-span-8">
           <Box display="flex" gap={2} mb={3}>
             <TextField
@@ -360,171 +194,110 @@ export const ProfileTab: React.FC<TabComponentProps> = ({ showNotification }) =>
               value={formData.firstName}
               onChange={handleChange}
               fullWidth
-              disabled={!isEditing || isUpdatingProfile || isRefetching}
+              disabled={!isEditing || isUpdating}
               required
-              error={!!updateError && !formData.firstName.trim()}
-              helperText={updateError && !formData.firstName.trim() ? 'Required field' : ''}
-              InputProps={{
-                readOnly: !isEditing,
-              }}
+              error={!!errorMessage && !formData.firstName.trim()}
+              helperText={errorMessage && !formData.firstName.trim() ? 'Required' : ''}
             />
-
             <TextField
               name="lastName"
               label="Last name"
               value={formData.lastName}
               onChange={handleChange}
               fullWidth
-              disabled={!isEditing || isUpdatingProfile || isRefetching}
+              disabled={!isEditing || isUpdating}
               required
-              error={!!updateError && !formData.lastName.trim()}
-              helperText={updateError && !formData.lastName.trim() ? 'Required field' : ''}
-              InputProps={{
-                readOnly: !isEditing,
-              }}
+              error={!!errorMessage && !formData.lastName.trim()}
+              helperText={errorMessage && !formData.lastName.trim() ? 'Required' : ''}
             />
           </Box>
 
-          <Box mb={3}>
-            <TextField
-              name="email"
-              label="Email Address"
-              value={formData.email}
-              fullWidth
-              disabled
-              InputProps={{
-                readOnly: true,
-              }}
-            />
-          </Box>
+          <TextField
+            name="email"
+            label="Email Address"
+            value={formData.email}
+            fullWidth
+            disabled
+            sx={{ mb: 3 }}
+          />
 
-          <Box mb={3}>
-            <TextField
-              name="phone"
-              label="Phone Number"
-              value={formData.phone}
-              onChange={handleChange}
-              fullWidth
-              disabled={!isEditing || isUpdatingProfile || isRefetching}
-              placeholder="+1 (555) 123-4567"
-              InputProps={{
-                readOnly: !isEditing,
-              }}
-            />
-          </Box>
+          <TextField
+            name="phone"
+            label="Phone Number"
+            value={formData.phone}
+            onChange={handleChange}
+            fullWidth
+            disabled={!isEditing || isUpdating}
+            placeholder="+1 (555) 123-4567"
+          />
         </Box>
       </div>
 
-      {/* Profile Preview */}
-      <Card sx={{ mb: 4, border: "1px solid", borderColor: "primary.light" }}>
-        <CardContent>
-          <Typography variant="subtitle1" gutterBottom sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-            Profile Preview
-            {isRefetching && (
-              <CircularProgress size={16} sx={{ ml: 1 }} />
-            )}
-          </Typography>
-          <Box sx={{ display: "flex", alignItems: "center", gap: 2, mt: 2 }}>
-            <Avatar
-              sx={{
-                bgcolor: "primary.main",
-                width: 60,
-                height: 60,
-                fontSize: "1.25rem",
-              }}
-            >
-              {userInitials}
-            </Avatar>
-            <Box>
-              <Typography variant="h6">
-                {formData.firstName} {formData.lastName}
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                {formData.email}
-              </Typography>
-              {formData.phone && (
-                <Typography variant="body2" color="text.secondary">
-                  {formData.phone}
-                </Typography>
-              )}
-            </Box>
-          </Box>
-        </CardContent>
-      </Card>
-
       <Divider sx={{ my: 4 }} />
 
-      {/* Timezone Section */}
+      {/* Timezone */}
       <div className="grid grid-cols-1 md:grid-cols-12 gap-8">
-        {/* Left Column - Header and Description */}
         <Box className="md:col-span-4">
           <Typography variant="h6" gutterBottom>
             Timezone
           </Typography>
-          <Typography variant="body2" color="text.secondary" paragraph>
+          <Typography variant="body2" color="text.secondary">
             Adjust the time zone to match your local time.
           </Typography>
         </Box>
 
-        {/* Right Column - Timezone Selector */}
         <Box className="md:col-span-8">
-          <Box mb={3}>
-            <TimezoneSelect
-              value={formData.timezone}
-              onChange={handleTimezoneChange}
-              labelStyle="original"
-              className="timezone-select"
-              menuPosition="fixed"
-              isDisabled={!isEditing || isUpdatingProfile || isRefetching}
-              styles={{
-                control: (base) => ({
-                  ...base,
-                  minHeight: '56px',
-                  borderColor: 'rgba(0, 0, 0, 0.23)',
-                  '&:hover': {
-                    borderColor: 'rgba(0, 0, 0, 0.87)'
-                  },
-                  backgroundColor: !isEditing ? 'rgba(0, 0, 0, 0.06)' : 'inherit',
-                  pointerEvents: !isEditing ? 'none' : 'auto'
-                })
-              }}
-            />
-          </Box>
+          <TimezoneSelect
+            value={formData.timezone}
+            onChange={handleTimezoneChange}
+            labelStyle="original"
+            menuPosition="fixed"
+            isDisabled={!isEditing || isUpdating}
+            styles={{
+              control: (base) => ({
+                ...base,
+                minHeight: '56px',
+                borderColor: 'rgba(0, 0, 0, 0.23)',
+                '&:hover': { borderColor: 'rgba(0, 0, 0, 0.87)' },
+                backgroundColor: !isEditing ? 'rgba(0, 0, 0, 0.06)' : 'inherit',
+              }),
+            }}
+          />
         </Box>
       </div>
 
-      {/* Action Buttons and Status Messages */}
-      <Box mt={4} display="flex" justifyContent="flex-end" gap={2} alignItems="center">
-        {updateError && (
-          <Alert severity="error" sx={{ flexGrow: 1 }}>
-            {updateError}
+      {/* Actions */}
+      <Box mt={4} display="flex" justifyContent="flex-end" gap={2}>
+        {errorMessage && (
+          <Alert severity="error" sx={{ mr: 2 }}>
+            {errorMessage}
           </Alert>
         )}
-        
+
         {isEditing ? (
           <>
             <Button
               variant="outlined"
-              onClick={toggleEdit}
-              disabled={isUpdatingProfile || isRefetching}
+              onClick={() => {
+                setIsEditing(false);
+                setFormData(originalData);
+                setErrorMessage(null);
+              }}
+              disabled={isUpdating}
             >
               Cancel
             </Button>
             <Button
               variant="contained"
               type="submit"
-              disabled={isUpdatingProfile || isRefetching || !hasChanges()}
-              startIcon={isUpdatingProfile ? <CircularProgress size={20} /> : null}
+              disabled={isUpdating || !hasChanges()}
+              startIcon={isUpdating ? <CircularProgress size={20} /> : undefined}
             >
-              {isUpdatingProfile ? 'Saving...' : 'Save Changes'}
+              {isUpdating ? 'Saving...' : 'Save Changes'}
             </Button>
           </>
         ) : (
-          <Button
-            variant="contained"
-            onClick={toggleEdit}
-            disabled={isRefetching}
-          >
+          <Button variant="contained" onClick={() => setIsEditing(true)}>
             Edit Profile
           </Button>
         )}

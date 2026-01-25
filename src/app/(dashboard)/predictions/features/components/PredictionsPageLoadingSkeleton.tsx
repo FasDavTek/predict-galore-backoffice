@@ -1,7 +1,4 @@
-import {
-  Box,
-  Skeleton,
-} from "@mui/material";
+import { Box, Skeleton } from '@mui/material';
 
 export const PredictionsPageLoadingSkeleton: React.FC = () => {
   return (
@@ -9,14 +6,19 @@ export const PredictionsPageLoadingSkeleton: React.FC = () => {
       {/* Analytics Skeleton */}
       <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
         {[...Array(6)].map((_, index) => (
-          <Box key={index} sx={{ flex: { xs: '1 1 100%', sm: '1 1 calc(50% - 16px)', md: '1 1 calc(33.333% - 16px)' } }}>
-            <Skeleton 
-              variant="rectangular" 
-              height={140} 
-              sx={{ 
+          <Box
+            key={index}
+            sx={{
+              flex: { xs: '1 1 100%', sm: '1 1 calc(50% - 16px)', md: '1 1 calc(33.333% - 16px)' },
+            }}
+          >
+            <Skeleton
+              variant="rectangular"
+              height={140}
+              sx={{
                 borderRadius: 2,
-                bgcolor: 'grey.100'
-              }} 
+                bgcolor: 'grey.100',
+              }}
             />
           </Box>
         ))}
@@ -30,7 +32,7 @@ export const PredictionsPageLoadingSkeleton: React.FC = () => {
           <Skeleton variant="rectangular" width={150} height={56} sx={{ borderRadius: 1 }} />
           <Skeleton variant="rectangular" width={150} height={56} sx={{ borderRadius: 1 }} />
         </Box>
-        
+
         {/* Toolbar Skeleton */}
         <Box sx={{ display: 'flex', gap: 1 }}>
           <Skeleton variant="rectangular" width={120} height={40} sx={{ borderRadius: 1 }} />
@@ -47,18 +49,18 @@ export const PredictionsPageLoadingSkeleton: React.FC = () => {
             <Skeleton key={index} variant="text" width={index === 0 ? 60 : 100} height={24} />
           ))}
         </Box>
-        
+
         {/* Table Rows */}
         {[...Array(5)].map((_, rowIndex) => (
-          <Box 
-            key={rowIndex} 
-            sx={{ 
-              p: 2, 
-              borderBottom: rowIndex < 4 ? 1 : 0, 
+          <Box
+            key={rowIndex}
+            sx={{
+              p: 2,
+              borderBottom: rowIndex < 4 ? 1 : 0,
               borderColor: 'divider',
-              display: 'flex', 
+              display: 'flex',
               gap: 2,
-              alignItems: 'center'
+              alignItems: 'center',
             }}
           >
             <Skeleton variant="circular" width={24} height={24} />

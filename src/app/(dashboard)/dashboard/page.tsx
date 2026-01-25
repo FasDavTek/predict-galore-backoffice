@@ -1,116 +1,119 @@
-// src/app/(dashboard)/dashboard/page.tsx
-"use client";
+/**
+ * Dashboard Page
+ * Clean, simple implementation
+ */
 
-import React, { useEffect, useState } from "react";
-import { Box } from "@mui/material";
-import DashboardHeader, { TimeRange } from "./features/components/DashboardHeader";
-import UserEngagementChart from "./features/components/UserEngagementChart";
-import Traffic from "./features/components/Traffic";
-import ActivityLog from "./features/components/ActivityLog";
-import { DashboardPageLoadingSkeleton } from "@/app/(dashboard)/dashboard/features/components/DashboardPageLoadingSkeleton";
-import { RootState } from "../../../store/store";
-import { useSelector } from "react-redux";
-import DashboardAnalytics from "@/app/(dashboard)/dashboard/features/components/DashboardAnalytics";
-import withAuth from "@/hoc/withAuth";
+'use client';
+
+import { PageHeader, TimeRange } from '@/shared/components/PageHeader';
+import Stack from '@mui/material/Stack';
+import Box from '@mui/material/Box';
+import DashboardAnalytics from './features/components/DashboardAnalytics';
+import UserEngagementChart from './features/components/UserEngagementChart';
+import Traffic from './features/components/Traffic';
+import ActivityLog from './features/components/ActivityLog';
+import { DashboardPageLoadingSkeleton } from './features/components/DashboardPageLoadingSkeleton';
+import { useAuth } from '@/features/auth';
+import { useState, useCallback, memo, useMemo } from 'react';
+import { useDashboardSummary, useDashboardEngagement, useDashboardTraffic, useDashboardActivity } from '@/features/dashboard';
+import { getTimeRangeDates } from '@/shared/lib/helpers';
+import { useQueryClient } from '@tanstack/react-query';
+import withAuth from '@/hoc/with-auth';
 
 function DashboardPage() {
-  const [isClientSide, setIsClientSide] = useState(false);
-  
-  // Global time range state for all dashboard components
-  const [globalTimeRange, setGlobalTimeRange] = useState<TimeRange>('default');
-  
-  // Refresh trigger state
-  const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+  const [timeRange, setTimeRange] = useState<TimeRange>('default');
   const [isRefreshing, setIsRefreshing] = useState(false);
 
-  // Redux auth state
-  const user = useSelector((state: RootState) => state.auth.user);
+  // Get date range from time range filter
+  const dateRange = useMemo(() => getTimeRangeDates(timeRange), [timeRange]);
 
-  // Set client-side flag using setTimeout to avoid synchronous state update
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setIsClientSide(true);
-    }, 0);
-    
-    return () => clearTimeout(timer);
-  }, []);
+  // Fetch all dashboard data at page level to coordinate loading
+  const { isLoading: isSummaryLoading, refetch: refetchSummary } = useDashboardSummary(dateRange || undefined);
+  const { isLoading: isEngagementLoading, refetch: refetchEngagement } = useDashboardEngagement();
+  const { isLoading: isTrafficLoading, refetch: refetchTraffic } = useDashboardTraffic();
+  const { isLoading: isActivityLoading, refetch: refetchActivity } = useDashboardActivity();
 
-  // Handle refresh button click
-  const handleRefresh = () => {
+  // Show loading until all critical queries are complete
+  const isPageLoading = isSummaryLoading || isEngagementLoading || isTrafficLoading || isActivityLoading || isRefreshing;
+
+  const handleRefresh = useCallback(async () => {
     setIsRefreshing(true);
-    // Increment refresh trigger to force all components to refetch
-    setRefreshTrigger(prev => prev + 1);
-    
-    // Set a timeout to hide the loading skeleton after a minimum duration
-    // This ensures users see the loading state even for fast refreshes
-    setTimeout(() => {
+    try {
+      // Invalidate and refetch all dashboard queries
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['dashboard-summary'] }),
+        queryClient.invalidateQueries({ queryKey: ['dashboard-engagement'] }),
+        queryClient.invalidateQueries({ queryKey: ['dashboard-traffic'] }),
+        queryClient.invalidateQueries({ queryKey: ['dashboard-activity'] }),
+        refetchSummary(),
+        refetchEngagement(),
+        refetchTraffic(),
+        refetchActivity(),
+      ]);
+    } finally {
       setIsRefreshing(false);
-    }, 1000); // Minimum 1 second loading state for better UX
-  };
+    }
+  }, [queryClient, refetchSummary, refetchEngagement, refetchTraffic, refetchActivity]);
 
-  // Use user from auth state first, fallback to fresh profile
-  const currentUser = user;
-
-  // Prevent rendering on server to avoid hydration mismatches
-  if (!isClientSide) {
-    return <DashboardPageLoadingSkeleton />;
-  }
-
-  // Show loading skeleton if refreshing, or if we don't have any user data
-  if (isRefreshing || !currentUser) {
-    return <DashboardPageLoadingSkeleton />;
-  }
+  const handleTimeRangeChange = useCallback((range: TimeRange) => {
+    setTimeRange(range);
+    // Invalidate queries when time range changes to trigger refetch with new dates
+    queryClient.invalidateQueries({ queryKey: ['dashboard-summary'] });
+    queryClient.invalidateQueries({ queryKey: ['dashboard-engagement'] });
+    queryClient.invalidateQueries({ queryKey: ['dashboard-traffic'] });
+    queryClient.invalidateQueries({ queryKey: ['dashboard-activity'] });
+  }, [queryClient]);
 
   return (
-    <>
-      <DashboardHeader 
-        timeRange={globalTimeRange}
-        onTimeRangeChange={setGlobalTimeRange}
+    <Box
+      sx={{
+        // maxWidth: 1536, 
+        width: '100%',
+        px: { xs: 2, sm: 3, md: 4 },
+        py: 4,
+      }}
+    >
+      <PageHeader
+        title="Dashboard Overview"
+        defaultSubtitle="Welcome {firstName}! Here's what's happening with your platform today."
+        timeRange={timeRange}
+        onTimeRangeChange={handleTimeRangeChange}
         onRefresh={handleRefresh}
-        user={currentUser}
+        user={user}
       />
 
-      {/* Overview Analytics Cards */}
-      <DashboardAnalytics 
-        timeRange={globalTimeRange} 
-        refreshTrigger={refreshTrigger}
-      />
+      {/* Show loading skeleton while loading */}
+      {isPageLoading ? (
+        <DashboardPageLoadingSkeleton />
+      ) : (
+        <>
+          <DashboardAnalytics timeRange={timeRange} />
+          <Box
+            sx={{
+              display: 'grid',
+              gridTemplateColumns: { xs: '1fr', lg: '2fr 1fr' },
+              gap: 3,
+              mt: 3,
+            }}
+          >
+            <Box>
+              <Stack spacing={3}>
+                <UserEngagementChart timeRange={timeRange} />
+                <Traffic />
+              </Stack>
+            </Box>
 
-      {/* Main content area with flexbox layout */}
-      <Box sx={{ 
-        display: 'flex', 
-        flexDirection: { xs: 'column', lg: 'row' },
-        gap: 3,
-        mt: 3,
-        minHeight: 'calc(100vh - 200px)' // Ensure the container has minimum height
-      }}>
-        {/* Left column - Main charts */}
-        <Box sx={{ 
-          flex: 1,
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 3
-        }}>
-          <UserEngagementChart 
-            globalTimeRange={globalTimeRange} 
-            refreshTrigger={refreshTrigger}
-          />
-          <Traffic refreshTrigger={refreshTrigger} />
-        </Box>
+            <Box>
+              <ActivityLog />
+            </Box>
+          </Box>
+        </>
+      )}
 
-        {/* Right column - Activity log (full height) */}
-        <Box sx={{ 
-          width: { xs: '100%', lg: 400 },
-          minWidth: { xs: 'auto', lg: 400 },
-          display: 'flex',
-          flexDirection: 'column'
-        }}>
-          <ActivityLog refreshTrigger={refreshTrigger} />
-        </Box>
-      </Box>
-    </>
+    </Box>
   );
 }
 
-// Wrap with authentication HOC
-export default withAuth(DashboardPage);
+export default withAuth(memo(DashboardPage));

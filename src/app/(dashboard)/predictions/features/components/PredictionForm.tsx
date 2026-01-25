@@ -1,15 +1,8 @@
 // features/components/PredictionForm/PredictionForm.tsx
-import React, { useCallback, useMemo, useState } from "react";
-import {
-  useForm,
-  FormProvider,
-  useFieldArray,
-  SubmitHandler,
-  useWatch,
-} from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
+import React, { useCallback, useMemo, useState } from 'react';
+import { useForm, FormProvider, useFieldArray, SubmitHandler, useWatch } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
 
-// Material-UI imports
 import {
   Box,
   Typography,
@@ -24,100 +17,75 @@ import {
   Snackbar,
   Alert,
   Chip,
-  Tooltip,
-} from "@mui/material";
+  Stack,
+} from '@mui/material';
 import {
   Home as HomeIcon,
   Check as CheckIcon,
   NavigateBefore as NavigateBeforeIcon,
   ChevronRight as ChevronRightIcon,
-  SmartToy as AIIcon,
   TrendingUp as TrendingUpIcon,
-} from "@mui/icons-material";
+} from '@mui/icons-material';
 
-// Date picker imports
-import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
-import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
+import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 
-// Types and schemas
 import {
   sportsPredictionFormSchema,
   SportsPredictionFormValues,
-} from "../validations/predictionSchema";
+} from '@/features/predictions';
 import {
-  useCreatePredictionMutation,
-  useGetSportsQuery,
-  useGetLeaguesQuery,
-  useGetUpcomingFixturesQuery,
-  useGetPredictionTypesQuery,
-} from "../api/predictionApi";
-import { League, Fixture } from "../types/prediction.types";
+  useCreatePrediction,
+  useSports,
+  useLeagues,
+  useUpcomingFixtures,
+} from '@/features/predictions';
+import { League, Fixture } from '@/features/predictions';
+import { formatDateForAPI } from '@/features/predictions';
+import { designTokens } from '@/shared/styles/tokens';
+import { useAuth } from '@/features/auth';
 
-// Step Components
-import { MatchSelectionStep } from "./PredictionForm/steps/MatchSelectionStep";
-import { PredictionAnalysisStep } from "./PredictionForm/steps/PredictionAnalysisStep";
-import { SubmissionPreviewStep } from "./PredictionForm/steps/SubmissionPreviewStep";
+import { MatchSelectionStep } from './PredictionForm/steps/MatchSelectionStep';
+import { PredictionAnalysisStep } from './PredictionForm/steps/PredictionAnalysisStep';
+import { SubmissionPreviewStep } from './PredictionForm/steps/SubmissionPreviewStep';
+import { AskHuddle } from './AskHuddle';
+import Image from 'next/image';
+// import { TestPredictionForm } from './PredictionForm/TestPredictionForm';
 
-// AI Component
-import { AskHuddle } from "./AskHuddle";
-
-// Utilities
-import { formatDateForAPI } from "../utils/dateUtils";
-
-// Constants
-const STEPS = [
-  "Match Selection",
-  "Prediction Analysis",
-  "Review & Submit",
-] as const;
+const STEPS = ['Match Selection', 'Prediction Analysis', 'Review & Submit'] as const;
 
 interface PredictionFormProps {
   onSuccess?: () => void;
   onCancel?: () => void;
 }
 
-interface SnackbarState {
-  open: boolean;
-  message: string;
-  severity: "success" | "error";
-}
-
-/**
- * Main Prediction Form Component
- * Handles multi-step prediction creation with form validation and API integration
- */
-export const PredictionForm: React.FC<PredictionFormProps> = ({
-  onSuccess,
-  onCancel,
-}) => {
+export const PredictionForm: React.FC<PredictionFormProps> = ({ onSuccess, onCancel }) => {
+  const { user } = useAuth();
   const [activeStep, setActiveStep] = useState<number>(0);
-  const [snackbar, setSnackbar] = useState<SnackbarState>({
+  const [snackbar, setSnackbar] = useState({
     open: false,
-    message: "",
-    severity: "success",
+    message: '',
+    severity: 'success' as 'success' | 'error',
   });
-  const [isAskHuddleOpen, setIsAskHuddleOpen] = useState<boolean>(false);
-  const [fixtureFromDate, setFixtureFromDate] = useState<Date | null>(
-    new Date()
-  );
+  const [fixtureFromDate, setFixtureFromDate] = useState<Date | null>(new Date());
+  const [askHuddleOpen, setAskHuddleOpen] = useState(false);
+  const [imageError, setImageError] = useState(false);
 
-  // API Mutations
-  const [createPrediction, { isLoading: isCreating }] =
-    useCreatePredictionMutation();
+  const createPredictionMutation = useCreatePrediction();
+  const isCreating = createPredictionMutation.isPending;
 
-  // Form setup
   const formMethods = useForm<SportsPredictionFormValues>({
     resolver: zodResolver(sportsPredictionFormSchema),
     defaultValues: {
-      sportId: "",
-      leagueId: "",
-      fixtureId: "",
+      sportId: '',
+      leagueId: '',
+      fixtureId: '',
       isPremium: false,
-      analysis: "",
+      analysis: '',
       accuracy: 50,
-      picks: [{ market: "", selectionKey: "", confidence: 70 }],
+      picks: [{ market: '', selectionKey: '', selectionLabel: '', confidence: 70 }],
     },
-    mode: "onChange",
+    mode: 'onChange',
   });
 
   const {
@@ -131,31 +99,17 @@ export const PredictionForm: React.FC<PredictionFormProps> = ({
 
   const { fields, append, remove } = useFieldArray({
     control: formMethods.control,
-    name: "picks",
+    name: 'picks',
   });
 
-  // Form watchers
-  const [sportId, leagueId, fixtureId, isPremium, analysis, accuracy, picks] =
-    useWatch({
-      control,
-      name: [
-        "sportId",
-        "leagueId",
-        "fixtureId",
-        "isPremium",
-        "analysis",
-        "accuracy",
-        "picks",
-      ],
-    });
+  const [sportId, leagueId, fixtureId, isPremium, analysis, accuracy, picks] = useWatch({
+    control,
+    name: ['sportId', 'leagueId', 'fixtureId', 'isPremium', 'analysis', 'accuracy', 'picks'],
+  });
 
-  // API Queries
-  const { data: sportsData, isLoading: isSportsLoading } = useGetSportsQuery(
-    {}
-  );
-  const { data: leaguesData, isLoading: isLeaguesLoading } = useGetLeaguesQuery(
-    { sportId: Number(sportId) },
-    { skip: !sportId }
+  const { data: sportsData, isLoading: isSportsLoading } = useSports({});
+  const { data: leaguesData, isLoading: isLeaguesLoading } = useLeagues(
+    sportId && sportId.trim() !== '' ? { sportId: Number(sportId) } : undefined
   );
 
   const formattedFromDate = useMemo(
@@ -163,63 +117,49 @@ export const PredictionForm: React.FC<PredictionFormProps> = ({
     [fixtureFromDate]
   );
 
-  const { data: fixturesData, isLoading: isFixturesLoading } =
-    useGetUpcomingFixturesQuery(
-      {
-        leagueId: Number(leagueId),
-        from: formattedFromDate,
-      },
-      { skip: !leagueId }
-    );
-
-  const { data: predictionTypesData } = useGetPredictionTypesQuery();
-
-  // Memoized data transformations
-  const sports = useMemo(() => sportsData?.data || [], [sportsData?.data]);
-  const leagues = useMemo(() => leaguesData?.data || [], [leaguesData?.data]);
-  const fixtures = useMemo(
-    () => fixturesData?.data || [],
-    [fixturesData?.data]
+  const { data: fixturesData, isLoading: isFixturesLoading } = useUpcomingFixtures(
+    leagueId
+      ? {
+          leagueId: Number(leagueId),
+          fromDate: formattedFromDate,
+        }
+      : undefined
   );
-  const predictionTypes = useMemo(
-    () => predictionTypesData?.data || [],
-    [predictionTypesData?.data]
-  );
+
+  const sports = useMemo(() => sportsData || [], [sportsData]);
+  const leagues = useMemo(() => leaguesData || [], [leaguesData]);
+  const fixtures = useMemo(() => fixturesData || [], [fixturesData]);
 
   const filteredLeagues = useMemo(
-    () =>
-      leagues.filter((league: League) => String(league.sportId) === sportId),
+    () => leagues.filter((league: League) => String(league.sportId) === sportId),
     [leagues, sportId]
   );
 
   const selectedFixture = useMemo(
-    () =>
-      fixtures.find((fixture: Fixture) => String(fixture.id) === fixtureId) ||
-      null,
+    () => fixtures.find((fixture: Fixture) => String(fixture.id) === fixtureId) || null,
     [fixtures, fixtureId]
   );
 
-  // Event handlers
   const handleSportChange = useCallback(
     (selectedSportId: string) => {
-      setValue("sportId", selectedSportId);
-      setValue("leagueId", "");
-      setValue("fixtureId", "");
+      setValue('sportId', selectedSportId);
+      setValue('leagueId', '');
+      setValue('fixtureId', '');
     },
     [setValue]
   );
 
   const handleLeagueChange = useCallback(
     (selectedLeagueId: string) => {
-      setValue("leagueId", selectedLeagueId);
-      setValue("fixtureId", "");
+      setValue('leagueId', selectedLeagueId);
+      setValue('fixtureId', '');
     },
     [setValue]
   );
 
   const handleFixtureChange = useCallback(
     (selectedFixtureId: string) => {
-      setValue("fixtureId", selectedFixtureId);
+      setValue('fixtureId', selectedFixtureId);
     },
     [setValue]
   );
@@ -227,13 +167,18 @@ export const PredictionForm: React.FC<PredictionFormProps> = ({
   const handleDateChange = useCallback(
     (newDate: Date | null) => {
       setFixtureFromDate(newDate);
-      setValue("fixtureId", "");
+      setValue('fixtureId', '');
     },
     [setValue]
   );
 
   const handleAddPick = useCallback(() => {
-    append({ market: "", selectionKey: "", confidence: 70 });
+    append({
+      market: '',
+      selectionKey: '',
+      selectionLabel: '',
+      confidence: 70,
+    });
   }, [append]);
 
   const handleRemovePick = useCallback(
@@ -247,22 +192,28 @@ export const PredictionForm: React.FC<PredictionFormProps> = ({
 
   const handlePickChange = useCallback(
     (index: number, field: string, value: string | number) => {
-      const currentPicks = formMethods.getValues("picks");
+      const currentPicks = formMethods.getValues('picks');
       const updatedPicks = [...currentPicks];
       updatedPicks[index] = { ...updatedPicks[index], [field]: value };
-      setValue("picks", updatedPicks);
+
+      // Auto-fill selectionLabel if it's empty and we're setting selectionKey
+      if (field === 'selectionKey' && !updatedPicks[index].selectionLabel) {
+        updatedPicks[index].selectionLabel = String(value);
+      }
+
+      setValue('picks', updatedPicks);
     },
     [formMethods, setValue]
   );
-  // Navigation handlers
+
   const handleBack = () => {
     setActiveStep((prev) => Math.max(0, prev - 1));
   };
 
   const handleNext = async () => {
     const stepFields = {
-      0: ["sportId", "leagueId", "fixtureId"],
-      1: ["analysis", "accuracy", "picks"],
+      0: ['sportId', 'leagueId', 'fixtureId'],
+      1: ['analysis', 'accuracy', 'picks'],
     } as const;
 
     const currentStepFields = stepFields[activeStep as keyof typeof stepFields];
@@ -279,24 +230,71 @@ export const PredictionForm: React.FC<PredictionFormProps> = ({
     }
   };
 
-  // Form submission
   const onSubmit: SubmitHandler<SportsPredictionFormValues> = async (data) => {
     try {
+      if (!data.fixtureId || data.fixtureId === '') {
+        throw new Error('Please select a valid fixture');
+      }
+
+      const foundFixture = fixtures.find(
+        (fixture: Fixture) => String(fixture.id) === data.fixtureId
+      );
+
+      if (!foundFixture) {
+        throw new Error('Selected fixture not found. Please refresh and try again.');
+      }
+
+      // Prepare picks with EXACT values matching the API spec
+      const transformedPicks = data.picks.map((pick) => ({
+        market: pick.market, // This should be the market name like "FullTimeResult_1X2"
+        selectionKey: pick.selectionKey, // This should be the selection key like "HOME"
+        selectionLabel: pick.selectionLabel || pick.selectionKey,
+        confidence: pick.confidence,
+        odds: 0,
+        tip: '',
+        recentForm: '',
+        homeScore: 0,
+        awayScore: 0,
+        tipGoals: 0,
+        playerId: 0,
+        playerName: '',
+        teamId: 0,
+        teamName: '',
+        subType: '',
+      }));
+
+      // Validate that user is available
+      if (!user || !user.id) {
+        throw new Error('User authentication required. Please log in again.');
+      }
+
+      // Prepare submission data matching API spec exactly
       const submissionData = {
         fixtureId: Number(data.fixtureId),
-        title: `Prediction for ${selectedFixture?.label || "Match"}`,
+        title: `Prediction for ${foundFixture.home} vs ${foundFixture.away}`,
         analysis: data.analysis,
         accuracy: data.accuracy,
-        audience: data.isPremium ? ("PREMIUM" as const) : ("FREE" as const),
-        picks: data.picks,
+        expertAnalysis: data.analysis, // Use analysis as expertAnalysis
+        audience: data.isPremium ? ('PREMIUM' as const) : ('FREE' as const),
+        includeTeamForm: false,
+        includeTeamComparison: false,
+        includeTopScorers: false,
+        isPremium: data.isPremium,
+        isScheduled: false,
+        scheduledTime: new Date().toISOString(),
+        picks: transformedPicks,
       };
 
-      await createPrediction(submissionData).unwrap();
+      // Make the API call with adminUser as query parameter
+      await createPredictionMutation.mutateAsync({
+        data: submissionData,
+        adminUser: user.id,
+      });
 
       setSnackbar({
         open: true,
-        message: "Prediction created successfully!",
-        severity: "success",
+        message: 'Prediction created successfully!',
+        severity: 'success',
       });
 
       setTimeout(() => {
@@ -306,32 +304,45 @@ export const PredictionForm: React.FC<PredictionFormProps> = ({
         setFixtureFromDate(new Date());
       }, 1500);
     } catch (error) {
+      let errorMessage = 'Failed to create prediction';
+
+      if (error instanceof Error) {
+        errorMessage = error.message;
+      } else if (error && typeof error === 'object') {
+        const err = error as { status?: number; data?: { message?: string } };
+
+        if (err.data?.message) {
+          errorMessage = err.data.message;
+        }
+
+        if (err.status) {
+          errorMessage = `Error ${err.status}: ${errorMessage}`;
+        }
+      }
+
       setSnackbar({
         open: true,
-        message: "Failed to create prediction",
-        severity: "error",
+        message: errorMessage,
+        severity: 'error',
       });
-      console.log(error);
     }
   };
 
-  const handleConfirmSubmit = handleSubmit(onSubmit);
+  const handleConfirmSubmit = async () => {
+    await handleSubmit(onSubmit)();
+  };
 
   const handleCloseSnackbar = () => {
     setSnackbar((prev) => ({ ...prev, open: false }));
   };
 
-  const handleOpenAskHuddle = () => setIsAskHuddleOpen(true);
-  const handleCloseAskHuddle = () => setIsAskHuddleOpen(false);
-
-  // Validation helpers
   const isStepValid = (step: number): boolean => {
     const stepValidations = {
       0: !!sportId && !!leagueId && !!fixtureId,
       1:
         !!analysis &&
         picks.every(
-          (pick) => pick.market && pick.selectionKey && pick.confidence > 0
+          (pick) => pick.market && pick.selectionKey && pick.selectionLabel && pick.confidence > 0
         ),
       2: true,
     };
@@ -363,7 +374,6 @@ export const PredictionForm: React.FC<PredictionFormProps> = ({
       ),
       1: (
         <PredictionAnalysisStep
-          predictionTypes={predictionTypes}
           picks={fields}
           onAddPick={handleAddPick}
           onRemovePick={handleRemovePick}
@@ -371,7 +381,6 @@ export const PredictionForm: React.FC<PredictionFormProps> = ({
           errors={errors}
           formValues={{ analysis, accuracy }}
           methods={formMethods}
-          onOpenAskHuddle={handleOpenAskHuddle}
         />
       ),
       2: (
@@ -381,7 +390,6 @@ export const PredictionForm: React.FC<PredictionFormProps> = ({
           analysis={analysis}
           accuracy={accuracy}
           picks={picks}
-          fixtureFromDate={fixtureFromDate}
         />
       ),
     };
@@ -389,285 +397,222 @@ export const PredictionForm: React.FC<PredictionFormProps> = ({
     return stepComponents[step as keyof typeof stepComponents] || null;
   };
 
+  const handleAskHuddleOpen = useCallback(() => {
+    setAskHuddleOpen(true);
+  }, []);
+
+  const handleAskHuddleClose = useCallback(() => {
+    setAskHuddleOpen(false);
+  }, []);
+
   return (
     <LocalizationProvider dateAdapter={AdapterDateFns}>
       <FormProvider {...formMethods}>
         <Box
           sx={{
             maxWidth: 1200,
-            margin: "0 auto",
-            bgcolor: "background.paper",
-            borderRadius: 2,
+            margin: '0 auto',
+            bgcolor: 'background.paper',
             boxShadow: 3,
-            position: "relative",
+            position: 'relative',
           }}
         >
-          <Box sx={{ p: 4 }}>
-            {/* Header Section */}
-            <HeaderSection />
+          {/* Ask Huddle Button - Fixed on the right side, top of form */}
+          <Box
+            sx={{
+              position: 'fixed',
+              right: 0,
+              top: 120, // Align with top of form content
+              zIndex: 1000,
+              cursor: 'pointer',
+              '@media (max-width: 1200px)': {
+                display: 'none', // Hide on smaller screens
+              },
+            }}
+            onClick={handleAskHuddleOpen}
+          >
+            {!imageError ? (
+              <Image
+                src="/ask-huddle-button.png"
+                alt="Ask Huddle"
+                width={80}
+                height={200}
+                style={{
+                  objectFit: 'contain',
+                  display: 'block',
+                }}
+                onError={() => setImageError(true)}
+              />
+            ) : (
+              <Box
+                sx={{
+                  background: 'linear-gradient(135deg, #6bc330 0%, #4ca020 100%)',
+                  color: 'white',
+                  padding: '20px 10px',
+                  writingMode: 'vertical-rl',
+                  textOrientation: 'mixed',
+                  fontWeight: 600,
+                  fontSize: '14px',
+                  borderRadius: 0,
+                  boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                  cursor: 'pointer',
+                  transition: 'all 0.3s',
+                  '&:hover': {
+                    transform: 'scale(1.05)',
+                  },
+                }}
+              >
+                Ask Huddle
+              </Box>
+            )}
+          </Box>
 
-            {/* Progress Stepper */}
-            <ProgressStepper
-              activeStep={activeStep}
-              steps={STEPS}
-              isStepValid={isStepValid(activeStep)}
-            />
+          <Box sx={{ p: designTokens.spacing.xl }}>
+            {/* Header */}
+            <Box sx={{ mb: designTokens.spacing.xl }}>
+              <Breadcrumbs sx={{ mb: designTokens.spacing.itemGap }}>
+                <Link
+                  color="inherit"
+                  href="/predictions"
+                  sx={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    textDecoration: 'none',
+                    '&:hover': { textDecoration: 'underline' },
+                  }}
+                >
+                  <HomeIcon sx={{ mr: 0.5 }} fontSize="small" />
+                  Predictions
+                </Link>
+                <Typography color="text.primary" sx={{ fontWeight: 500 }}>
+                  Create New Prediction
+                </Typography>
+              </Breadcrumbs>
+            </Box>
+
+            {/* Stepper */}
+            <Paper
+              sx={{
+                p: designTokens.spacing.sectionGap,
+                mb: designTokens.spacing.xl,
+                background: 'linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)',
+                border: '1px solid',
+                borderColor: 'divider',
+              }}
+            >
+              <Stepper activeStep={activeStep} sx={{ mb: designTokens.spacing.itemGap }}>
+                {STEPS.map((label) => (
+                  <Step key={label}>
+                    <StepLabel>{label}</StepLabel>
+                  </Step>
+                ))}
+              </Stepper>
+
+              <Stack direction="row" justifyContent="space-between" alignItems="center">
+                <Typography variant="body2" color="text.secondary">
+                  Step {activeStep + 1} of {STEPS.length}
+                </Typography>
+                {isStepValid(activeStep) && (
+                  <Chip
+                    label="Step Complete"
+                    color="success"
+                    size="small"
+                    variant="outlined"
+                    icon={<CheckIcon />}
+                  />
+                )}
+              </Stack>
+            </Paper>
 
             {/* Step Content */}
             <Paper
               sx={{
-                p: 4,
-                mb: 3,
-                border: "1px solid",
-                borderColor: "divider",
-                borderRadius: 2,
-                boxShadow: "0 4px 20px 0 rgba(0,0,0,0.1)",
+                p: designTokens.spacing.xl,
+                mb: designTokens.spacing.sectionGap,
+                border: '1px solid',
+                borderColor: 'divider',
               }}
             >
               {renderStepContent(activeStep)}
+              {/* <TestPredictionForm /> */}
             </Paper>
 
-            {/* AI Assistance Button */}
-            {activeStep === 1 && (
-              <AIAssistanceButton onClick={handleOpenAskHuddle} />
-            )}
+            {/* Navigation */}
+            <Box
+              sx={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                mt: 4,
+              }}
+            >
+              <Button
+                disabled={activeStep === 0}
+                onClick={handleBack}
+                variant="outlined"
+                size="large"
+                startIcon={<NavigateBeforeIcon />}
+              >
+                Back
+              </Button>
 
-            {/* Navigation Buttons */}
-            <NavigationButtons
-              activeStep={activeStep}
-              totalSteps={STEPS.length}
-              onBack={handleBack}
-              onNext={handleNext}
-              onCancel={onCancel}
-              isCreating={isCreating}
-              isStepValid={isStepValid(activeStep)}
-            />
+              <Box sx={{ display: 'flex', gap: 2 }}>
+                {onCancel && (
+                  <Button onClick={onCancel} variant="text" size="large">
+                    Cancel
+                  </Button>
+                )}
+                <Button
+                  variant="contained"
+                  onClick={handleNext}
+                  disabled={!isStepValid(activeStep) || isCreating}
+                  size="large"
+                  endIcon={
+                    isCreating ? (
+                      <CircularProgress size={20} />
+                    ) : activeStep === STEPS.length - 1 ? (
+                      <TrendingUpIcon />
+                    ) : (
+                      <ChevronRightIcon />
+                    )
+                  }
+                >
+                  {activeStep === STEPS.length - 1
+                    ? isCreating
+                      ? 'Creating...'
+                      : 'Create Prediction'
+                    : 'Next'}
+                </Button>
+              </Box>
+            </Box>
           </Box>
 
-          {/* AI Assistance Drawer */}
-          <AskHuddle
-            open={isAskHuddleOpen}
-            onClose={handleCloseAskHuddle}
-            // disableBackdropClick={true}
-            //   disableEscapeKeyDown={true}
-          />
-
-          {/* Notification Snackbar */}
-          <NotificationSnackbar
-            snackbar={snackbar}
+          {/* Snackbar */}
+          <Snackbar
+            open={snackbar.open}
+            autoHideDuration={10000}
             onClose={handleCloseSnackbar}
-          />
+            anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+          >
+            <Alert
+              onClose={handleCloseSnackbar}
+              severity={snackbar.severity}
+              sx={{ width: '100%', maxWidth: 600 }}
+              variant="filled"
+            >
+              <Typography variant="subtitle2" fontWeight={600}>
+                {snackbar.severity === 'success' ? 'Success!' : 'Error'}
+              </Typography>
+              <Typography variant="body2">{snackbar.message}</Typography>
+            </Alert>
+          </Snackbar>
         </Box>
+
+        {/* Ask Huddle Drawer */}
+        <AskHuddle open={askHuddleOpen} onClose={handleAskHuddleClose} />
       </FormProvider>
     </LocalizationProvider>
   );
 };
-
-// Sub-components for better organization
-const HeaderSection: React.FC = () => (
-  <Box sx={{ mb: 4 }}>
-    <Breadcrumbs sx={{ mb: 2 }}>
-      <Link
-        color="inherit"
-        href="/predictions"
-        sx={{
-          display: "flex",
-          alignItems: "center",
-          textDecoration: "none",
-          "&:hover": { textDecoration: "underline" },
-        }}
-      >
-        <HomeIcon sx={{ mr: 0.5 }} fontSize="small" />
-        Predictions
-      </Link>
-      <Typography color="text.primary" sx={{ fontWeight: 500 }}>
-        Create New Prediction
-      </Typography>
-    </Breadcrumbs>
-
-
-  </Box>
-);
-
-interface ProgressStepperProps {
-  activeStep: number;
-  steps: readonly string[];
-  isStepValid: boolean;
-}
-
-const ProgressStepper: React.FC<ProgressStepperProps> = ({
-  activeStep,
-  steps,
-  isStepValid,
-}) => (
-  <Paper
-    sx={{
-      p: 3,
-      mb: 4,
-      background: "linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)",
-      border: "1px solid",
-      borderColor: "divider",
-      borderRadius: 2,
-    }}
-  >
-    <Stepper activeStep={activeStep} sx={{ mb: 2 }}>
-      {steps.map((label) => (
-        <Step key={label}>
-          <StepLabel>{label}</StepLabel>
-        </Step>
-      ))}
-    </Stepper>
-
-    <Box
-      sx={{
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "space-between",
-      }}
-    >
-      <Typography variant="body2" color="text.secondary">
-        Step {activeStep + 1} of {steps.length}
-      </Typography>
-      {isStepValid && (
-        <Chip
-          label="Step Complete"
-          color="success"
-          size="small"
-          variant="outlined"
-          icon={<CheckIcon />}
-        />
-      )}
-    </Box>
-  </Paper>
-);
-
-interface NavigationButtonsProps {
-  activeStep: number;
-  totalSteps: number;
-  onBack: () => void;
-  onNext: () => void;
-  onCancel?: () => void;
-  isCreating: boolean;
-  isStepValid: boolean;
-}
-
-const NavigationButtons: React.FC<NavigationButtonsProps> = ({
-  activeStep,
-  totalSteps,
-  onBack,
-  onNext,
-  onCancel,
-  isCreating,
-  isStepValid,
-}) => (
-  <Box
-    sx={{
-      display: "flex",
-      justifyContent: "space-between",
-      alignItems: "center",
-      mt: 4,
-    }}
-  >
-    <Button
-      disabled={activeStep === 0}
-      onClick={onBack}
-      variant="outlined"
-      size="large"
-      startIcon={<NavigateBeforeIcon />}
-    >
-      Back
-    </Button>
-
-    <Box sx={{ display: "flex", gap: 2 }}>
-      {onCancel && (
-        <Button onClick={onCancel} variant="text" size="large">
-          Cancel
-        </Button>
-      )}
-      <Button
-        variant="contained"
-        onClick={onNext}
-        disabled={!isStepValid || isCreating}
-        size="large"
-        endIcon={
-          isCreating ? (
-            <CircularProgress size={20} />
-          ) : activeStep === totalSteps - 1 ? (
-            <TrendingUpIcon />
-          ) : (
-            <ChevronRightIcon />
-          )
-        }
-        sx={{
-          minWidth: 140,
-          background:
-            activeStep === totalSteps - 1
-              ? "linear-gradient(45deg, #2E7D32 30%, #4CAF50 90%)"
-              : undefined,
-        }}
-      >
-        {activeStep === totalSteps - 1
-          ? isCreating
-            ? "Creating..."
-            : "Create Prediction"
-          : "Next"}
-      </Button>
-    </Box>
-  </Box>
-);
-
-interface AIAssistanceButtonProps {
-  onClick: () => void;
-}
-
-const AIAssistanceButton: React.FC<AIAssistanceButtonProps> = ({ onClick }) => (
-  <Tooltip title="Get AI assistance with analysis" placement="left" arrow>
-    <Button
-      onClick={onClick}
-      variant="contained"
-      startIcon={<AIIcon />}
-      sx={{
-        position: "fixed",
-        right: 24,
-        bottom: 24,
-        zIndex: 1200,
-        borderRadius: 3,
-        background: "linear-gradient(45deg, #6bc330 30%, #4ca020 90%)",
-        boxShadow: "0 4px 20px 0 rgba(107, 195, 48, 0.3)",
-        "&:hover": {
-          background: "linear-gradient(45deg, #5cb130 30%, #3d9010 90%)",
-          boxShadow: "0 6px 25px 0 rgba(107, 195, 48, 0.4)",
-        },
-      }}
-    >
-      Ask Huddle AI
-    </Button>
-  </Tooltip>
-);
-
-interface NotificationSnackbarProps {
-  snackbar: SnackbarState;
-  onClose: () => void;
-}
-
-const NotificationSnackbar: React.FC<NotificationSnackbarProps> = ({
-  snackbar,
-  onClose,
-}) => (
-  <Snackbar
-    open={snackbar.open}
-    autoHideDuration={6000}
-    onClose={onClose}
-    anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
-  >
-    <Alert
-      onClose={onClose}
-      severity={snackbar.severity}
-      sx={{ width: "100%" }}
-    >
-      {snackbar.message}
-    </Alert>
-  </Snackbar>
-);
 
 export default PredictionForm;

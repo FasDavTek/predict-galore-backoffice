@@ -1,9 +1,5 @@
-import React from "react";
-import {
-  Box,
-  Skeleton,
-  Paper,
-} from "@mui/material";
+import React from 'react';
+import { Box, Skeleton, Paper } from '@mui/material';
 
 export const SettingsPageLoadingSkeleton: React.FC = () => {
   return (
@@ -17,12 +13,7 @@ export const SettingsPageLoadingSkeleton: React.FC = () => {
       {/* Tabs Skeleton */}
       <Box sx={{ display: 'flex', gap: 2, mb: 4 }}>
         {[...Array(5)].map((_, index) => (
-          <Skeleton 
-            key={index} 
-            variant="rounded" 
-            width={100} 
-            height={40} 
-          />
+          <Skeleton key={index} variant="rounded" width={100} height={40} />
         ))}
       </Box>
 
@@ -43,9 +34,7 @@ export const SettingsPageLoadingSkeleton: React.FC = () => {
               {[...Array(4)].map((_, index) => (
                 <Box key={index} sx={{ display: 'flex', gap: 2 }}>
                   <Skeleton variant="rounded" width="100%" height={56} />
-                  {index === 0 && (
-                    <Skeleton variant="rounded" width="100%" height={56} />
-                  )}
+                  {index === 0 && <Skeleton variant="rounded" width="100%" height={56} />}
                 </Box>
               ))}
             </Box>

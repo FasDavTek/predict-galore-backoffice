@@ -15,8 +15,7 @@ import {
   Refresh as RetryIcon,
   MoneyOff as RefundIcon,
 } from '@mui/icons-material';
-import { Transaction, TransactionStatus, PaymentMethod } from '../types/transaction.types';
-import { formatCurrency, formatPaymentMethod, formatTransactionStatus } from '../utils/transactionTransformers';
+import { Transaction, TransactionStatus, PaymentMethod, formatCurrency, formatPaymentMethod, formatTransactionStatus } from '@/features/transactions';
 
 interface SelectedTransactionPreviewProps {
   selectedTransactions: Transaction[];
@@ -24,7 +23,7 @@ interface SelectedTransactionPreviewProps {
   onTransactionEdit: (transaction: Transaction) => void;
   onTransactionAction: (transaction: Transaction, action: string) => void;
   onClearSelection: () => void;
-  onRemoveTransaction: (transactionId: string) => void;
+  onRemoveTransaction: (transactionId: string | number) => void;
 }
 
 export const SelectedTransactionPreview: React.FC<SelectedTransactionPreviewProps> = ({
@@ -66,15 +65,15 @@ export const SelectedTransactionPreview: React.FC<SelectedTransactionPreviewProp
 
   const getAvailableActions = (transaction: Transaction) => {
     const actions = [];
-    
+
     if (transaction.status === 'Failed') {
       actions.push({ label: 'Retry Transaction', action: 'retry', icon: <RetryIcon /> });
     }
-    
-    if (transaction.status === 'Successful' && transaction.type === 'payment') {
+
+    if (transaction.status === 'Successful' && (transaction.type === 'payment' || transaction.paymentType === 'payment')) {
       actions.push({ label: 'Issue Refund', action: 'refund', icon: <RefundIcon /> });
     }
-    
+
     return actions;
   };
 
@@ -91,7 +90,7 @@ export const SelectedTransactionPreview: React.FC<SelectedTransactionPreviewProp
       Refunded: 0,
     };
 
-    selectedTransactions.forEach(transaction => {
+    selectedTransactions.forEach((transaction) => {
       summary[transaction.status]++;
     });
 
@@ -101,11 +100,11 @@ export const SelectedTransactionPreview: React.FC<SelectedTransactionPreviewProp
   };
 
   return (
-    <Paper 
-      elevation={1} 
-      sx={{ 
-        p: 3, 
-        mb: 3, 
+    <Paper
+      elevation={1}
+      sx={{
+        p: 3,
+        mb: 3,
         border: `1px solid ${theme.palette.divider}`,
         backgroundColor: theme.palette.background.default,
       }}
@@ -117,16 +116,13 @@ export const SelectedTransactionPreview: React.FC<SelectedTransactionPreviewProp
             Selected Transactions ({selectedTransactions.length})
           </Typography>
           <Typography variant="body2" color="text.secondary">
-            {calculateTotalAmount() > 0 && `Total Amount: ${formatCurrency(calculateTotalAmount())}`}
+            {calculateTotalAmount() > 0 &&
+              `Total Amount: ${formatCurrency(calculateTotalAmount())}`}
           </Typography>
         </Box>
-        
+
         <Tooltip title="Clear selection">
-          <IconButton 
-            size="small" 
-            onClick={onClearSelection}
-            sx={{ color: 'text.secondary' }}
-          >
+          <IconButton size="small" onClick={onClearSelection} sx={{ color: 'text.secondary' }}>
             <CloseIcon />
           </IconButton>
         </Tooltip>
@@ -187,36 +183,32 @@ export const SelectedTransactionPreview: React.FC<SelectedTransactionPreviewProp
                     }}
                   />
                   <Chip
-                    label={formatPaymentMethod(transaction.paymentMethod)}
+                    label={formatPaymentMethod(transaction.paymentMethod || transaction.channel)}
                     size="small"
                     variant="outlined"
                     sx={{
-                      borderColor: getPaymentMethodColor(transaction.paymentMethod),
-                      color: getPaymentMethodColor(transaction.paymentMethod),
+                      borderColor: getPaymentMethodColor(transaction.paymentMethod || transaction.channel),
+                      color: getPaymentMethodColor(transaction.paymentMethod || transaction.channel),
                       fontSize: '0.75rem',
                     }}
                   />
                 </Box>
 
                 <Typography variant="body2" color="text.secondary" mb={0.5}>
-                  {transaction.customerName} • {transaction.customerEmail}
+                  {transaction.customerName || transaction.email.split('@')[0]} • {transaction.customerEmail || transaction.email}
                 </Typography>
 
                 <Typography variant="body1" fontWeight="600">
-                  {formatCurrency(transaction.amount, transaction.currency)}
+                  {formatCurrency(transaction.amount, transaction.currency || 'NGN')}
                 </Typography>
 
                 <Typography variant="caption" color="text.secondary">
-                  {new Date(transaction.createdAt).toLocaleDateString()} • {transaction.type}
+                  {new Date(transaction.createdAt || transaction.dateCreated).toLocaleDateString()} • {transaction.type || transaction.paymentType}
                 </Typography>
               </Box>
 
               {/* Actions */}
               <Box display="flex" alignItems="center" gap={0.5} ml={2}>
-             
-
-           
-
                 {getAvailableActions(transaction).map((action) => (
                   <Tooltip key={action.action} title={action.label}>
                     <IconButton
@@ -243,8 +235,6 @@ export const SelectedTransactionPreview: React.FC<SelectedTransactionPreviewProp
           </Paper>
         ))}
       </Stack>
-
-    
     </Paper>
   );
 };

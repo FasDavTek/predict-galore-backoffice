@@ -1,329 +1,132 @@
-"use client";
+/**
+ * Login Page
+ * Clean, simple implementation
+ */
 
-import React, { useState, useEffect } from "react";
-import {
-  TextField,
-  Button,
-  Box,
-  Checkbox,
-  FormControlLabel,
-  InputAdornment,
-  IconButton,
-  CircularProgress,
-  Link,
-  Typography,
-  Alert,
-} from "@mui/material";
-import {
-  Person as PersonIcon,
-  Lock as LockIcon,
-  Visibility as VisibilityIcon,
-  VisibilityOff as VisibilityOffIcon,
-} from "@mui/icons-material";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useRouter } from "next/navigation";
-import { toast } from "react-toastify";
-import { AuthCard } from "@/app/(auth)/features/components/AuthCard";
-// import { ErrorMessage } from "@/app/(auth)/features/components/ErrorMessage";
-import {
-  loginFormValidation,
-  LoginFormData,
-} from "../features/validations/auth";
-import { useAppDispatch, useAppSelector } from "@/shared/hooks/redux";
-import { useLoginMutation } from "../features/api/authApi";
-import {
-  setToken,
-  setAuthUser,
-  setAuthStatus,
-} from "../features/slices/authSlice";
-import { AuthStatus } from "@/app/(auth)/features/types/authTypes";
+'use client';
 
-// Define error response type
-interface ApiError {
-  data?: {
-    fieldErrors?: Record<string, string>;
-    message?: string;
-    error?: string;
-    detail?: string;
-  };
-  status?: number;
-  error?: string;
-  message?: string;
-}
+import { useState, useCallback, memo } from 'react';
+import { useRouter } from 'next/navigation';
+import Box from '@mui/material/Box';
+import Card from '@mui/material/Card';
+import CardContent from '@mui/material/CardContent';
+import TextField from '@mui/material/TextField';
+import Button from '@mui/material/Button';
+import Typography from '@mui/material/Typography';
+import Link from '@mui/material/Link';
+import Alert from '@mui/material/Alert';
+import Checkbox from '@mui/material/Checkbox';
+import FormControlLabel from '@mui/material/FormControlLabel';
+import { useLogin } from '@/features/auth';
 
-export default function LoginPage() {
+function LoginPage() {
   const router = useRouter();
-  const dispatch = useAppDispatch();
-  const authStatus = useAppSelector((state) => state.auth.authStatus);
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [rememberMe, setRememberMe] = useState(false);
 
-  const [mounted, setMounted] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
-  const [apiError, setApiError] = useState<string | null>(null);
+  const { mutate, isPending, error } = useLogin();
 
-  const [login, { isLoading: isLoggingIn }] = useLoginMutation();
+  const handleSubmit = useCallback((e: React.FormEvent) => {
+    e.preventDefault();
+    mutate(
+      { username, password, rememberMe },
+      {
+        onSuccess: () => {
+          router.push('/dashboard');
+        },
+      }
+    );
+  }, [username, password, rememberMe, mutate, router]);
 
-  const {
-    register,
-    handleSubmit,
-    formState: { errors, isValid },
-    setError,
-    clearErrors,
-  } = useForm<LoginFormData>({
-    resolver: zodResolver(loginFormValidation),
-    mode: "onChange",
-  });
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setMounted(true);
-    }, 0);
-
-    return () => clearTimeout(timer);
+  const handleUsernameChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setUsername(e.target.value);
   }, []);
 
-  useEffect(() => {
-    if (authStatus === AuthStatus.AUTHENTICATED) {
-      router.push("/dashboard");
-    }
-  }, [authStatus, router]);
+  const handlePasswordChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setPassword(e.target.value);
+  }, []);
 
-  const onSubmit = async (data: LoginFormData) => {
-    setApiError(null);
-    clearErrors("root");
-
-    try {
-      const result = await login(data).unwrap();
-
-      if (result.token) {
-        dispatch(setToken(result.token));
-        dispatch(setAuthStatus(AuthStatus.AUTHENTICATED));
-
-        if (result.user) {
-          dispatch(setAuthUser(result.user));
-        }
-
-        toast.success("Login successful! Redirecting...");
-        router.push("/dashboard");
-      }
-    } catch (error: unknown) {
-      // Better error extraction without freezing the UI
-      let errorMessage = "An unexpected error occurred during login";
-      
-      // Safely extract error message without JSON.stringify
-      if (error && typeof error === 'object') {
-        const apiError = error as ApiError;
-        
-        // Extract from nested data object
-        if (apiError.data?.message) {
-          errorMessage = apiError.data.message;
-        } else if (apiError.data?.error) {
-          errorMessage = apiError.data.error;
-        } else if (apiError.data?.detail) {
-          errorMessage = apiError.data.detail;
-        } 
-        // Extract from top-level error object
-        else if (apiError.error) {
-          errorMessage = apiError.error;
-        } else if (apiError.message) {
-          errorMessage = apiError.message;
-        }
-        // Handle string errors
-        else if ('toString' in error) {
-          const errorString = error.toString();
-          if (errorString !== '[object Object]') {
-            errorMessage = errorString;
-          }
-        }
-      } else if (typeof error === 'string') {
-        errorMessage = error;
-      }
-
-      // Set the error state for display
-      setApiError(errorMessage);
-
-      // Handle field-specific errors
-      if (error && typeof error === 'object') {
-        const apiError = error as ApiError;
-        if (apiError.data?.fieldErrors) {
-          Object.entries(apiError.data.fieldErrors).forEach(
-            ([field, message]) => {
-              setError(field as keyof LoginFormData, {
-                type: "server",
-                message: message as string,
-              });
-            }
-          );
-        }
-      }
-
-      // Set general error
-      setError("root", {
-        type: "server",
-        message: errorMessage,
-      });
-
-      // Show user-friendly toast notification
-      toast.error(getUserFriendlyErrorMessage(errorMessage));
-    }
-  };
-
-  // Convert technical error messages to user-friendly ones
-  const getUserFriendlyErrorMessage = (errorMessage: string): string => {
-    const lowerCaseMessage = errorMessage.toLowerCase();
-    
-    if (lowerCaseMessage.includes('invalid credentials') || 
-        lowerCaseMessage.includes('invalid username') || 
-        lowerCaseMessage.includes('invalid password')) {
-      return "Invalid username or password. Please check your credentials and try again.";
-    }
-    
-    if (lowerCaseMessage.includes('network') || lowerCaseMessage.includes('fetch')) {
-      return "Network error. Please check your internet connection and try again.";
-    }
-    
-    if (lowerCaseMessage.includes('timeout')) {
-      return "Request timed out. Please try again in a moment.";
-    }
-    
-    if (lowerCaseMessage.includes('too many requests')) {
-      return "Too many login attempts. Please wait a few minutes before trying again.";
-    }
-    
-    if (lowerCaseMessage.includes('account') && lowerCaseMessage.includes('locked')) {
-      return "Your account has been temporarily locked due to too many failed attempts. Please try again later or contact support.";
-    }
-    
-    if (lowerCaseMessage.includes('server error') || lowerCaseMessage.includes('500')) {
-      return "Server error. Please try again in a few moments.";
-    }
-    
-    // Return original message if no specific match, but truncate if too long
-    return errorMessage.length > 100 
-      ? `${errorMessage.substring(0, 100)}...` 
-      : errorMessage;
-  };
-
-  const isLoading = isLoggingIn;
+  const handleRememberMeChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setRememberMe(e.target.checked);
+  }, []);
 
   return (
-    <AuthCard
-      title="Log In"
-      subtitle="Enter your credentials to access your account"
+    <Box
+      sx={{
+        minHeight: '100vh',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        bgcolor: 'background.default',
+        p: 2,
+      }}
     >
-      {/* Display API error as Alert */}
-      {apiError && (
-        <Alert 
-          severity="error" 
-          sx={{ mb: 2 }}
-          onClose={() => setApiError(null)}
-        >
-          {getUserFriendlyErrorMessage(apiError)}
-        </Alert>
-      )}
-
-      <Box
-        component="form"
-        onSubmit={handleSubmit(onSubmit)}
-        sx={{ width: "100%" }}
-      >
-        <TextField
-          fullWidth
-          label="Username"
-          {...register("username")}
-          error={!!errors.username}
-          helperText={errors.username?.message}
-          sx={{ mb: 3 }}
-          InputProps={{
-            startAdornment: (
-              <InputAdornment position="start">
-                <PersonIcon color="disabled" />
-              </InputAdornment>
-            ),
-          }}
-        />
-
-        <TextField
-          fullWidth
-          label="Password"
-          type={showPassword ? "text" : "password"}
-          {...register("password")}
-          error={!!errors.password}
-          helperText={errors.password?.message}
-          sx={{ mb: 3 }}
-          InputProps={{
-            startAdornment: (
-              <InputAdornment position="start">
-                <LockIcon color="disabled" />
-              </InputAdornment>
-            ),
-            endAdornment: (
-              <InputAdornment position="end">
-                <IconButton
-                  onClick={() => setShowPassword(!showPassword)}
-                  edge="end"
-                  color="inherit"
-                >
-                  {showPassword ? <VisibilityOffIcon /> : <VisibilityIcon />}
-                </IconButton>
-              </InputAdornment>
-            ),
-          }}
-        />
-
-        {/* Display root/server error */}
-        {errors.root && (
-          <Typography color="error" variant="body2" sx={{ mb: 2 }}>
-            {getUserFriendlyErrorMessage(errors.root.message || "")}
+      <Card sx={{ maxWidth: 400, width: '100%' }}>
+        <CardContent sx={{ p: 4 }}>
+          <Typography variant="h4" gutterBottom align="center" fontWeight={600}>
+            Welcome Back
           </Typography>
-        )}
+          <Typography variant="body2" color="text.secondary" align="center" sx={{ mb: 3 }}>
+            Sign in to your account
+          </Typography>
 
-        <Box
-          sx={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            mb: 3,
-          }}
-        >
-          <FormControlLabel
-            control={<Checkbox {...register("rememberMe")} color="primary" />}
-            label="Remember me"
-          />
-          <Link
-            href="/reset-password"
-            sx={{ color: "primary.main", textDecoration: "none" }}
-          >
-            Forgot Password?
-          </Link>
-        </Box>
-
-        <Button
-          type="submit"
-          fullWidth
-          variant="contained"
-          disabled={!mounted || isLoading || !isValid}
-          sx={{ height: 48, mb: 3 }}
-        >
-          {isLoading ? (
-            <CircularProgress size={24} color="inherit" />
-          ) : (
-            "Log into Account"
+          {error && (
+            <Alert severity="error" sx={{ mb: 2 }}>
+              {error.message || 'Invalid credentials'}
+            </Alert>
           )}
-        </Button>
 
-        <Box sx={{ textAlign: "center" }}>
-          <Typography variant="body2" sx={{ color: "text.secondary" }}>
-            Don&apos;t have an account?{" "}
-            <Link
-              href="/register"
-              sx={{ color: "primary.main", fontWeight: 600 }}
+          <Box component="form" onSubmit={handleSubmit}>
+            <TextField
+              fullWidth
+              label="Username"
+              value={username}
+              onChange={handleUsernameChange}
+              margin="normal"
+              required
+              autoFocus
+            />
+
+            <TextField
+              fullWidth
+              label="Password"
+              type="password"
+              value={password}
+              onChange={handlePasswordChange}
+              margin="normal"
+              required
+            />
+
+            <FormControlLabel
+              control={
+                <Checkbox checked={rememberMe} onChange={handleRememberMeChange} />
+              }
+              label="Remember me"
+              sx={{ mt: 1 }}
+            />
+
+            <Button
+              type="submit"
+              fullWidth
+              variant="contained"
+              size="large"
+              sx={{ mt: 3, mb: 2 }}
+              disabled={isPending}
             >
-              Sign Up
-            </Link>
-          </Typography>
-        </Box>
-      </Box>
-    </AuthCard>
+              {isPending ? 'Signing in...' : 'Sign In'}
+            </Button>
+
+            <Box sx={{ textAlign: 'center', mt: 2 }}>
+              <Link href="/reset-password" variant="body2">
+                Forgot password?
+              </Link>
+            </Box>
+          </Box>
+        </CardContent>
+      </Card>
+    </Box>
   );
 }
+
+export default memo(LoginPage);

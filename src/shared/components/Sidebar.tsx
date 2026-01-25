@@ -1,35 +1,30 @@
 // components/dashboard/Sidebar.tsx
-"use client";
+'use client';
 
-import React from 'react';
-import {
-  Box,
-  List,
-  ListItem,
-  ListItemButton,
-  ListItemIcon,
-  ListItemText,
-  Drawer,
-  IconButton,
-  Tooltip,
-  useMediaQuery,
-  useTheme,
-} from '@mui/material';
-import {
-  Dashboard as DashboardIcon,
-  Description as DescriptionIcon,
-  People as PeopleIcon,
-  AccountBalanceWallet as WalletIcon,
-  Settings as SettingsIcon,
-  Logout as LogoutIcon,
-  ChevronLeft,
-  ChevronRight,
-  Close as CloseIcon,
-} from '@mui/icons-material';
+import React, { memo, useCallback } from 'react';
+import Box from '@mui/material/Box';
+import List from '@mui/material/List';
+import ListItem from '@mui/material/ListItem';
+import ListItemButton from '@mui/material/ListItemButton';
+import ListItemIcon from '@mui/material/ListItemIcon';
+import ListItemText from '@mui/material/ListItemText';
+import Drawer from '@mui/material/Drawer';
+import IconButton from '@mui/material/IconButton';
+import Tooltip from '@mui/material/Tooltip';
+import useMediaQuery from '@mui/material/useMediaQuery';
+import { useTheme } from '@mui/material/styles';
+import DashboardIcon from '@mui/icons-material/Dashboard';
+import DescriptionIcon from '@mui/icons-material/Description';
+import PeopleIcon from '@mui/icons-material/People';
+import WalletIcon from '@mui/icons-material/AccountBalanceWallet';
+import SettingsIcon from '@mui/icons-material/Settings';
+import LogoutIcon from '@mui/icons-material/Logout';
+import ChevronLeft from '@mui/icons-material/ChevronLeft';
+import ChevronRight from '@mui/icons-material/ChevronRight';
+import CloseIcon from '@mui/icons-material/Close';
 import Image from 'next/image';
 import { useRouter, usePathname } from 'next/navigation';
-import { useDispatch } from 'react-redux';
-import { logout } from '@/app/(auth)/features/slices/authSlice';
+import { useAuth } from '@/features/auth';
 
 // Sidebar width constants
 const DRAWER_WIDTH = 260; // Expanded width
@@ -42,6 +37,7 @@ interface NavigationItem {
   path: string;
 }
 
+// Memoize navigation items to prevent recreation
 const navigationItems: NavigationItem[] = [
   { icon: <DashboardIcon />, label: 'Dashboard', path: '/dashboard' },
   { icon: <DescriptionIcon />, label: 'Predictions', path: '/predictions' },
@@ -61,38 +57,38 @@ const Sidebar = ({ collapsed, setCollapsed, mobileOpen, setMobileOpen }: Sidebar
   const router = useRouter();
   const pathname = usePathname();
   const theme = useTheme();
-  const dispatch = useDispatch();
+  const { logout } = useAuth();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
 
   // Toggle sidebar between expanded/collapsed states (desktop only)
-  const toggleSidebar = () => {
+  const toggleSidebar = useCallback(() => {
     if (isMobile) {
       setMobileOpen(!mobileOpen);
     } else {
       setCollapsed(!collapsed);
     }
-  };
+  }, [isMobile, mobileOpen, collapsed, setMobileOpen, setCollapsed]);
 
   // Close mobile sidebar
-  const handleMobileClose = () => {
+  const handleMobileClose = useCallback(() => {
     setMobileOpen(false);
-  };
+  }, [setMobileOpen]);
 
   // Check if current route matches item path
-  const isActive = (path: string) => pathname === path;
+  const isActive = useCallback((path: string) => pathname === path, [pathname]);
 
   // Handle navigation
-  const handleNavigation = (path: string) => {
+  const handleNavigation = useCallback((path: string) => {
     router.push(path);
     if (isMobile) setMobileOpen(false);
-  };
+  }, [router, isMobile, setMobileOpen]);
 
   // Handle logout
-  const handleLogout = () => {
-    dispatch(logout());
+  const handleLogout = useCallback(() => {
+    logout();
     router.push('/login');
     if (isMobile) setMobileOpen(false);
-  };
+  }, [logout, router, isMobile, setMobileOpen]);
 
   // Main drawer content
   const drawerContent = (
@@ -109,7 +105,7 @@ const Sidebar = ({ collapsed, setCollapsed, mobileOpen, setMobileOpen }: Sidebar
         sx={{
           display: 'flex',
           alignItems: 'center',
-          justifyContent: isMobile ? 'space-between' : (collapsed ? 'center' : 'space-between'),
+          justifyContent: isMobile ? 'space-between' : collapsed ? 'center' : 'space-between',
           px: 2,
           py: 2,
           borderBottom: '1px solid',
@@ -140,21 +136,23 @@ const Sidebar = ({ collapsed, setCollapsed, mobileOpen, setMobileOpen }: Sidebar
 
         {/* Close button for mobile, collapse button for desktop */}
         <IconButton onClick={isMobile ? handleMobileClose : toggleSidebar}>
-          {isMobile ? <CloseIcon /> : (collapsed ? <ChevronRight /> : <ChevronLeft />)}
+          {isMobile ? <CloseIcon /> : collapsed ? <ChevronRight /> : <ChevronLeft />}
         </IconButton>
       </Box>
 
       {/* Navigation menu items */}
-      <Box sx={{ 
-        flex: 1, 
-        overflowY: 'auto', 
-        px: (collapsed && !isMobile) ? 0 : 1.5, 
-        py: 2 
-      }}>
+      <Box
+        sx={{
+          flex: 1,
+          overflowY: 'auto',
+          px: collapsed && !isMobile ? 0 : 1.5,
+          py: 2,
+        }}
+      >
         <List>
           {navigationItems.map((item, index) => {
             const active = isActive(item.path);
-            
+
             // Reusable button component for each menu item
             const menuButton = (
               <ListItemButton
@@ -162,9 +160,9 @@ const Sidebar = ({ collapsed, setCollapsed, mobileOpen, setMobileOpen }: Sidebar
                 onClick={() => handleNavigation(item.path)}
                 sx={{
                   borderRadius: isMobile ? 0 : 1, // Remove border radius on mobile
-                  mx: (collapsed && !isMobile) ? 0.5 : 0,
+                  mx: collapsed && !isMobile ? 0.5 : 0,
                   my: isMobile ? 0 : 0.5, // Remove vertical margin on mobile
-                  justifyContent: (collapsed && !isMobile) ? 'center' : 'flex-start',
+                  justifyContent: collapsed && !isMobile ? 'center' : 'flex-start',
                   // Active state styling
                   '&.Mui-selected': {
                     backgroundColor: 'rgba(66, 166, 5, 0.12)',
@@ -186,20 +184,18 @@ const Sidebar = ({ collapsed, setCollapsed, mobileOpen, setMobileOpen }: Sidebar
               >
                 <ListItemIcon
                   sx={{
-                    minWidth: (collapsed && !isMobile) ? 'auto' : 36,
+                    minWidth: collapsed && !isMobile ? 'auto' : 36,
                     justifyContent: 'center',
                     color: active ? 'primary.main' : 'text.secondary',
                   }}
                 >
-                  <Box sx={{ fontSize: 'small' }}>
-                    {item.icon}
-                  </Box>
+                  <Box sx={{ fontSize: 'small' }}>{item.icon}</Box>
                 </ListItemIcon>
                 {/* Hide text when collapsed on desktop */}
                 {!(collapsed && !isMobile) && (
                   <ListItemText
                     primary={item.label}
-                    primaryTypographyProps={{ 
+                    primaryTypographyProps={{
                       fontSize: 14,
                       color: active ? 'primary.main' : 'text.secondary',
                       fontWeight: active ? 600 : 'normal',
@@ -213,7 +209,7 @@ const Sidebar = ({ collapsed, setCollapsed, mobileOpen, setMobileOpen }: Sidebar
             return (
               <ListItem key={index} disablePadding sx={{ display: 'block' }}>
                 {/* Show tooltip only when collapsed on desktop */}
-                {(collapsed && !isMobile) ? (
+                {collapsed && !isMobile ? (
                   <Tooltip title={item.label} placement="right">
                     {menuButton}
                   </Tooltip>
@@ -229,23 +225,19 @@ const Sidebar = ({ collapsed, setCollapsed, mobileOpen, setMobileOpen }: Sidebar
       {/* Footer section with logout button */}
       <Box
         sx={{
-          px: (collapsed && !isMobile) ? 0 : 2,
+          px: collapsed && !isMobile ? 0 : 2,
           py: 2,
           borderTop: '1px solid',
           borderColor: 'divider',
         }}
       >
-        <Tooltip 
-          title="Logout" 
-          placement="right" 
-          disableHoverListener={!(collapsed && !isMobile)}
-        >
+        <Tooltip title="Logout" placement="right" disableHoverListener={!(collapsed && !isMobile)}>
           <ListItemButton
             onClick={handleLogout}
             sx={{
               borderRadius: isMobile ? 0 : 1, // Remove border radius on mobile
-              justifyContent: (collapsed && !isMobile) ? 'center' : 'flex-start',
-              mx: (collapsed && !isMobile) ? 0.5 : 0,
+              justifyContent: collapsed && !isMobile ? 'center' : 'flex-start',
+              mx: collapsed && !isMobile ? 0.5 : 0,
               '&:hover': {
                 backgroundColor: 'rgba(211, 47, 47, 0.08)',
                 '& .MuiListItemIcon-root': { color: 'error.main' },
@@ -254,8 +246,8 @@ const Sidebar = ({ collapsed, setCollapsed, mobileOpen, setMobileOpen }: Sidebar
             }}
           >
             <ListItemIcon
-              sx={{ 
-                minWidth: (collapsed && !isMobile) ? 'auto' : 36, 
+              sx={{
+                minWidth: collapsed && !isMobile ? 'auto' : 36,
                 justifyContent: 'center',
                 color: 'text.secondary',
               }}
@@ -286,10 +278,10 @@ const Sidebar = ({ collapsed, setCollapsed, mobileOpen, setMobileOpen }: Sidebar
           keepMounted: true,
         }}
         sx={{
-          width: isMobile ? 'auto' : (collapsed ? COLLAPSED_WIDTH : DRAWER_WIDTH),
+          width: isMobile ? 'auto' : collapsed ? COLLAPSED_WIDTH : DRAWER_WIDTH,
           flexShrink: 0,
           '& .MuiDrawer-paper': {
-            width: isMobile ? DRAWER_WIDTH : (collapsed ? COLLAPSED_WIDTH : DRAWER_WIDTH),
+            width: isMobile ? DRAWER_WIDTH : collapsed ? COLLAPSED_WIDTH : DRAWER_WIDTH,
             boxSizing: 'border-box',
             transition: theme.transitions.create('width', {
               easing: theme.transitions.easing.sharp,
@@ -331,4 +323,4 @@ const Sidebar = ({ collapsed, setCollapsed, mobileOpen, setMobileOpen }: Sidebar
   );
 };
 
-export default Sidebar;
+export default memo(Sidebar);

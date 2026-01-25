@@ -1,307 +1,157 @@
-// src/app/(dashboard)/predictions/page.tsx
-"use client";
+/**
+ * Predictions Page
+ * Clean, simple implementation
+ */
 
-import React, { useState, useMemo } from "react";
-import {
-  Box,
-  Container,
-  Dialog,
-  Snackbar,
-  Alert,
-  Skeleton,
-} from "@mui/material";
+'use client';
 
-// Components
-import { PredictionsTable } from "./features/components/PredictionsTable";
-import { PredictionAnalytics } from "./features/components/PredictionAnalytics";
-import { PredictionForm } from "./features/components/PredictionForm";
-import PredictionsPageHeader, { TimeRange } from "./features/components/PredictionsPageHeader";
-import { PredictionsPageLoadingSkeleton } from "./features/components/PredictionsPageLoadingSkeleton";
-
-// Global State Components
-import { ErrorState } from "@/shared/components/ErrorState";
-
-// Hooks
-import { usePredictions } from "./features/hooks/usePredictions";
-
-// Types
-import { Prediction } from "./features/types/prediction.types";
-
-// Auth
-import { RootState } from "@/store/store";
-import { useSelector } from "react-redux";
-import withAuth from "@/hoc/withAuth";
+import { useState, useCallback, useMemo, memo } from 'react';
+import { useRouter } from 'next/navigation';
+import { Box } from '@mui/material';
+import { PageHeader, TimeRange } from '@/shared/components/PageHeader';
+import { designTokens } from '@/shared/styles/tokens';
+import { PredictionsTable } from './features/components/PredictionsTable';
+import { PredictionAnalytics } from './features/components/PredictionAnalytics';
+import { PredictionsPageLoadingSkeleton } from './features/components/PredictionsPageLoadingSkeleton';
+import { usePredictions, usePredictionsAnalytics, useDeletePrediction, PredictionsFilter, Prediction } from '@/features/predictions';
+import { useAuth } from '@/features/auth';
+import { getTimeRangeDates } from '@/shared/lib/helpers';
+import { useQueryClient } from '@tanstack/react-query';
+import withAuth from '@/hoc/with-auth';
 
 function PredictionsPage() {
-  const [showPredictionForm, setShowPredictionForm] = useState(false);
-  const [snackbar, setSnackbar] = useState<{
-    open: boolean;
-    message: string;
-    severity: "success" | "error";
-  }>({
-    open: false,
-    message: "",
-    severity: "success",
-  });
-
-  // Global time range state for predictions page
-  const [globalTimeRange, setGlobalTimeRange] = useState<TimeRange>("default");
-
-  // Refresh trigger state
-  const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const router = useRouter();
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [timeRange, setTimeRange] = useState<TimeRange>('default');
+  
+  // Get date range from time range filter
+  const dateRange = useMemo(() => getTimeRangeDates(timeRange), [timeRange]);
+  
+  const [filters, setFilters] = useState<PredictionsFilter>({
+    page: 1,
+    limit: 10,
+  });
+  const [selectedPrediction, setSelectedPrediction] = useState<Prediction | null>(null);
 
-  // Redux auth state
-  const user = useSelector((state: RootState) => state.auth.user);
+  // Merge date range into filters
+  const filtersWithDateRange = useMemo(() => ({
+    ...filters,
+    ...(dateRange ? { startDate: dateRange.from, endDate: dateRange.to } : {}),
+  }), [filters, dateRange]);
 
-  const {
-    predictions,
-    pagination,
-    isLoading,
-    error,
-    currentFilters,
-    localSearch,
-    selectedPredictionIds,
-    handleSearchChange,
-    handleFilterChange,
-    handleClearFilters,
-    handlePageChange,
-    handleDeletePrediction,
-    handleCancelPrediction,
-    handleExportPredictions,
-    handleToggleSelection,
-    handleSelectAll,
-    handleClearAllSelection,
-    refetchPredictions,
-    isExporting,
-  } = usePredictions();
+  const { data, isLoading, error, refetch } = usePredictions(filtersWithDateRange);
+  const { isLoading: isAnalyticsLoading, refetch: refetchAnalytics } = usePredictionsAnalytics();
+  const deletePrediction = useDeletePrediction();
 
-  // Memoize selected predictions for performance
-  const selectedPredictionsData = useMemo(() => {
-    return predictions.filter((prediction) =>
-      selectedPredictionIds.includes(prediction.id)
-    );
-  }, [predictions, selectedPredictionIds]);
+  // Show loading until both queries are complete
+  const isPageLoading = isLoading || isAnalyticsLoading || isRefreshing;
 
-  // If handleRemoveFromSelection doesn't exist in your hook, create it locally
-  const handleRemoveFromSelection = (predictionId: string) => {
-    // This is the same as toggling selection - remove if selected
-    if (selectedPredictionIds.includes(predictionId)) {
-      handleToggleSelection(predictionId);
-    }
-  };
+  const predictions = useMemo(() => data?.predictions || [], [data?.predictions]);
+  const pagination = useMemo(() => {
+    if (!data?.pagination) return null;
+    return {
+      page: data.pagination.page,
+      limit: data.pagination.limit,
+      total: data.pagination.total,
+      totalPages: data.pagination.totalPages,
+    };
+  }, [data]);
 
-  // Handle refresh button click
-  const handleRefresh = () => {
+  const handleRefresh = useCallback(async () => {
     setIsRefreshing(true);
-    // Clear selections when refreshing
-    handleClearAllSelection();
-    // Increment refresh trigger to force all components to refetch
-    setRefreshTrigger((prev) => prev + 1);
-
-    // Refetch predictions data
-    refetchPredictions();
-
-    // Set a timeout to hide the loading skeleton after a minimum duration
-    setTimeout(() => {
+    try {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['predictions'] }),
+        queryClient.invalidateQueries({ queryKey: ['predictions-analytics'] }),
+        refetch(),
+        refetchAnalytics(),
+      ]);
+    } finally {
       setIsRefreshing(false);
-    }, 1000);
-  };
-
-  const showSnackbar = (message: string, severity: "success" | "error") => {
-    setSnackbar({ open: true, message, severity });
-  };
-
-  const handlePredictionSelect = (prediction: Prediction) => {
-    // Handle prediction selection if needed
-    console.log('Selected prediction:', prediction);
-  };
-
-  const handlePredictionEdit = (prediction: Prediction) => {
-    // Handle prediction edit
-    console.log('Edit prediction:', prediction);
-    showSnackbar(`Edit prediction ${prediction.name}`, "success");
-  };
-
-  const handlePredictionDelete = async (prediction: Prediction): Promise<void> => {
-    const confirmed = window.confirm(
-      `Are you sure you want to delete "${prediction.name}"?`
-    );
-    if (!confirmed) return;
-
-    const success = await handleDeletePrediction(prediction.id);
-    if (success) {
-      showSnackbar("Prediction deleted successfully", "success");
-      // Trigger refresh after successful deletion
-      handleRefresh();
-    } else {
-      showSnackbar("Failed to delete prediction", "error");
     }
-  };
+  }, [refetch, refetchAnalytics, queryClient]);
 
-  const handlePredictionCancel = async (prediction: Prediction): Promise<void> => {
-    const confirmed = window.confirm(
-      `Are you sure you want to cancel "${prediction.name}"?`
-    );
-    if (!confirmed) return;
+  const handleFilterChange = useCallback((newFilters: Partial<PredictionsFilter>) => {
+    setFilters((prev) => ({ ...prev, ...newFilters, page: 1 }));
+  }, []);
 
-    const success = await handleCancelPrediction(prediction.id);
-    if (success) {
-      showSnackbar("Prediction cancelled successfully", "success");
-      // Trigger refresh after successful cancellation
-      handleRefresh();
-    } else {
-      showSnackbar("Failed to cancel prediction", "error");
+  const handleAddPrediction = useCallback(() => {
+    router.push('/predictions/new');
+  }, [router]);
+
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const handleEditPrediction = useCallback((_prediction: Prediction) => {
+    // TODO: Implement edit functionality when PredictionForm supports editing
+    router.push('/predictions/new');
+  }, [router]);
+
+  const handleDeletePrediction = useCallback(async (prediction: Prediction) => {
+    if (confirm(`Are you sure you want to delete this prediction?`)) {
+      await deletePrediction.mutateAsync(String(prediction.id));
+      refetch();
+      if (selectedPrediction?.id === prediction.id) {
+        setSelectedPrediction(null);
+      }
     }
-  };
+  }, [deletePrediction, refetch, selectedPrediction]);
 
-  const handleAddPrediction = () => {
-    setShowPredictionForm(true);
-  };
+  const handlePredictionSelect = useCallback((prediction: Prediction | null) => {
+    setSelectedPrediction(prediction);
+  }, []);
 
-  const handleFormSuccess = () => {
-    setShowPredictionForm(false);
-    showSnackbar("Prediction created successfully", "success");
-    // Trigger refresh after successful form submission
-    handleRefresh();
-  };
-
-  const handleFormCancel = () => {
-    setShowPredictionForm(false);
-  };
-
-  const handleCloseSnackbar = () => {
-    setSnackbar((prev) => ({ ...prev, open: false }));
-  };
-
-  const hasError = !!error;
-
-  // Show Prediction Form as main component
-  if (showPredictionForm) {
-    return (
-      <Container maxWidth="lg" sx={{ py: 4 }}>
-        <PredictionForm
-          onSuccess={handleFormSuccess}
-          onCancel={handleFormCancel}
-        />
-      </Container>
-    );
-  }
-
-  // Show loading skeleton for initial page load or during refresh
-  if ((isLoading && predictions.length === 0) || isRefreshing) {
-    return (
-      <Container maxWidth="xl" sx={{ py: 4 }}>
-        {/* Header Skeleton */}
-        <Box sx={{ mb: 4 }}>
-          <Skeleton variant="text" width={250} height={48} sx={{ mb: 1 }} />
-          <Skeleton variant="text" width={350} height={24} />
-        </Box>
-
-        <PredictionsPageLoadingSkeleton />
-      </Container>
-    );
-  }
-
-  // Show error state if there's an API error
-  if (error) {
-    return (
-      <Container maxWidth="xl" sx={{ py: 4 }}>
-        <ErrorState
-          variant="api"
-          title="Failed to Load Predictions"
-          message="We encountered an error while loading prediction data. Please try again."
-          retryAction={{
-            onClick: handleRefresh,
-            label: "Retry Loading",
-          }}
-          height={400}
-        />
-      </Container>
-    );
-  }
+  const handleTimeRangeChange = useCallback((range: TimeRange) => {
+    setTimeRange(range);
+    // Reset to first page when time range changes
+    setFilters((prev) => ({ ...prev, page: 1 }));
+    // Invalidate queries when time range changes to trigger refetch with new dates
+    queryClient.invalidateQueries({ queryKey: ['predictions'] });
+    queryClient.invalidateQueries({ queryKey: ['predictions-analytics'] });
+  }, [queryClient]);
 
   return (
-    <Container maxWidth="xl" sx={{ py: 4 }}>
-      {/* Header  */}
-      <PredictionsPageHeader
-        title="Predictions Management"
-        timeRange={globalTimeRange}
-        onTimeRangeChange={setGlobalTimeRange}
+    <Box
+      sx={{
+        // maxWidth: 1536, // 2xl breakpoint (96rem = 1536px)
+        width: '100%',
+        px: { xs: 2, sm: 3, md: 4 },
+        py: designTokens.spacing.xl,
+      }}
+    >
+      <PageHeader
+        title="Prediction Management"
+        defaultSubtitle="Welcome {firstName}! Create and manage predictions."
+        timeRange={timeRange}
+        onTimeRangeChange={handleTimeRangeChange}
         onRefresh={handleRefresh}
         user={user}
       />
 
-      {/* Analytics - Pass refresh trigger  */}
-      <PredictionAnalytics refreshTrigger={refreshTrigger} />
+      {isPageLoading ? (
+        <PredictionsPageLoadingSkeleton />
+      ) : (
+        <>
+          <PredictionAnalytics />
 
-      {/* Consolidated PredictionsTable Component */}
-      <PredictionsTable
-        // Data
-        predictions={predictions}
-        pagination={pagination || undefined} // Handle null case
-        isLoading={isLoading}
-        hasError={hasError}
-        
-        // Filters
-        currentFilters={currentFilters}
-        localSearch={localSearch}
-        
-        // Selection
-        selectedPredictions={selectedPredictionsData}
-        selectedPredictionIds={selectedPredictionIds}
-        
-        // Handlers
-        onPredictionSelect={handlePredictionSelect}
-        onPredictionEdit={handlePredictionEdit}
-        onPredictionDelete={handlePredictionDelete}
-        onPredictionCancel={handlePredictionCancel}
-        onAddPrediction={handleAddPrediction}
-        onExportPredictions={handleExportPredictions}
-        onRefresh={handleRefresh}
-        onSearchChange={handleSearchChange}
-        onFilterChange={handleFilterChange}
-        onClearFilters={handleClearFilters}
-        onPageChange={handlePageChange}
-        onToggleSelection={handleToggleSelection}
-        onSelectAll={handleSelectAll}
-        onClearAllSelection={handleClearAllSelection}
-        onRemoveFromSelection={handleRemoveFromSelection}
-        
-        // States
-        isExporting={isExporting}
-        isRefreshing={isRefreshing}
-      />
-
-      {/* Prediction Form Dialog */}
-      <Dialog
-        open={showPredictionForm}
-        onClose={handleFormCancel}
-        maxWidth="md"
-        fullWidth
-      >
-        <PredictionForm
-          onSuccess={handleFormSuccess}
-          onCancel={handleFormCancel}
-        />
-      </Dialog>
-
-      {/* Snackbar */}
-      <Snackbar
-        open={snackbar.open}
-        autoHideDuration={6000}
-        onClose={handleCloseSnackbar}
-      >
-        <Alert
-          onClose={handleCloseSnackbar}
-          severity={snackbar.severity}
-          sx={{ width: "100%" }}
-        >
-          {snackbar.message}
-        </Alert>
-      </Snackbar>
-    </Container>
+          <PredictionsTable
+            predictions={predictions}
+            pagination={pagination}
+            isLoading={isLoading}
+            error={error}
+            filters={filtersWithDateRange}
+            onFilterChange={handleFilterChange}
+            onAddPrediction={handleAddPrediction}
+            onEditPrediction={handleEditPrediction}
+            onDeletePrediction={handleDeletePrediction}
+            onRefresh={handleRefresh}
+            selectedPrediction={selectedPrediction}
+            onPredictionSelect={handlePredictionSelect}
+          />
+        </>
+      )}
+    </Box>
   );
 }
 
-export default withAuth(PredictionsPage);
+export default withAuth(memo(PredictionsPage));

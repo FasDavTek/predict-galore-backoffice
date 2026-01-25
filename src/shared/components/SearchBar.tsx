@@ -1,18 +1,14 @@
-import { useState } from "react";
-import {
-  Box,
-  IconButton,
-  InputBase,
-  Tooltip,
-  Typography,
-  Paper,
-} from "@mui/material";
+import React, { useState, useCallback, memo, useEffect } from 'react';
+import { IconButton, InputBase, Tooltip, Typography, Paper } from '@mui/material';
+import Stack from '@mui/material/Stack';
+import { designTokens } from '../styles/tokens';
 import {
   Search as SearchIcon,
   ArrowDropDown as ArrowDropDownIcon,
   Clear as ClearIcon,
-} from "@mui/icons-material";
-import { FiMenu } from "react-icons/fi";
+} from '@mui/icons-material';
+import { FiMenu } from 'react-icons/fi';
+import { useDebounce } from '../hooks/useDebounce';
 
 interface SearchBarProps {
   searchQuery: string;
@@ -20,45 +16,55 @@ interface SearchBarProps {
   onSearch?: (query: string) => void;
 }
 
-const SearchBar = ({ searchQuery, setSearchQuery, onSearch }: SearchBarProps) => {
+const SearchBar = memo(({ searchQuery, setSearchQuery, onSearch }: SearchBarProps) => {
   const [activeMatch, setActiveMatch] = useState(0);
   const [totalMatches, setTotalMatches] = useState(0);
+  const [localQuery, setLocalQuery] = useState(searchQuery);
+  
+  // Debounce the search query
+  const debouncedQuery = useDebounce(localQuery, 300);
+  
+  // Update parent when debounced query changes
+  useEffect(() => {
+    setSearchQuery(debouncedQuery);
+    onSearch?.(debouncedQuery);
+  }, [debouncedQuery, setSearchQuery, onSearch]);
 
-  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleSearchChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const query = e.target.value;
-    setSearchQuery(query);
-    onSearch?.(query);
-  };
+    setLocalQuery(query);
+  }, []);
 
-  const clearSearch = () => {
-    setSearchQuery("");
+  const clearSearch = useCallback(() => {
+    setLocalQuery('');
+    setSearchQuery('');
     setTotalMatches(0);
     setActiveMatch(0);
-    onSearch?.("");
-  };
+    onSearch?.('');
+  }, [setSearchQuery, onSearch]);
 
-  const navigateMatches = (direction: number) => {
+  const navigateMatches = useCallback((direction: number) => {
     const newIndex = activeMatch + direction;
     if (newIndex > 0 && newIndex <= totalMatches) {
       setActiveMatch(newIndex);
     }
-  };
+  }, [activeMatch, totalMatches]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = useCallback((e: React.FormEvent) => {
     e.preventDefault();
-    onSearch?.(searchQuery);
-  };
+    onSearch?.(localQuery);
+  }, [localQuery, onSearch]);
 
   return (
-    <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+    <Stack direction="row" spacing={designTokens.spacing.itemGap} alignItems="center">
       {/* Mobile Menu Icon */}
       <IconButton
-        sx={{ 
-          display: { lg: 'none' }, 
-          color: "text.secondary",
+        sx={{
+          display: { lg: 'none' },
+          color: 'text.secondary',
           '&:hover': {
-            backgroundColor: 'rgba(66, 166, 5, 0.08)',
-            color: '#42A605',
+            backgroundColor: `${designTokens.colors.primary[500]}14`,
+            color: designTokens.colors.primary[500],
           },
         }}
         className="lg:hidden"
@@ -67,38 +73,38 @@ const SearchBar = ({ searchQuery, setSearchQuery, onSearch }: SearchBarProps) =>
       </IconButton>
 
       {/* Search Bar */}
-      <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+      <Stack direction="row" spacing={1} alignItems="center">
         <Paper
           component="form"
           onSubmit={handleSubmit}
           elevation={0}
           sx={{
-            display: "flex",
-            alignItems: "center",
-            px: 2,
+            display: 'flex',
+            alignItems: 'center',
+            px: designTokens.spacing.itemGap,
             py: 1,
             width: { xs: 240, sm: 360, md: 480 },
-            borderRadius: 2,
-            border: "1px solid",
-            borderColor: "divider",
-            backgroundColor: "background.default",
-            "&:hover": {
-              borderColor: "primary.main",
+            borderRadius: designTokens.borderRadius.md,
+            border: '1px solid',
+            borderColor: 'divider',
+            backgroundColor: 'background.default',
+            '&:hover': {
+              borderColor: 'primary.main',
             },
-            "&:focus-within": {
-              borderColor: "primary.main",
-              borderWidth: "2px",
-              boxShadow: "0 0 0 3px rgba(66, 166, 5, 0.1)",
+            '&:focus-within': {
+              borderColor: 'primary.main',
+              borderWidth: '2px',
+              boxShadow: `0 0 0 3px ${designTokens.colors.primary[100]}`,
             },
           }}
         >
-          <SearchIcon sx={{ color: "text.secondary", mr: 1, fontSize: 20 }} />
+          <SearchIcon sx={{ color: 'text.secondary', mr: 1, fontSize: 20 }} />
           <InputBase
             placeholder="Search..."
-            value={searchQuery}
+            value={localQuery}
             onChange={handleSearchChange}
-            sx={{ 
-              flex: 1, 
+            sx={{
+              flex: 1,
               fontSize: 14,
               '& .MuiInputBase-input': {
                 color: 'text.primary',
@@ -108,17 +114,17 @@ const SearchBar = ({ searchQuery, setSearchQuery, onSearch }: SearchBarProps) =>
                 },
               },
             }}
-            inputProps={{ "aria-label": "search" }}
+            inputProps={{ 'aria-label': 'search' }}
           />
-          {searchQuery && (
-            <IconButton 
-              size="small" 
+          {localQuery && (
+            <IconButton
+              size="small"
               onClick={clearSearch}
               sx={{
-                color: "text.secondary",
+                color: 'text.secondary',
                 '&:hover': {
-                  color: "primary.main",
-                  backgroundColor: 'rgba(66, 166, 5, 0.08)',
+                  color: 'primary.main',
+                  backgroundColor: `${designTokens.colors.primary[500]}14`,
                 },
               }}
             >
@@ -129,12 +135,13 @@ const SearchBar = ({ searchQuery, setSearchQuery, onSearch }: SearchBarProps) =>
 
         {/* Search Navigation - Only show if we have matches */}
         {totalMatches > 0 && (
-          <Box
+          <Stack
+            direction="row"
+            spacing={1}
+            alignItems="center"
             sx={{
-              display: "flex",
-              alignItems: "center",
-              color: "text.secondary",
-              fontSize: "0.875rem",
+              color: 'text.secondary',
+              fontSize: designTokens.typography.fontSize.sm,
             }}
           >
             <Tooltip title="Previous match">
@@ -143,20 +150,20 @@ const SearchBar = ({ searchQuery, setSearchQuery, onSearch }: SearchBarProps) =>
                 onClick={() => navigateMatches(-1)}
                 disabled={activeMatch <= 1}
                 sx={{
-                  color: "text.secondary",
+                  color: 'text.secondary',
                   '&:hover': {
-                    color: "primary.main",
-                    backgroundColor: 'rgba(66, 166, 5, 0.08)',
+                    color: 'primary.main',
+                    backgroundColor: `${designTokens.colors.primary[500]}14`,
                   },
                   '&:disabled': {
-                    color: "text.disabled",
+                    color: 'text.disabled',
                   },
                 }}
               >
-                <ArrowDropDownIcon sx={{ transform: "rotate(90deg)" }} />
+                <ArrowDropDownIcon sx={{ transform: 'rotate(90deg)' }} />
               </IconButton>
             </Tooltip>
-            <Typography variant="body2" sx={{ mx: 1, color: "text.primary" }}>
+            <Typography variant="body2" sx={{ mx: 1, color: 'text.primary' }}>
               {activeMatch} of {totalMatches}
             </Typography>
             <Tooltip title="Next match">
@@ -165,24 +172,26 @@ const SearchBar = ({ searchQuery, setSearchQuery, onSearch }: SearchBarProps) =>
                 onClick={() => navigateMatches(1)}
                 disabled={activeMatch >= totalMatches}
                 sx={{
-                  color: "text.secondary",
+                  color: 'text.secondary',
                   '&:hover': {
-                    color: "primary.main",
-                    backgroundColor: 'rgba(66, 166, 5, 0.08)',
+                    color: 'primary.main',
+                    backgroundColor: `${designTokens.colors.primary[500]}14`,
                   },
                   '&:disabled': {
-                    color: "text.disabled",
+                    color: 'text.disabled',
                   },
                 }}
               >
-                <ArrowDropDownIcon sx={{ transform: "rotate(-90deg)" }} />
+                <ArrowDropDownIcon sx={{ transform: 'rotate(-90deg)' }} />
               </IconButton>
             </Tooltip>
-          </Box>
+          </Stack>
         )}
-      </Box>
-    </Box>
+      </Stack>
+    </Stack>
   );
-};
+});
+
+SearchBar.displayName = 'SearchBar';
 
 export default SearchBar;

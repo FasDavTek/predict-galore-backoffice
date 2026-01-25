@@ -1,6 +1,9 @@
 // features/components/AskHuddle.tsx
-import React, { useState, useEffect, useRef } from "react";
-import { useAskHuddleMutation } from "../api/predictionApi";
+import React, { useState, useEffect, useRef } from 'react';
+import { createLogger } from '@/shared/api';
+// TODO: Add useAskHuddle to @/api/predictions
+
+const logger = createLogger('Predictions:AskHuddle');
 import {
   Box,
   Drawer,
@@ -12,13 +15,14 @@ import {
   CircularProgress,
   Alert,
   Paper,
-} from "@mui/material";
-import {
-  Close as CloseIcon,
-  Send as SendIcon,
-  SmartToy as AIIcon,
-} from "@mui/icons-material";
-import { HuddleMessage } from "../types/huddle.types";
+} from '@mui/material';
+import { Close as CloseIcon, Send as SendIcon, SmartToy as AIIcon } from '@mui/icons-material';
+
+interface HuddleMessage {
+  type: 'user' | 'assistant' | 'system';
+  content: string;
+  timestamp: string;
+}
 
 interface ApiError {
   data?: {
@@ -34,24 +38,30 @@ interface AskHuddleProps {
   disableEscapeKeyDown?: boolean;
 }
 
-export const AskHuddle: React.FC<AskHuddleProps> = ({ 
-  open, 
+export const AskHuddle: React.FC<AskHuddleProps> = ({
+  open,
   onClose,
   disableBackdropClick = false,
-  disableEscapeKeyDown = false 
+  disableEscapeKeyDown = false,
 }) => {
-  const [prompt, setPrompt] = useState("");
+  const [prompt, setPrompt] = useState('');
   const [conversation, setConversation] = useState<HuddleMessage[]>([]);
 
   const chatContainerRef = useRef<HTMLDivElement>(null);
 
-  const [askHuddle, { isLoading, error }] = useAskHuddleMutation();
+  // TODO: Implement when hook is added
+  const isLoading = false;
+  const error = null;
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const askHuddle = async (_data: unknown) => {
+    logger.warn('AskHuddle not yet implemented');
+    return Promise.resolve({ data: { message: 'Not implemented' } });
+  };
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
     if (chatContainerRef.current) {
-      chatContainerRef.current.scrollTop =
-        chatContainerRef.current.scrollHeight;
+      chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
     }
   }, [conversation]);
 
@@ -65,20 +75,20 @@ export const AskHuddle: React.FC<AskHuddleProps> = ({
 
     // Add user message to conversation immediately
     const newUserMessage: HuddleMessage = {
-      type: "user",
+      type: 'user',
       content: userMessage,
       timestamp: new Date().toISOString(),
     };
 
     setConversation((prev) => [...prev, newUserMessage]);
-    setPrompt("");
+    setPrompt('');
 
     try {
       // Prepare API payload with default values
       const payload = {
         prompt: userMessage,
-        sport: "Football",
-        league: "Premier League",
+        sport: 'Football',
+        league: 'Premier League',
         teams: [],
         toolsAllowed: true,
         lookbackGames: 5,
@@ -86,24 +96,23 @@ export const AskHuddle: React.FC<AskHuddleProps> = ({
       };
 
       // Dispatch the API call
-      const response = await askHuddle(payload).unwrap();
+      const response = await askHuddle(payload);
 
       // Add assistant message to conversation
       const assistantMessage: HuddleMessage = {
-        type: "assistant",
-        content: response.data?.answer || "No response received",
+        type: 'assistant',
+        content: response.data?.message || 'No response received',
         timestamp: new Date().toISOString(),
       };
 
       setConversation((prev) => [...prev, assistantMessage]);
     } catch (err) {
-      console.error("Failed to get AI response:", err);
+      logger.error('Failed to get AI response', { error: err });
 
       // Add error message to conversation
       const errorMessage: HuddleMessage = {
-        type: "assistant",
-        content:
-          "Sorry, I encountered an error while processing your request. Please try again.",
+        type: 'assistant',
+        content: 'Sorry, I encountered an error while processing your request. Please try again.',
         timestamp: new Date().toISOString(),
       };
 
@@ -112,28 +121,28 @@ export const AskHuddle: React.FC<AskHuddleProps> = ({
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" && !e.shiftKey) {
+    if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSend();
     }
   };
 
   const getErrorMessage = (error: unknown): string => {
-    if (typeof error === "object" && error !== null) {
+    if (typeof error === 'object' && error !== null) {
       const apiError = error as ApiError;
       if (apiError.data?.message) {
         return apiError.data.message;
       }
     }
-    return "An error occurred";
+    return 'An error occurred';
   };
 
   // Handle drawer close with prevention logic
-const handleDrawerClose = (event: object, reason: "backdropClick" | "escapeKeyDown") => {
-    if (reason === "backdropClick" && disableBackdropClick) {
+  const handleDrawerClose = (event: object, reason: 'backdropClick' | 'escapeKeyDown') => {
+    if (reason === 'backdropClick' && disableBackdropClick) {
       return; // Prevent closing on backdrop click
     }
-    if (reason === "escapeKeyDown" && disableEscapeKeyDown) {
+    if (reason === 'escapeKeyDown' && disableEscapeKeyDown) {
       return; // Prevent closing on escape key
     }
     handleClose();
@@ -142,7 +151,7 @@ const handleDrawerClose = (event: object, reason: "backdropClick" | "escapeKeyDo
   // Handle drawer close with state reset
   const handleClose = () => {
     // Reset state synchronously when closing
-    setPrompt("");
+    setPrompt('');
     setConversation([]);
     onClose();
   };
@@ -153,12 +162,12 @@ const handleDrawerClose = (event: object, reason: "backdropClick" | "escapeKeyDo
       open={open}
       onClose={handleDrawerClose}
       sx={{
-        "& .MuiDrawer-paper": {
-          width: 400,
-          maxWidth: "90vw",
-          background: "linear-gradient(135deg, #f8fdf5 0%, #ffffff 100%)",
-          borderLeft: "2px solid",
-          borderColor: "primary.light",
+        '& .MuiDrawer-paper': {
+          width: 550,
+          maxWidth: '90vw',
+          background: 'linear-gradient(135deg, #f8fdf5 0%, #ffffff 100%)',
+          borderLeft: '2px solid',
+          borderColor: 'primary.light',
         },
       }}
     >
@@ -167,21 +176,21 @@ const handleDrawerClose = (event: object, reason: "backdropClick" | "escapeKeyDo
         elevation={1}
         sx={{
           p: 2,
-          background: "linear-gradient(135deg, #6bc330 0%, #4ca020 100%)",
-          color: "white",
+          background: 'linear-gradient(135deg, #6bc330 0%, #4ca020 100%)',
+          color: 'white',
           borderRadius: 0,
         }}
       >
         <Box
           sx={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
           }}
         >
-          <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-            <Avatar sx={{ bgcolor: "white", width: 40, height: 40 }}>
-              <AIIcon sx={{ color: "#6bc330" }} />
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            <Avatar sx={{ bgcolor: 'white', width: 40, height: 40 }}>
+              <AIIcon sx={{ color: '#6bc330' }} />
             </Avatar>
             <Box>
               <Typography variant="h6" sx={{ fontWeight: 600 }}>
@@ -192,11 +201,7 @@ const handleDrawerClose = (event: object, reason: "backdropClick" | "escapeKeyDo
               </Typography>
             </Box>
           </Box>
-          <IconButton
-            onClick={handleClose}
-            size="small"
-            sx={{ color: "white" }}
-          >
+          <IconButton onClick={handleClose} size="small" sx={{ color: 'white' }}>
             <CloseIcon />
           </IconButton>
         </Box>
@@ -205,9 +210,9 @@ const handleDrawerClose = (event: object, reason: "backdropClick" | "escapeKeyDo
       {/* Content */}
       <Box
         sx={{
-          display: "flex",
-          flexDirection: "column",
-          height: "100%",
+          display: 'flex',
+          flexDirection: 'column',
+          height: '100%',
           p: 2,
           gap: 2,
         }}
@@ -224,20 +229,20 @@ const handleDrawerClose = (event: object, reason: "backdropClick" | "escapeKeyDo
           ref={chatContainerRef}
           sx={{
             flex: 1,
-            overflowY: "auto",
-            display: "flex",
-            flexDirection: "column",
+            overflowY: 'auto',
+            display: 'flex',
+            flexDirection: 'column',
             gap: 2,
             p: 1,
-            scrollbarWidth: "thin",
-            "&::-webkit-scrollbar": {
+            scrollbarWidth: 'thin',
+            '&::-webkit-scrollbar': {
               width: 6,
             },
-            "&::-webkit-scrollbar-track": {
-              background: "transparent",
+            '&::-webkit-scrollbar-track': {
+              background: 'transparent',
             },
-            "&::-webkit-scrollbar-thumb": {
-              background: "#e0e0e0",
+            '&::-webkit-scrollbar-thumb': {
+              background: '#e0e0e0',
               borderRadius: 3,
             },
           }}
@@ -245,19 +250,18 @@ const handleDrawerClose = (event: object, reason: "backdropClick" | "escapeKeyDo
           {conversation.length === 0 && (
             <Box
               sx={{
-                alignSelf: "center",
-                textAlign: "center",
+                alignSelf: 'center',
+                textAlign: 'center',
                 py: 4,
-                color: "text.secondary",
+                color: 'text.secondary',
               }}
             >
-              <AIIcon sx={{ fontSize: 48, color: "primary.light", mb: 2 }} />
+              <AIIcon sx={{ fontSize: 48, color: 'primary.light', mb: 2 }} />
               <Typography variant="body1" gutterBottom>
                 Ask me anything about sports predictions and insights!
               </Typography>
               <Typography variant="body2" color="text.secondary">
-                I can help you analyze matches, provide statistics, and suggest
-                predictions.
+                I can help you analyze matches, provide statistics, and suggest predictions.
               </Typography>
             </Box>
           )}
@@ -266,53 +270,47 @@ const handleDrawerClose = (event: object, reason: "backdropClick" | "escapeKeyDo
             <Box
               key={index}
               sx={{
-                alignSelf: message.type === "user" ? "flex-end" : "flex-start",
-                bgcolor: message.type === "user" ? "primary.light" : "grey.100",
-                color: message.type === "user" ? "white" : "text.primary",
+                alignSelf: message.type === 'user' ? 'flex-end' : 'flex-start',
+                bgcolor: message.type === 'user' ? 'primary.light' : 'grey.100',
+                color: message.type === 'user' ? 'white' : 'text.primary',
                 px: 2,
                 py: 1.5,
                 borderRadius: 2,
-                maxWidth: "85%",
+                maxWidth: '85%',
                 boxShadow: 1,
-                border: message.type === "user" ? "none" : "1px solid",
-                borderColor: "grey.300",
+                border: message.type === 'user' ? 'none' : '1px solid',
+                borderColor: 'grey.300',
               }}
             >
-              <Box sx={{ display: "flex", alignItems: "flex-start", gap: 1 }}>
-                {message.type === "assistant" && (
-                  <Avatar
-                    sx={{ width: 24, height: 24, bgcolor: "primary.main" }}
-                  >
+              <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
+                {message.type === 'assistant' && (
+                  <Avatar sx={{ width: 24, height: 24, bgcolor: 'primary.main' }}>
                     <AIIcon sx={{ fontSize: 14 }} />
                   </Avatar>
                 )}
                 <Box sx={{ flex: 1 }}>
-                  <Typography
-                    variant="body2"
-                    sx={{ fontWeight: 500, whiteSpace: "pre-wrap" }}
-                  >
+                  <Typography variant="body2" sx={{ fontWeight: 500, whiteSpace: 'pre-wrap' }}>
                     {message.content}
                   </Typography>
                   <Typography
                     variant="caption"
                     sx={{
                       mt: 0.5,
-                      display: "block",
+                      display: 'block',
                       opacity: 0.7,
-                      color:
-                        message.type === "user" ? "white" : "text.secondary",
+                      color: message.type === 'user' ? 'white' : 'text.secondary',
                     }}
                   >
                     {new Date(message.timestamp).toLocaleTimeString()}
                   </Typography>
                 </Box>
-                {message.type === "user" && (
+                {message.type === 'user' && (
                   <Avatar
                     sx={{
                       width: 24,
                       height: 24,
-                      bgcolor: "white",
-                      color: "primary.main",
+                      bgcolor: 'white',
+                      color: 'primary.main',
                     }}
                   >
                     👤
@@ -325,19 +323,19 @@ const handleDrawerClose = (event: object, reason: "backdropClick" | "escapeKeyDo
           {isLoading && (
             <Box
               sx={{
-                alignSelf: "flex-start",
-                display: "flex",
-                alignItems: "center",
+                alignSelf: 'flex-start',
+                display: 'flex',
+                alignItems: 'center',
                 gap: 1,
               }}
             >
-              <Avatar sx={{ width: 24, height: 24, bgcolor: "primary.main" }}>
+              <Avatar sx={{ width: 24, height: 24, bgcolor: 'primary.main' }}>
                 <AIIcon sx={{ fontSize: 14 }} />
               </Avatar>
               <Box
                 sx={{
-                  display: "flex",
-                  alignItems: "center",
+                  display: 'flex',
+                  alignItems: 'center',
                   gap: 1,
                   px: 2,
                   py: 1.5,
@@ -378,8 +376,8 @@ const handleDrawerClose = (event: object, reason: "backdropClick" | "escapeKeyDo
               ),
             }}
             sx={{
-              "& .MuiOutlinedInput-root": {
-                background: "white",
+              '& .MuiOutlinedInput-root': {
+                background: 'white',
               },
             }}
           />

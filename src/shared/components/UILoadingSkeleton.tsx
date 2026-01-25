@@ -1,10 +1,5 @@
 import React from 'react';
-import {
-  Box,
-  Skeleton,
-  Card,
-  CardContent,
-} from '@mui/material';
+import { Box, Skeleton, Card, CardContent } from '@mui/material';
 
 export interface PageSkeletonProps {
   /**
@@ -15,12 +10,12 @@ export interface PageSkeletonProps {
    * - 'basic': Basic loading skeleton
    */
   variant?: 'dashboard' | 'table' | 'form' | 'basic';
-  
+
   /**
    * Number of skeleton items to display
    */
   itemCount?: number;
-  
+
   /**
    * Additional CSS classes
    */
@@ -52,21 +47,23 @@ export const UILoadingSkeleton: React.FC<PageSkeletonProps> = ({
 
       {/* Analytics Cards Skeleton */}
       <Box sx={{ mb: 3 }}>
-        <Box sx={{ 
-          display: 'flex', 
-          flexWrap: 'wrap',
-          gap: 2 
-        }}>
+        <Box
+          sx={{
+            display: 'flex',
+            flexWrap: 'wrap',
+            gap: 2,
+          }}
+        >
           {Array.from({ length: itemCount }).map((_, index) => (
-            <Box 
+            <Box
               key={index}
-              sx={{ 
-                flex: { 
-                  xs: '1 1 100%', 
-                  sm: '1 1 calc(50% - 8px)', 
-                  md: '1 1 calc(25% - 8px)' 
+              sx={{
+                flex: {
+                  xs: '1 1 100%',
+                  sm: '1 1 calc(50% - 8px)',
+                  md: '1 1 calc(25% - 8px)',
                 },
-                minWidth: { xs: '100%', sm: 250 }
+                minWidth: { xs: '100%', sm: 250 },
               }}
             >
               <Card sx={{ height: '100%', boxShadow: 'none' }}>
@@ -85,23 +82,34 @@ export const UILoadingSkeleton: React.FC<PageSkeletonProps> = ({
       </Box>
 
       {/* Charts and Content Skeleton */}
-      <Box sx={{ 
-        display: 'flex', 
-        flexDirection: { xs: 'column', lg: 'row' }, 
-        gap: 3, 
-        mt: 3 
-      }}>
-        {/* Main Content Skeleton */}
-        <Box sx={{ 
-          flex: 1,
+      <Box
+        sx={{
           display: 'flex',
-          flexDirection: 'column',
-          gap: 3
-        }}>
+          flexDirection: { xs: 'column', lg: 'row' },
+          gap: 3,
+          mt: 3,
+        }}
+      >
+        {/* Main Content Skeleton */}
+        <Box
+          sx={{
+            flex: 1,
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 3,
+          }}
+        >
           {/* Chart Skeleton */}
           <Card>
             <CardContent>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+              <Box
+                sx={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  mb: 3,
+                }}
+              >
                 <Skeleton variant="text" width="30%" height={32} />
                 <Skeleton variant="rectangular" width={140} height={40} sx={{ borderRadius: 1 }} />
               </Box>
@@ -112,18 +120,25 @@ export const UILoadingSkeleton: React.FC<PageSkeletonProps> = ({
           {/* Table Skeleton */}
           <Card>
             <CardContent>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+              <Box
+                sx={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  mb: 3,
+                }}
+              >
                 <Skeleton variant="text" width="40%" height={32} />
                 <Skeleton variant="rectangular" width={120} height={40} sx={{ borderRadius: 1 }} />
               </Box>
               {Array.from({ length: 5 }).map((_, index) => (
-                <Box 
-                  key={index} 
-                  sx={{ 
-                    display: 'flex', 
-                    justifyContent: 'space-between', 
+                <Box
+                  key={index}
+                  sx={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
                     mb: 2,
-                    gap: 2 
+                    gap: 2,
                   }}
                 >
                   <Skeleton variant="text" sx={{ flex: 3 }} height={24} />
@@ -136,13 +151,22 @@ export const UILoadingSkeleton: React.FC<PageSkeletonProps> = ({
         </Box>
 
         {/* Sidebar Skeleton */}
-        <Box sx={{ 
-          width: { xs: '100%', lg: 400 },
-          minWidth: { xs: 'auto', lg: 400 }
-        }}>
+        <Box
+          sx={{
+            width: { xs: '100%', lg: 400 },
+            minWidth: { xs: 'auto', lg: 400 },
+          }}
+        >
           <Card>
             <CardContent>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+              <Box
+                sx={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  mb: 3,
+                }}
+              >
                 <Skeleton variant="text" width="50%" height={32} />
                 <Skeleton variant="rectangular" width={100} height={40} sx={{ borderRadius: 1 }} />
               </Box>
@@ -167,46 +191,40 @@ export const UILoadingSkeleton: React.FC<PageSkeletonProps> = ({
       <Card>
         <CardContent>
           {/* Table Header */}
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+          <Box
+            sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}
+          >
             <Skeleton variant="text" width="30%" height={40} />
             <Skeleton variant="rectangular" width={120} height={40} sx={{ borderRadius: 1 }} />
           </Box>
 
           {/* Table Headers */}
-          <Box sx={{ 
-            display: 'flex', 
-            justifyContent: 'space-between', 
-            mb: 2,
-            gap: 2 
-          }}>
+          <Box
+            sx={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              mb: 2,
+              gap: 2,
+            }}
+          >
             {Array.from({ length: 4 }).map((_, index) => (
-              <Skeleton 
-                key={index} 
-                variant="text" 
-                sx={{ flex: 1 }} 
-                height={24} 
-              />
+              <Skeleton key={index} variant="text" sx={{ flex: 1 }} height={24} />
             ))}
           </Box>
 
           {/* Table Rows */}
           {Array.from({ length: itemCount }).map((_, rowIndex) => (
-            <Box 
-              key={rowIndex} 
-              sx={{ 
-                display: 'flex', 
-                justifyContent: 'space-between', 
+            <Box
+              key={rowIndex}
+              sx={{
+                display: 'flex',
+                justifyContent: 'space-between',
                 mb: 2,
-                gap: 2 
+                gap: 2,
               }}
             >
               {Array.from({ length: 4 }).map((_, colIndex) => (
-                <Skeleton 
-                  key={colIndex} 
-                  variant="text" 
-                  sx={{ flex: 1 }} 
-                  height={20} 
-                />
+                <Skeleton key={colIndex} variant="text" sx={{ flex: 1 }} height={20} />
               ))}
             </Box>
           ))}
@@ -220,14 +238,14 @@ export const UILoadingSkeleton: React.FC<PageSkeletonProps> = ({
       <Card>
         <CardContent>
           <Skeleton variant="text" width="40%" height={40} sx={{ mb: 3 }} />
-          
+
           {Array.from({ length: itemCount }).map((_, index) => (
             <Box key={index} sx={{ mb: 3 }}>
               <Skeleton variant="text" width="30%" height={20} sx={{ mb: 1 }} />
               <Skeleton variant="rectangular" height={56} sx={{ borderRadius: 1 }} />
             </Box>
           ))}
-          
+
           <Box sx={{ display: 'flex', gap: 2, mt: 4 }}>
             <Skeleton variant="rectangular" width={120} height={40} sx={{ borderRadius: 1 }} />
             <Skeleton variant="rectangular" width={120} height={40} sx={{ borderRadius: 1 }} />

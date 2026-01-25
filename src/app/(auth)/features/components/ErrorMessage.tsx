@@ -1,28 +1,27 @@
 // features/auth/components/ErrorMessage.tsx
-import React from 'react';
+import React, { memo, useMemo } from 'react';
 import { Alert, AlertTitle, Box } from '@mui/material';
-import { toast } from 'react-toastify';
 
 export interface ErrorMessageProps {
-  error: any;
+  error: unknown;
   title?: string;
   severity?: 'error' | 'warning' | 'info';
   showDetails?: boolean;
   className?: string;
 }
 
-export const ErrorMessage: React.FC<ErrorMessageProps> = ({
+export const ErrorMessage = memo<ErrorMessageProps>(({
   error,
   title,
   severity = 'error',
   showDetails = false,
   className,
 }) => {
-  const { message, statusCode, type } = parseError(error);
+  const { message, statusCode, type } = useMemo(() => parseError(error), [error]);
 
-  const getErrorTitle = () => {
+  const errorTitle = useMemo(() => {
     if (title) return title;
-    
+
     switch (type) {
       case 'network':
         return 'Network Error';
@@ -43,11 +42,11 @@ export const ErrorMessage: React.FC<ErrorMessageProps> = ({
       default:
         return 'Error';
     }
-  };
+  }, [title, type]);
 
-  const getErrorSeverity = () => {
+  const errorSeverity = useMemo(() => {
     if (severity) return severity;
-    
+
     switch (type) {
       case 'network':
       case 'server':
@@ -61,29 +60,27 @@ export const ErrorMessage: React.FC<ErrorMessageProps> = ({
       default:
         return 'error';
     }
-  };
+  }, [severity, type]);
 
   return (
-    <Alert 
-      severity={getErrorSeverity()} 
-      className={className}
-      sx={{ width: '100%', mb: 2 }}
-    >
-      <AlertTitle>{getErrorTitle()}</AlertTitle>
+    <Alert severity={errorSeverity} className={className} sx={{ width: '100%', mb: 2 }}>
+      <AlertTitle>{errorTitle}</AlertTitle>
       {message}
       {showDetails && statusCode && (
-        <Box sx={{ mt: 1, fontSize: '0.75rem', opacity: 0.7 }}>
-          Status: {statusCode}
-        </Box>
+        <Box sx={{ mt: 1, fontSize: '0.75rem', opacity: 0.7 }}>Status: {statusCode}</Box>
       )}
     </Alert>
   );
-};
+});
+
+ErrorMessage.displayName = 'ErrorMessage';
 
 // Helper function to parse different error formats
-export const parseError = (error: any): { 
-  message: string; 
-  statusCode?: number; 
+export const parseError = (
+  error: unknown
+): {
+  message: string;
+  statusCode?: number;
   type: string;
 } => {
   if (!error) {
@@ -91,139 +88,142 @@ export const parseError = (error: any): {
   }
 
   // Network errors
-  if (error.message?.includes('Network Error') || error.message?.includes('Failed to fetch')) {
-    return { 
-      message: 'Unable to connect to the server. Please check your internet connection and try again.', 
-      type: 'network' 
+  const errorObj = error as Record<string, unknown>;
+  if ((errorObj.message as string)?.includes('Network Error') || (errorObj.message as string)?.includes('Failed to fetch')) {
+    return {
+      message:
+        'Unable to connect to the server. Please check your internet connection and try again.',
+      type: 'network',
     };
   }
 
   // Axios-like errors
-  if (error.status || error.code) {
-    const status = error.status || error.code;
-    const data = error.data || error;
-    
+  if (errorObj.status || errorObj.code) {
+    const status = errorObj.status as number || errorObj.code as number;
+    const data = (errorObj.data as Record<string, unknown>) || errorObj;
+
     switch (status) {
       case 400:
-        return { 
-          message: data.message || 'Invalid request. Please check your input and try again.', 
+        return {
+          message: (data.message as string) || 'Invalid request. Please check your input and try again.',
           statusCode: 400,
-          type: 'validation'
+          type: 'validation',
         };
       case 401:
-        return { 
-          message: data.message || 'Authentication failed. Please check your credentials and try again.', 
+        return {
+          message:
+            (data.message as string) || 'Authentication failed. Please check your credentials and try again.',
           statusCode: 401,
-          type: 'authentication'
+          type: 'authentication',
         };
       case 403:
-        return { 
-          message: data.message || 'You do not have permission to perform this action.', 
+        return {
+          message: (data.message as string) || 'You do not have permission to perform this action.',
           statusCode: 403,
-          type: 'authorization'
+          type: 'authorization',
         };
       case 404:
-        return { 
-          message: data.message || 'The requested resource was not found.', 
+        return {
+          message: (data.message as string) || 'The requested resource was not found.',
           statusCode: 404,
-          type: 'not_found'
+          type: 'not_found',
         };
       case 409:
-        return { 
-          message: data.message || 'A conflict occurred. This resource may already exist.', 
+        return {
+          message: (data.message as string) || 'A conflict occurred. This resource may already exist.',
           statusCode: 409,
-          type: 'validation'
+          type: 'validation',
         };
       case 422:
-        return { 
-          message: data.message || 'Validation failed. Please check your input.', 
+        return {
+          message: (data.message as string) || 'Validation failed. Please check your input.',
           statusCode: 422,
-          type: 'validation'
+          type: 'validation',
         };
       case 429:
-        return { 
-          message: data.message || 'Too many requests. Please wait a moment and try again.', 
+        return {
+          message: (data.message as string) || 'Too many requests. Please wait a moment and try again.',
           statusCode: 429,
-          type: 'rate_limit'
+          type: 'rate_limit',
         };
       case 500:
-        return { 
-          message: data.message || 'Internal server error. Please try again later.', 
+        return {
+          message: (data.message as string) || 'Internal server error. Please try again later.',
           statusCode: 500,
-          type: 'server'
+          type: 'server',
         };
       case 502:
       case 503:
       case 504:
-        return { 
-          message: data.message || 'Service temporarily unavailable. Please try again later.', 
+        return {
+          message: (data.message as string) || 'Service temporarily unavailable. Please try again later.',
           statusCode: status,
-          type: 'server'
+          type: 'server',
         };
       default:
-        return { 
-          message: data.message || `An error occurred (${status}). Please try again.`, 
+        return {
+          message: (data.message as string) || `An error occurred (${status}). Please try again.`,
           statusCode: status,
-          type: 'server'
+          type: 'server',
         };
     }
   }
 
   // Generic error with message
-  if (error.message) {
-    return { 
-      message: error.message, 
-      type: 'client'
+  if (errorObj.message) {
+    return {
+      message: errorObj.message as string,
+      type: 'client',
     };
   }
 
   // String errors
   if (typeof error === 'string') {
-    return { 
-      message: error, 
-      type: 'client'
+    return {
+      message: error,
+      type: 'client',
     };
   }
 
+  // Fallback for unknown error types
+  return {
+    message: 'An unexpected error occurred',
+    type: 'unknown',
+  };
+
   // Fallback
-  return { 
-    message: 'An unexpected error occurred. Please try again.', 
-    type: 'unknown'
+  return {
+    message: 'An unexpected error occurred. Please try again.',
+    type: 'unknown',
   };
 };
 
 // Hook for showing toast notifications based on error type
 export const useErrorToast = () => {
-  const showErrorToast = (error: any, options?: any) => {
+  const showErrorToast = React.useCallback((error: unknown, options?: Record<string, unknown>) => {
     const { message, type } = parseError(error);
-    
-    const toastConfig = {
-      position: "top-center" as const,
-      autoClose: 5000,
-      hideProgressBar: false,
-      closeOnClick: true,
-      pauseOnHover: true,
-      draggable: true,
-      ...options,
-    };
+
+    // Using react-hot-toast (already in providers)
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const toast = require('react-hot-toast');
 
     switch (type) {
       case 'network':
-        toast.error(message, { ...toastConfig, autoClose: 7000 });
+        toast.error(message, { duration: 7000, ...options });
         break;
       case 'authentication':
-        toast.warning(message, toastConfig);
+        toast(message, { icon: '⚠️', duration: 5000, ...options });
         break;
       case 'rate_limit':
-        toast.info(message, { ...toastConfig, autoClose: 6000 });
+        toast(message, { duration: 6000, icon: 'ℹ️', ...options });
         break;
       case 'validation':
-        toast.warning(message, toastConfig);
+        toast(message, { icon: '⚠️', duration: 5000, ...options });
         break;
       default:
-        toast.error(message, toastConfig);
+        toast.error(message, { duration: 5000, ...options });
     }
-  };
+  }, []);
 
   return { showErrorToast };
 };

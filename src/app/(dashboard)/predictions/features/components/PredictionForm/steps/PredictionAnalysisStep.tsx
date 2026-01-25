@@ -1,30 +1,30 @@
 // features/components/PredictionForm/steps/PredictionAnalysisStep.tsx
-import React from "react";
+import React from 'react';
 import {
   Box,
   Typography,
   Button,
   FormControl,
   TextField,
-  Chip,
   Card,
   CardContent,
   Autocomplete,
-} from "@mui/material";
-
-import {
-  Analytics as AnalyticsIcon,
-  TrendingUp as TrendingUpIcon,
-  ErrorOutline as ErrorIcon,
-} from "@mui/icons-material";
-
-import { PredictionTypeOption, Pick } from "../../../types/prediction.types";
-import { FieldErrors, UseFormReturn } from "react-hook-form";
-import { SportsPredictionFormValues } from "../../../validations/predictionSchema";
+  CircularProgress,
+  Slider,
+} from '@mui/material';
+import { Analytics as AnalyticsIcon, TrendingUp as TrendingUpIcon } from '@mui/icons-material';
+import { FieldErrors, UseFormReturn } from 'react-hook-form';
+import { SportsPredictionFormValues, Market } from '@/features/predictions';
+import { useMarkets, useMarketSelections } from '@/features/predictions';
 
 interface PredictionAnalysisStepProps {
-  predictionTypes: PredictionTypeOption[];
-  picks: Array<Pick & { id: string }>;
+  picks: Array<{
+    id: string;
+    market: string;
+    selectionKey: string;
+    selectionLabel: string;
+    confidence: number;
+  }>;
   onAddPick: () => void;
   onRemovePick: (index: number) => void;
   onPickChange: (index: number, field: string, value: string | number) => void;
@@ -34,378 +34,24 @@ interface PredictionAnalysisStepProps {
     accuracy: number;
   };
   methods: UseFormReturn<SportsPredictionFormValues>;
-  onOpenAskHuddle: () => void;
 }
 
-// Common market options for sports predictions
-const MARKET_OPTIONS = [
-  { id: 1, name: "Match Winner", category: "main" },
-  { id: 2, name: "Over/Under", category: "goals" },
-  { id: 3, name: "Both Teams to Score", category: "goals" },
-  { id: 4, name: "Double Chance", category: "main" },
-  { id: 5, name: "Correct Score", category: "score" },
-  { id: 6, name: "Half Time/Full Time", category: "time" },
-  { id: 7, name: "Draw No Bet", category: "main" },
-  { id: 8, name: "Asian Handicap", category: "handicap" },
-  { id: 9, name: "Total Goals", category: "goals" },
-  { id: 10, name: "First Team to Score", category: "goals" },
-  { id: 11, name: "Last Team to Score", category: "goals" },
-  { id: 12, name: "Win to Nil", category: "main" },
-  { id: 13, name: "Score Both Halves", category: "time" },
-  { id: 14, name: "Total Corners", category: "corners" },
-  { id: 15, name: "Total Cards", category: "cards" },
-  { id: 16, name: "Player to Score", category: "players" },
-  { id: 17, name: "Anytime Goalscorer", category: "players" },
-  { id: 18, name: "First Goalscorer", category: "players" },
-];
+interface ApiSelection {
+  key: string;
+  label: string;
+}
 
-// Selection options mapped to markets
-const getSelectionOptions = (market: string) => {
-  const marketLower = market.toLowerCase();
-
-  if (marketLower.includes("winner") || marketLower.includes("match winner")) {
-    return [
-      "Home Win",
-      "Away Win",
-      "Draw",
-      "Home/Draw",
-      "Away/Draw",
-      "Home/Away",
-    ];
-  }
-
-  if (
-    marketLower.includes("over/under") ||
-    marketLower.includes("total goals")
-  ) {
-    return [
-      "Over 0.5",
-      "Under 0.5",
-      "Over 1.5",
-      "Under 1.5",
-      "Over 2.5",
-      "Under 2.5",
-      "Over 3.5",
-      "Under 3.5",
-      "Over 4.5",
-      "Under 4.5",
-    ];
-  }
-
-  if (marketLower.includes("both teams to score")) {
-    return ["Yes", "No"];
-  }
-
-  if (marketLower.includes("double chance")) {
-    return ["Home Win or Draw", "Away Win or Draw", "Home Win or Away Win"];
-  }
-
-  if (marketLower.includes("correct score")) {
-    return [
-      "1-0",
-      "2-0",
-      "2-1",
-      "3-0",
-      "3-1",
-      "3-2",
-      "0-0",
-      "1-1",
-      "2-2",
-      "3-3",
-      "0-1",
-      "0-2",
-      "1-2",
-      "0-3",
-      "1-3",
-      "2-3",
-    ];
-  }
-
-  if (marketLower.includes("half time/full time")) {
-    return [
-      "Home/Home",
-      "Home/Draw",
-      "Home/Away",
-      "Draw/Home",
-      "Draw/Draw",
-      "Draw/Away",
-      "Away/Home",
-      "Away/Draw",
-      "Away/Away",
-    ];
-  }
-
-  if (marketLower.includes("asian handicap")) {
-    return [
-      "Home -0.5",
-      "Away -0.5",
-      "Home -1.0",
-      "Away -1.0",
-      "Home -1.5",
-      "Away -1.5",
-      "Home +0.5",
-      "Away +0.5",
-      "Home +1.0",
-      "Away +1.0",
-    ];
-  }
-
-  if (
-    marketLower.includes("first team to score") ||
-    marketLower.includes("last team to score")
-  ) {
-    return ["Home Team", "Away Team", "No Goal"];
-  }
-
-  if (marketLower.includes("total corners")) {
-    return [
-      "Over 4.5",
-      "Under 4.5",
-      "Over 5.5",
-      "Under 5.5",
-      "Over 6.5",
-      "Under 6.5",
-      "Over 7.5",
-      "Under 7.5",
-      "Over 8.5",
-      "Under 8.5",
-    ];
-  }
-
-  if (marketLower.includes("total cards")) {
-    return [
-      "Over 1.5",
-      "Under 1.5",
-      "Over 2.5",
-      "Under 2.5",
-      "Over 3.5",
-      "Under 3.5",
-      "Over 4.5",
-      "Under 4.5",
-    ];
-  }
-
-  if (
-    marketLower.includes("player to score") ||
-    marketLower.includes("goalscorer")
-  ) {
-    return [
-      "Player 1 (Home)",
-      "Player 2 (Home)",
-      "Player 3 (Home)",
-      "Player 1 (Away)",
-      "Player 2 (Away)",
-      "Player 3 (Away)",
-      "No Goalscorer",
-    ];
-  }
-
-  // Default options for other markets
-  return ["Home", "Away", "Draw", "Yes", "No", "Over", "Under"];
-};
-
-// Individual Prediction Market Component
-const PredictionMarket: React.FC<{
-  index: number;
-  pick: Pick;
-  predictionTypes: PredictionTypeOption[];
-  onRemove: (index: number) => void;
-  onChange: (index: number, field: string, value: string | number) => void;
-  errors: FieldErrors<SportsPredictionFormValues>;
-  canRemove: boolean;
-}> = ({
-  index,
-  pick,
-  predictionTypes,
-  onRemove,
-  onChange,
-  errors,
-  canRemove,
-}) => {
-  // Use provided predictionTypes or fallback to our options
-  const marketOptions =
-    predictionTypes.length > 0 ? predictionTypes : MARKET_OPTIONS;
-  const selectionOptions = getSelectionOptions(pick.market);
-
-  const handleMarketChange = (newMarket: string) => {
-    onChange(index, "market", newMarket);
-    // Reset selection when market changes to avoid invalid combinations
-    onChange(index, "selectionKey", "");
-  };
-
-  return (
-    <Card
-      sx={{
-        mb: 2,
-        p: 2,
-        border: errors.picks?.[index]
-          ? "1px solid #f44336"
-          : "1px solid #e0e0e0",
-        backgroundColor: errors.picks?.[index] ? "#ffebee" : "background.paper",
-      }}
-    >
-      <CardContent>
-        <Box
-          sx={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "flex-start",
-            mb: 2,
-          }}
-        >
-          <Typography variant="subtitle1" fontWeight="medium">
-            Pick #{index + 1}
-          </Typography>
-          {canRemove && (
-            <Button
-              onClick={() => onRemove(index)}
-              color="error"
-              size="small"
-              variant="outlined"
-              sx={{ minWidth: "auto" }}
-            >
-              Remove
-            </Button>
-          )}
-        </Box>
-
-        <Box
-          sx={{
-            display: "flex",
-            gap: 2,
-            flexDirection: { xs: "column", md: "row" },
-          }}
-        >
-          {/* Market Selection - Autocomplete */}
-          <FormControl fullWidth error={!!errors.picks?.[index]?.market}>
-            <Autocomplete
-              options={marketOptions}
-              getOptionLabel={(option) =>
-                typeof option === "string" ? option : option.name
-              }
-              value={marketOptions.find((m) => m.name === pick.market) || null}
-              onChange={(_, newValue) => {
-                const marketValue =
-                  typeof newValue === "string"
-                    ? newValue
-                    : newValue?.name || "";
-                handleMarketChange(marketValue);
-              }}
-              renderInput={(params) => (
-                <TextField
-                  {...params}
-                  label="Market *"
-                  error={!!errors.picks?.[index]?.market}
-                  helperText={
-                    errors.picks?.[index]?.market?.message ||
-                    "Select the prediction market type"
-                  }
-                  placeholder="Search or select market..."
-                />
-              )}
-              groupBy={(option) => option.category || "General"}
-              sx={{ minWidth: 200 }}
-            />
-          </FormControl>
-
-          {/* Selection Key - Autocomplete */}
-          <FormControl fullWidth error={!!errors.picks?.[index]?.selectionKey}>
-            <Autocomplete
-              options={selectionOptions}
-              value={pick.selectionKey || null}
-              onChange={(_, newValue) => {
-                onChange(index, "selectionKey", newValue || "");
-              }}
-              disabled={!pick.market}
-              renderInput={(params) => (
-                <TextField
-                  {...params}
-                  label="Selection *"
-                  error={!!errors.picks?.[index]?.selectionKey}
-                  helperText={
-                    errors.picks?.[index]?.selectionKey?.message ||
-                    (pick.market
-                      ? `Select ${pick.market} option`
-                      : "Select a market first")
-                  }
-                  placeholder={
-                    pick.market
-                      ? `Choose ${pick.market}...`
-                      : "Select market first"
-                  }
-                />
-              )}
-              sx={{ minWidth: 200 }}
-            />
-          </FormControl>
-        </Box>
-
-        {/* Confidence Slider */}
-        <Box sx={{ mt: 3, px: 1 }}>
-          <Box
-            sx={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              mb: 1,
-            }}
-          >
-            <Typography variant="body2" fontWeight="medium">
-              Pick Confidence
-            </Typography>
-            <Chip
-              label={`${pick.confidence}%`}
-              size="small"
-              color={
-                pick.confidence >= 80
-                  ? "success"
-                  : pick.confidence >= 60
-                  ? "warning"
-                  : "default"
-              }
-              variant="outlined"
-            />
-          </Box>
-          <input
-            type="range"
-            min="0"
-            max="100"
-            step="5"
-            value={pick.confidence}
-            onChange={(e) =>
-              onChange(index, "confidence", Number(e.target.value))
-            }
-            style={{
-              width: "100%",
-              accentColor:
-                pick.confidence >= 80
-                  ? "#4caf50"
-                  : pick.confidence >= 60
-                  ? "#ff9800"
-                  : "#9e9e9e",
-            }}
-          />
-          <Box
-            sx={{ display: "flex", justifyContent: "space-between", mt: 0.5 }}
-          >
-            <Typography variant="caption" color="text.secondary">
-              Low
-            </Typography>
-            <Typography variant="caption" color="text.secondary">
-              Medium
-            </Typography>
-            <Typography variant="caption" color="text.secondary">
-              High
-            </Typography>
-          </Box>
-        </Box>
-      </CardContent>
-    </Card>
-  );
-};
+interface TransformedSelection {
+  id: number;
+  code: string;
+  marketId: number;
+  name: string;
+  isActive: boolean;
+  selectionKey: string;
+  displayLabel: string;
+}
 
 export const PredictionAnalysisStep: React.FC<PredictionAnalysisStepProps> = ({
-  predictionTypes,
   picks,
   onAddPick,
   onRemovePick,
@@ -417,23 +63,147 @@ export const PredictionAnalysisStep: React.FC<PredictionAnalysisStepProps> = ({
   const { setValue, register } = methods;
   const { analysis, accuracy } = formValues;
 
-  // Helper function to render error state
-  const renderErrorState = (hasError: boolean, errorMessage?: string) =>
-    hasError && (
-      <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, mt: 0.5 }}>
-        <ErrorIcon color="error" sx={{ fontSize: 16 }} />
-        <Typography variant="caption" color="error">
-          {errorMessage}
-        </Typography>
+  // Get all markets
+  const { data: marketsData, isLoading: isMarketsLoading } = useMarkets();
+  const markets = marketsData || [];
+
+  // Collect unique market IDs from picks
+  const marketIds = picks.reduce<number[]>((ids, pick) => {
+    const market = markets.find((m: Market) => m.name === pick.market);
+    if (market && !ids.includes(market.id)) {
+      ids.push(market.id);
+    }
+    return ids;
+  }, []);
+
+  // Fetch selections for each market (using conditional hooks)
+  const selections1 = useMarketSelections({ marketId: marketIds[0] }, { enabled: !!marketIds[0] });
+  const selections2 = useMarketSelections({ marketId: marketIds[1] }, { enabled: !!marketIds[1] });
+  const selections3 = useMarketSelections({ marketId: marketIds[2] }, { enabled: !!marketIds[2] });
+  const selections4 = useMarketSelections({ marketId: marketIds[3] }, { enabled: !!marketIds[3] });
+  const selections5 = useMarketSelections({ marketId: marketIds[4] }, { enabled: !!marketIds[4] });
+
+  const marketSelectionQueries = [selections1, selections2, selections3, selections4, selections5];
+
+  // Helper to process API response into TransformedSelection objects
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const processSelectionsResponse = (data: unknown): TransformedSelection[] => {
+    if (!data || typeof data !== 'object') return [];
+
+    const response = data as { data?: ApiSelection[] };
+    if (!response.data || !Array.isArray(response.data)) return [];
+
+    return response.data
+      .filter((item): item is ApiSelection => item.key !== undefined && item.label !== undefined && item.label.trim() !== '')
+      .map((item, index) => ({
+        id: index,
+        code: item.key,
+        marketId: 0,
+        name: item.label,
+        isActive: true,
+        selectionKey: item.key,
+        displayLabel: item.label.trim() || `Selection ${index + 1}`,
+      }));
+  };
+
+  // Get selections for a specific market by ID
+  const getSelectionsForMarketId = (marketId: number): TransformedSelection[] => {
+    const marketIndex = marketIds.indexOf(marketId);
+    if (marketIndex === -1) return [];
+
+    const query = marketSelectionQueries[marketIndex];
+    if (!query.data) return [];
+
+    // First pass: create selections with base labels
+    const selections = query.data.map((item, index: number) => {
+      const baseLabel = item.label?.trim() || `Selection ${index + 1}`;
+      return {
+        id: index,
+        code: item.key,
+        marketId: marketId,
+        name: item.label,
+        isActive: true,
+        selectionKey: item.key,
+        displayLabel: baseLabel,
+      };
+    });
+
+    // Second pass: ensure unique display labels
+    const labelCounts: Record<string, number> = {};
+    selections.forEach(selection => {
+      labelCounts[selection.displayLabel] = (labelCounts[selection.displayLabel] || 0) + 1;
+    });
+
+    return selections.map(selection => ({
+      ...selection,
+      displayLabel: labelCounts[selection.displayLabel] > 1
+        ? `${selection.displayLabel} (ID: ${selection.id})`
+        : selection.displayLabel,
+    }));
+  };
+
+  // Check if selections are loading for a market
+  const areSelectionsLoadingForMarketId = (marketId: number): boolean => {
+    const marketIndex = marketIds.indexOf(marketId);
+    if (marketIndex === -1) return false;
+
+    return marketSelectionQueries[marketIndex].isLoading || false;
+  };
+
+  const handleMarketChange = (index: number, selectedMarket: Market | null) => {
+    if (selectedMarket) {
+      onPickChange(index, 'market', selectedMarket.name);
+      onPickChange(index, 'selectionKey', '');
+      onPickChange(index, 'selectionLabel', '');
+    } else {
+      onPickChange(index, 'market', '');
+      onPickChange(index, 'selectionKey', '');
+      onPickChange(index, 'selectionLabel', '');
+    }
+  };
+
+  const handleSelectionChange = (index: number, selection: TransformedSelection | null) => {
+    onPickChange(index, 'selectionKey', selection?.selectionKey || '');
+    onPickChange(index, 'selectionLabel', selection?.displayLabel || selection?.selectionKey || '');
+  };
+
+  const handleAccuracyChange = (_event: Event, newValue: number | number[]) => {
+    const value = Array.isArray(newValue) ? newValue[0] : newValue;
+    setValue('accuracy', value);
+  };
+
+  const handleConfidenceChange = (index: number, value: number) => {
+    onPickChange(index, 'confidence', value);
+  };
+
+  // Get market by name
+  const getMarketByName = (marketName: string): Market | undefined => {
+    return markets.find((market) => market.name === marketName);
+  };
+
+  // Find selection by selectionKey
+  const findSelectionByKey = (
+    selections: TransformedSelection[],
+    key: string
+  ): TransformedSelection | null => {
+    return selections.find((selection) => selection.selectionKey === key) || null;
+  };
+
+  if (isMarketsLoading) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
+        <CircularProgress />
+        <Typography sx={{ ml: 2 }}>Loading markets...</Typography>
       </Box>
     );
+  }
 
   return (
     <Box>
       <Typography
         variant="h5"
         gutterBottom
-        sx={{ display: "flex", alignItems: "center", gap: 1, mb: 3 }}
+        sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 3 }}
       >
         <AnalyticsIcon color="primary" />
         Prediction Analysis
@@ -441,213 +211,234 @@ export const PredictionAnalysisStep: React.FC<PredictionAnalysisStepProps> = ({
 
       {/* Analysis Section */}
       <Box sx={{ mb: 4 }}>
-        <Box
-          sx={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            mb: 2,
-          }}
-        >
-          <Typography variant="h6" gutterBottom>
-            Match Analysis
-          </Typography>
-          <Chip
-            label="Required"
-            size="small"
-            color="primary"
-            variant="outlined"
-          />
-        </Box>
-
+        <Typography variant="h6" gutterBottom>
+          Match Analysis
+        </Typography>
         <FormControl fullWidth error={!!errors.analysis}>
           <TextField
-            {...register("analysis")}
+            {...register('analysis')}
             label="Detailed Analysis *"
             multiline
-            rows={6}
+            rows={4}
             value={analysis}
-            onChange={(e) => setValue("analysis", e.target.value)}
+            onChange={(e) => setValue('analysis', e.target.value)}
             error={!!errors.analysis}
-            helperText={
-              errors.analysis?.message ||
-              "Provide detailed analysis and reasoning for your prediction"
-            }
-            placeholder="Analyze team form, key players, injuries, historical data, and other relevant factors..."
-            FormHelperTextProps={{
-              sx: {
-                color: errors.analysis ? "error.main" : "text.secondary",
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                mx: 0,
-              },
-            }}
+            helperText={typeof errors.analysis?.message === 'string' ? errors.analysis.message : 'Provide detailed analysis for your prediction'}
+            placeholder="Analyze team form, key players, injuries..."
           />
-          {renderErrorState(!!errors.analysis, errors.analysis?.message)}
         </FormControl>
       </Box>
 
-      {/* Accuracy Slider */}
+      {/* Accuracy Section */}
       <Box sx={{ mb: 4 }}>
-        <Box
-          sx={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            mb: 2,
-          }}
+        <Typography
+          variant="h6"
+          gutterBottom
+          sx={{ display: 'flex', alignItems: 'center', gap: 1 }}
         >
-          <Typography variant="h6" gutterBottom>
-            Prediction Confidence
-          </Typography>
-          <Chip
-            label="Required"
-            size="small"
-            color="primary"
-            variant="outlined"
-          />
-        </Box>
-
+          <TrendingUpIcon />
+          Prediction Confidence
+        </Typography>
         <FormControl fullWidth error={!!errors.accuracy}>
-          <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-            <TrendingUpIcon color={errors.accuracy ? "error" : "action"} />
-            <Box sx={{ flexGrow: 1 }}>
-              <Typography
-                gutterBottom
-                color={errors.accuracy ? "error" : "text.primary"}
-              >
-                Accuracy: {accuracy}%
-              </Typography>
-              <input
-                type="range"
-                min="0"
-                max="100"
-                value={accuracy}
-                onChange={(e) => setValue("accuracy", Number(e.target.value))}
-                style={{
-                  width: "100%",
-                  accentColor: errors.accuracy ? "#d32f2f" : undefined,
-                }}
-              />
-            </Box>
-            <Chip
-              label={`${accuracy}%`}
-              color={
-                errors.accuracy
-                  ? "error"
-                  : accuracy >= 80
-                  ? "success"
-                  : accuracy >= 60
-                  ? "warning"
-                  : "error"
-              }
-              variant={errors.accuracy ? "outlined" : "filled"}
+          <Box sx={{ px: 2 }}>
+            <Typography gutterBottom>Accuracy: {accuracy}%</Typography>
+            <Slider
+              value={accuracy}
+              onChange={handleAccuracyChange}
+              aria-labelledby="accuracy-slider"
+              min={0}
+              max={100}
+              marks={[
+                { value: 0, label: '0%' },
+                { value: 50, label: '50%' },
+                { value: 100, label: '100%' },
+              ]}
+              sx={{ mt: 2 }}
             />
           </Box>
-          {errors.accuracy ? (
-            renderErrorState(true, errors.accuracy.message)
-          ) : (
-            <Typography variant="caption" color="text.secondary" sx={{ mt: 1 }}>
-              {accuracy >= 80
-                ? "High confidence prediction"
-                : accuracy >= 60
-                ? "Moderate confidence prediction"
-                : "Low confidence prediction"}
+          {errors.accuracy && (
+            <Typography color="error" variant="caption" sx={{ mt: 1, display: 'block' }}>
+              {typeof errors.accuracy.message === 'string' ? errors.accuracy.message : 'Invalid accuracy value'}
             </Typography>
           )}
         </FormControl>
       </Box>
 
-      {/* Prediction Picks */}
+      {/* Market Picks Section */}
       <Box>
         <Box
           sx={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            mb: 2,
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            mb: 3,
           }}
         >
-          <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-            <Typography variant="h6" gutterBottom>
-              Market Picks
-            </Typography>
-            <Chip
-              label="Required"
-              size="small"
-              color="primary"
-              variant="outlined"
-            />
-          </Box>
-          <Button
-            onClick={onAddPick}
-            variant="outlined"
-            size="small"
-            disabled={picks.length >= 5}
-          >
+          <Typography variant="h6">Market Picks</Typography>
+          <Button onClick={onAddPick} variant="outlined" size="medium" disabled={picks.length >= 5}>
             Add Pick {picks.length > 0 && `(${picks.length}/5)`}
           </Button>
         </Box>
 
-        {picks.map((pick, index) => (
-          <PredictionMarket
-            key={pick.id}
-            index={index}
-            pick={pick}
-            predictionTypes={predictionTypes}
-            onRemove={onRemovePick}
-            onChange={onPickChange}
-            errors={errors}
-            canRemove={picks.length > 1}
-          />
-        ))}
-
-        {/* Global picks error */}
-        {errors.picks && (
+        {picks.length === 0 ? (
           <Box
             sx={{
-              mt: 2,
-              p: 1.5,
-              border: 1,
-              borderColor: "error.main",
+              textAlign: 'center',
+              p: 4,
+              border: '1px dashed',
+              borderColor: 'divider',
               borderRadius: 1,
-              bgcolor: "error.light",
+              bgcolor: 'action.hover',
             }}
           >
-            <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-              <ErrorIcon color="error" />
-              <Typography
-                variant="body2"
-                color="error.main"
-                fontWeight="medium"
+            <Typography color="text.secondary" variant="body1">
+              No picks added yet. Click &quot;Add Pick&quot; to start.
+            </Typography>
+          </Box>
+        ) : (
+          picks.map((pick, index) => {
+            const market = getMarketByName(pick.market);
+            const selections = market ? getSelectionsForMarketId(market.id) : [];
+            const isLoading = market ? areSelectionsLoadingForMarketId(market.id) : false;
+            const currentSelection = findSelectionByKey(selections, pick.selectionKey);
+
+            return (
+              <Card
+                key={pick.id}
+                sx={{
+                  mb: 3,
+                  border: 1,
+                  borderColor: 'divider',
+                  borderRadius: 2,
+                  boxShadow: 1,
+                }}
               >
-                {errors.picks.message ||
-                  "Please fix the errors in your market picks before proceeding"}
-              </Typography>
-            </Box>
-          </Box>
-        )}
+                <CardContent>
+                  {/* Pick Header */}
+                  <Box
+                    sx={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      mb: 3,
+                    }}
+                  >
+                    <Typography variant="subtitle1" fontWeight={600}>
+                      Pick #{index + 1}
+                    </Typography>
+                    {picks.length > 1 && (
+                      <Button
+                        onClick={() => onRemovePick(index)}
+                        size="small"
+                        color="error"
+                        variant="outlined"
+                      >
+                        Remove Pick
+                      </Button>
+                    )}
+                  </Box>
 
-        {/* Empty state guidance */}
-        {picks.length === 0 && (
-          <Box
-            sx={{
-              textAlign: "center",
-              p: 3,
-              border: 2,
-              borderColor: "divider",
-              borderRadius: 1,
-              borderStyle: "dashed",
-            }}
-          >
-            <Typography variant="body2" color="text.secondary" gutterBottom>
-              No market picks added yet
-            </Typography>
-            <Typography variant="caption" color="text.secondary">
-              Click &quot;Add Pick&quot; to start adding your market selections
-            </Typography>
-          </Box>
+                  {/* Market and Selection Fields */}
+                  <Box
+                    sx={{
+                      display: 'flex',
+                      gap: 3,
+                      flexDirection: { xs: 'column', md: 'row' },
+                      mb: 3,
+                    }}
+                  >
+                    {/* Market Selection */}
+                    <FormControl fullWidth>
+                      <Autocomplete
+                        options={markets}
+                        getOptionLabel={(option: Market) => option.displayName}
+                        value={market || null}
+                        onChange={(_event, newValue) => handleMarketChange(index, newValue)}
+                        renderInput={(params) => (
+                          <TextField
+                            {...params}
+                            label="Market *"
+                            placeholder="Select market..."
+                            error={!!(Array.isArray(errors.picks) && errors.picks[index]?.market)}
+                            helperText={Array.isArray(errors.picks) && typeof errors.picks[index]?.market?.message === 'string' ? errors.picks[index]?.market?.message : undefined}
+                          />
+                        )}
+                        groupBy={(option) => option.category || 'General'}
+                        isOptionEqualToValue={(option, value) => option.id === value.id}
+                      />
+                    </FormControl>
+
+                    {/* Selection Dropdown */}
+                    <FormControl fullWidth>
+                      <Autocomplete
+                        options={selections}
+                        getOptionLabel={(option: TransformedSelection) => option.displayLabel}
+                        value={currentSelection}
+                        onChange={(_event, newValue) => handleSelectionChange(index, newValue)}
+                        disabled={!market}
+                        loading={isLoading}
+                        renderInput={(params) => (
+                          <TextField
+                            {...params}
+                            label="Selection *"
+                            placeholder={market ? 'Choose selection...' : 'Select market first'}
+                            error={!!(Array.isArray(errors.picks) && errors.picks[index]?.selectionKey)}
+                            helperText={Array.isArray(errors.picks) && typeof errors.picks[index]?.selectionKey?.message === 'string' ? errors.picks[index]?.selectionKey?.message : undefined}
+                            InputProps={{
+                              ...params.InputProps,
+                              endAdornment: (
+                                <>
+                                  {isLoading && <CircularProgress size={20} />}
+                                  {params.InputProps.endAdornment}
+                                </>
+                              ),
+                            }}
+                          />
+                        )}
+                        isOptionEqualToValue={(option, value) =>
+                          option.selectionKey === value.selectionKey
+                        }
+                      />
+                      {market && selections.length === 0 && !isLoading && (
+                        <Typography
+                          variant="caption"
+                          color="text.secondary"
+                          sx={{ mt: 1, display: 'block' }}
+                        >
+                          No selections available for this market
+                        </Typography>
+                      )}
+                    </FormControl>
+                  </Box>
+
+                  {/* Confidence Slider */}
+                  <Box>
+                    <Typography variant="body2" gutterBottom sx={{ mb: 1 }}>
+                      Confidence Level: {pick.confidence}%
+                    </Typography>
+                    <Slider
+                      value={pick.confidence}
+                      onChange={(_event, newValue) =>
+                        handleConfidenceChange(index, newValue as number)
+                      }
+                      aria-labelledby={`confidence-slider-${index}`}
+                      min={0}
+                      max={100}
+                      marks={[
+                        { value: 0, label: '0%' },
+                        { value: 25, label: '25%' },
+                        { value: 50, label: '50%' },
+                        { value: 75, label: '75%' },
+                        { value: 100, label: '100%' },
+                      ]}
+                      valueLabelDisplay="auto"
+                      sx={{ width: '95%', mx: 'auto' }}
+                    />
+                  </Box>
+                </CardContent>
+              </Card>
+            );
+          })
         )}
       </Box>
     </Box>

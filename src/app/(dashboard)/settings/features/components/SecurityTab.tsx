@@ -1,68 +1,83 @@
-import React, { useState } from "react";
-import { 
-  Box, 
-  Typography, 
-  TextField, 
-  Button, 
-  Divider, 
-  LinearProgress, 
+import React, { useState, useEffect } from 'react';
+import {
+  Box,
+  Typography,
+  TextField,
+  Button,
+  Divider,
+  LinearProgress,
   Switch,
   FormControlLabel,
   InputAdornment,
   IconButton,
   Alert,
-} from "@mui/material";
-import { 
-  Lock as LockIcon, 
+} from '@mui/material';
+import {
+  Lock as LockIcon,
   Visibility as VisibilityIcon,
-  VisibilityOff as VisibilityOffIcon 
-} from "@mui/icons-material";
+  VisibilityOff as VisibilityOffIcon,
+} from '@mui/icons-material';
+import { createLogger } from '@/shared/api';
+import { useUpdatePassword, useToggleTwoFactor, useProfileSettings } from '@/features/settings';
 
-// Hooks
-import { useSettings } from "../hooks/useSettings";
+const logger = createLogger('Settings:Security');
+import { UpdatePasswordData } from '@/features/settings';
 
-// Types
-import { TabComponentProps, PasswordChangeData } from "../types";
+interface TabComponentProps {
+  showNotification: (message: string, severity: 'success' | 'error' | 'warning') => void;
+}
 
-/**
- * SecurityTab - Handles security-related settings
- */
+type PasswordChangeData = UpdatePasswordData;
+
 export const SecurityTab: React.FC<TabComponentProps> = ({ showNotification }) => {
-  const {
-    twoFactorEnabled,
-    changePassword,
-    isChangingPassword,
-    passwordError,
-    toggleTwoFactorAuth,
-  } = useSettings();
+  // API hooks
+  const { data: profileData, isLoading: isLoadingSettings, error: settingsError } = useProfileSettings();
+  const changePasswordMutation = useUpdatePassword();
+  const isChangingPassword = changePasswordMutation.isPending;
+  const toggleTwoFactorMutation = useToggleTwoFactor();
 
+  // State
   const [passwordData, setPasswordData] = useState<PasswordChangeData>({
     currentPassword: '',
     newPassword: '',
-    confirmPassword: ''
+    confirmPassword: '',
   });
   const [passwordStrength, setPasswordStrength] = useState(0);
+  const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
   const [showPassword, setShowPassword] = useState({
     current: false,
     new: false,
-    confirm: false
+    confirm: false,
   });
+  const [error, setError] = useState<string | null>(null);
 
-  // Handle input changes and calculate password strength
-  const handleInputChange = (field: keyof PasswordChangeData) => (event: React.ChangeEvent<HTMLInputElement>) => {
-    const value = event.target.value;
-    setPasswordData(prev => ({
-      ...prev,
-      [field]: value
-    }));
-
-    // Calculate password strength when new password changes
-    if (field === 'newPassword') {
-      calculatePasswordStrength(value);
+  // Initialize two-factor state from API data
+  useEffect(() => {
+    if (profileData) {
+      // Security config comes from profile data (though it may be null)
+      const twoFactorEnabled = profileData.securityConfig?.twoFactorEnabled || false;
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- Initializing state from API data
+      setTwoFactorEnabled(twoFactorEnabled);
+    } else {
+      // Reset to false if no data is available
+      setTwoFactorEnabled(false);
     }
-  };
+  }, [profileData]);
 
-  // Calculate password strength based on complexity
+  // Handle input changes
+  const handleInputChange =
+    (field: keyof PasswordChangeData) => (event: React.ChangeEvent<HTMLInputElement>) => {
+      const value = event.target.value;
+      setPasswordData((prev: PasswordChangeData) => ({ ...prev, [field]: value }));
+      setError(null);
+
+      // Calculate password strength when new password changes
+      if (field === 'newPassword') {
+        calculatePasswordStrength(value);
+      }
+    };
+
+  // Calculate password strength
   const calculatePasswordStrength = (password: string) => {
     let strength = 0;
     if (password.length > 0) strength += 20;
@@ -73,7 +88,7 @@ export const SecurityTab: React.FC<TabComponentProps> = ({ showNotification }) =
     setPasswordStrength(strength);
   };
 
-  // Handle password change submission
+  // Handle password change
   const handleSave = async () => {
     if (passwordData.newPassword !== passwordData.confirmPassword) {
       showNotification("Passwords don't match!", 'error');
@@ -81,42 +96,49 @@ export const SecurityTab: React.FC<TabComponentProps> = ({ showNotification }) =
     }
 
     if (passwordStrength < 60) {
-      showNotification("Please choose a stronger password", 'warning');
+      showNotification('Please choose a stronger password', 'warning');
       return;
     }
 
     try {
-      const success = await changePassword(passwordData);
-      if (success) {
-        showNotification('Password changed successfully!', 'success');
-        setPasswordData({
-          currentPassword: '',
-          newPassword: '',
-          confirmPassword: ''
-        });
-        setPasswordStrength(0);
-      } else {
-        showNotification('Failed to change password', 'error');
+      await changePasswordMutation.mutateAsync({
+        currentPassword: passwordData.currentPassword,
+        newPassword: passwordData.newPassword,
+        confirmPassword: passwordData.confirmPassword,
+      });
+
+      showNotification('Password changed successfully!', 'success');
+      setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
+      setPasswordStrength(0);
+      setError(null);
+    } catch (error: unknown) {
+      let errorMessage = 'Failed to change password';
+
+      if (error && typeof error === 'object' && 'data' in error) {
+        const apiError = error as { data?: { message?: string } };
+        errorMessage = apiError.data?.message || errorMessage;
       }
-    } catch {
-      showNotification('Failed to change password', 'error');
+
+      setError(errorMessage);
+      showNotification(errorMessage, 'error');
     }
   };
 
   // Handle 2FA toggle
   const handleTwoFactorToggle = async () => {
     try {
-      const success = await toggleTwoFactorAuth(!twoFactorEnabled);
-      if (success) {
-        showNotification(
-          `Two-factor authentication ${!twoFactorEnabled ? 'enabled' : 'disabled'}!`,
-          'success'
-        );
-      } else {
-        showNotification('Failed to update two-factor authentication', 'error');
-      }
-    } catch {
+      await toggleTwoFactorMutation.mutateAsync(!twoFactorEnabled);
+
+      // Two-factor toggle successful
+      const newState = !twoFactorEnabled;
+      setTwoFactorEnabled(newState);
+      showNotification(
+        `Two-factor authentication ${newState ? 'enabled' : 'disabled'}!`,
+        'success'
+      );
+    } catch (error: unknown) {
       showNotification('Failed to update two-factor authentication', 'error');
+      logger.error('Failed to update two-factor authentication', { error });
     }
   };
 
@@ -129,22 +151,55 @@ export const SecurityTab: React.FC<TabComponentProps> = ({ showNotification }) =
 
   // Toggle password visibility
   const togglePasswordVisibility = (field: keyof typeof showPassword) => {
-    setShowPassword(prev => ({
+    setShowPassword((prev) => ({
       ...prev,
-      [field]: !prev[field]
+      [field]: !prev[field],
     }));
   };
 
-  const isFormValid = passwordData.currentPassword && 
-                     passwordData.newPassword && 
-                     passwordData.confirmPassword &&
-                     passwordData.newPassword === passwordData.confirmPassword;
+  const isFormValid =
+    passwordData.currentPassword &&
+    passwordData.newPassword &&
+    passwordData.confirmPassword &&
+    passwordData.newPassword === passwordData.confirmPassword;
+
+  // Loading state
+  if (isLoadingSettings) {
+    return (
+      <Box>
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-8">
+          <Box className="md:col-span-4">
+            <Typography variant="h6" sx={{ mb: 1 }}>
+              Security Settings
+            </Typography>
+            <Typography variant="body2" sx={{ mb: 3 }}>
+              Loading your security preferences...
+            </Typography>
+          </Box>
+          <Box className="md:col-span-8">
+            <Typography color="text.secondary">Loading security settings...</Typography>
+          </Box>
+        </div>
+      </Box>
+    );
+  }
+
+  // Error state
+  if (settingsError) {
+    return (
+      <Box>
+        <Alert severity="error" sx={{ my: 2 }}>
+          Failed to load security settings. Please try again.
+        </Alert>
+      </Box>
+    );
+  }
 
   return (
     <Box>
       {/* Password Section */}
       <div className="grid grid-cols-1 md:grid-cols-12 gap-8">
-        {/* Left Column - Header and Description */}
+        {/* Left Column */}
         <Box className="md:col-span-4">
           <Typography variant="h6" sx={{ mb: 1 }}>
             Password
@@ -152,17 +207,17 @@ export const SecurityTab: React.FC<TabComponentProps> = ({ showNotification }) =
           <Typography variant="body2" sx={{ mb: 3 }}>
             Please enter your current password to change your password.
           </Typography>
-          <Button 
-            variant="contained" 
-            sx={{ mb: 4 }}
+          <Button
+            variant="contained"
+            sx={{ mb: 2 }}
             onClick={handleSave}
             disabled={isChangingPassword || !isFormValid}
           >
             {isChangingPassword ? 'Updating...' : 'Save Changes'}
           </Button>
-          {passwordError && (
+          {error && (
             <Alert severity="error" sx={{ mt: 2 }}>
-              {passwordError}
+              {error}
             </Alert>
           )}
         </Box>
@@ -172,7 +227,7 @@ export const SecurityTab: React.FC<TabComponentProps> = ({ showNotification }) =
           <Box sx={{ mb: 3 }}>
             <TextField
               label="Current Password"
-              type={showPassword.current ? "text" : "password"}
+              type={showPassword.current ? 'text' : 'password'}
               value={passwordData.currentPassword}
               onChange={handleInputChange('currentPassword')}
               fullWidth
@@ -185,15 +240,11 @@ export const SecurityTab: React.FC<TabComponentProps> = ({ showNotification }) =
                 ),
                 endAdornment: (
                   <InputAdornment position="end">
-                    <IconButton
-                      onClick={() => togglePasswordVisibility('current')}
-                      edge="end"
-                      disabled={isChangingPassword}
-                    >
+                    <IconButton onClick={() => togglePasswordVisibility('current')} edge="end">
                       {showPassword.current ? <VisibilityOffIcon /> : <VisibilityIcon />}
                     </IconButton>
                   </InputAdornment>
-                )
+                ),
               }}
             />
           </Box>
@@ -201,7 +252,7 @@ export const SecurityTab: React.FC<TabComponentProps> = ({ showNotification }) =
           <Box sx={{ mb: 2 }}>
             <TextField
               label="New Password"
-              type={showPassword.new ? "text" : "password"}
+              type={showPassword.new ? 'text' : 'password'}
               value={passwordData.newPassword}
               onChange={handleInputChange('newPassword')}
               fullWidth
@@ -214,15 +265,11 @@ export const SecurityTab: React.FC<TabComponentProps> = ({ showNotification }) =
                 ),
                 endAdornment: (
                   <InputAdornment position="end">
-                    <IconButton
-                      onClick={() => togglePasswordVisibility('new')}
-                      edge="end"
-                      disabled={isChangingPassword}
-                    >
+                    <IconButton onClick={() => togglePasswordVisibility('new')} edge="end">
                       {showPassword.new ? <VisibilityOffIcon /> : <VisibilityIcon />}
                     </IconButton>
                   </InputAdornment>
-                )
+                ),
               }}
             />
             {passwordData.newPassword && (
@@ -230,13 +277,17 @@ export const SecurityTab: React.FC<TabComponentProps> = ({ showNotification }) =
                 <Typography variant="caption" sx={{ mt: 1, display: 'block' }}>
                   Password strength
                 </Typography>
-                <LinearProgress 
-                  variant="determinate" 
-                  value={passwordStrength} 
+                <LinearProgress
+                  variant="determinate"
+                  value={passwordStrength}
                   color={getPasswordStrengthColor()}
                   sx={{ height: 6, borderRadius: 3, mt: 1 }}
                 />
-                <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
+                <Typography
+                  variant="caption"
+                  color="text.secondary"
+                  sx={{ mt: 0.5, display: 'block' }}
+                >
                   {passwordStrength < 40 ? 'Weak' : passwordStrength < 80 ? 'Good' : 'Strong'}
                 </Typography>
               </>
@@ -246,15 +297,19 @@ export const SecurityTab: React.FC<TabComponentProps> = ({ showNotification }) =
           <Box sx={{ mb: 3 }}>
             <TextField
               label="Confirm Password"
-              type={showPassword.confirm ? "text" : "password"}
+              type={showPassword.confirm ? 'text' : 'password'}
               value={passwordData.confirmPassword}
               onChange={handleInputChange('confirmPassword')}
               fullWidth
               disabled={isChangingPassword}
-              error={passwordData.confirmPassword !== '' && passwordData.newPassword !== passwordData.confirmPassword}
+              error={
+                passwordData.confirmPassword !== '' &&
+                passwordData.newPassword !== passwordData.confirmPassword
+              }
               helperText={
-                passwordData.confirmPassword !== '' && passwordData.newPassword !== passwordData.confirmPassword 
-                  ? "Passwords don't match" 
+                passwordData.confirmPassword !== '' &&
+                passwordData.newPassword !== passwordData.confirmPassword
+                  ? "Passwords don't match"
                   : ''
               }
               InputProps={{
@@ -265,15 +320,11 @@ export const SecurityTab: React.FC<TabComponentProps> = ({ showNotification }) =
                 ),
                 endAdornment: (
                   <InputAdornment position="end">
-                    <IconButton
-                      onClick={() => togglePasswordVisibility('confirm')}
-                      edge="end"
-                      disabled={isChangingPassword}
-                    >
+                    <IconButton onClick={() => togglePasswordVisibility('confirm')} edge="end">
                       {showPassword.confirm ? <VisibilityOffIcon /> : <VisibilityIcon />}
                     </IconButton>
                   </InputAdornment>
-                )
+                ),
               }}
             />
           </Box>
@@ -284,7 +335,6 @@ export const SecurityTab: React.FC<TabComponentProps> = ({ showNotification }) =
 
       {/* Two Factor Authentication Section */}
       <div className="grid grid-cols-1 md:grid-cols-12 gap-8">
-        {/* Left Column - Header and Description */}
         <Box className="md:col-span-4">
           <Typography variant="h6" sx={{ mb: 2 }}>
             Two Factor Authentication
@@ -294,22 +344,22 @@ export const SecurityTab: React.FC<TabComponentProps> = ({ showNotification }) =
           </Typography>
         </Box>
 
-        {/* Right Column - 2FA Options */}
         <Box className="md:col-span-8">
           <FormControlLabel
             control={
-              <Switch 
+              <Switch
                 checked={twoFactorEnabled}
                 onChange={handleTwoFactorToggle}
                 color="primary"
-                disabled={isChangingPassword}
+                disabled={isChangingPassword || toggleTwoFactorMutation.isPending}
               />
             }
-            label={twoFactorEnabled ? "Enabled" : "Disabled"}
+            label={twoFactorEnabled ? 'Enabled' : 'Disabled'}
             sx={{ mb: 2 }}
           />
           <Typography variant="body2" color="text.secondary">
-            When enabled, you&apos;ll be required to enter both your password and a verification code.
+            When enabled, you&apos;ll be required to enter both your password and a verification
+            code.
           </Typography>
         </Box>
       </div>

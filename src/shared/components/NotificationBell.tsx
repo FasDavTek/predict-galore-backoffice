@@ -1,15 +1,12 @@
-"use client";
+'use client';
 
-import React from "react";
-import {
-  Box,
-  IconButton,
-  Badge,
-  alpha,
-  useTheme,
-} from "@mui/material";
-import { Notifications as NotificationsIcon } from "@mui/icons-material";
-import { useGetNotificationStatsQuery } from "../api/notificationApi";
+import React from 'react';
+import Box from '@mui/material/Box';
+import IconButton from '@mui/material/IconButton';
+import Badge from '@mui/material/Badge';
+import { alpha, useTheme } from '@mui/material/styles';
+import NotificationsIcon from '@mui/icons-material/Notifications';
+import { useUnreadCount } from '@/features/notifications';
 
 interface NotificationBellProps {
   open: boolean;
@@ -18,39 +15,57 @@ interface NotificationBellProps {
 
 const NotificationBell = ({ open, onToggle }: NotificationBellProps) => {
   const theme = useTheme();
-  const { data: statsData } = useGetNotificationStatsQuery();
-  
-  // Calculate unread count from stats or fallback
-  const unreadCount = statsData?.data?.unreadCount || 0;
+  const { data: unreadCountData } = useUnreadCount();
+  const unreadCount = unreadCountData || 0;
 
   return (
-    <Box sx={{ position: "relative" }}>
+    <Box sx={{ position: 'relative' }}>
       <IconButton
         onClick={onToggle}
         sx={{
-          backgroundColor: open 
-            ? alpha(theme.palette.primary.main, 0.08) 
-            : "background.default",
-          color: open ? "primary.main" : "text.secondary",
-          "&:hover": { 
+          backgroundColor: open ? alpha(theme.palette.primary.main, 0.08) : 'background.default',
+          color: open ? 'primary.main' : 'text.secondary',
+          '&:hover': {
             backgroundColor: alpha(theme.palette.primary.main, 0.12),
-            color: "primary.main",
+            color: 'primary.main',
           },
           transition: 'all 0.2s ease-in-out',
           position: 'relative',
+          animation: unreadCount > 0 && !open ? 'pulse 1.5s infinite' : 'none',
+          '@keyframes pulse': {
+            '0%': {
+              boxShadow: `0 0 0 0 ${alpha(theme.palette.error.main, 0.7)}`,
+            },
+            '70%': {
+              boxShadow: `0 0 0 6px ${alpha(theme.palette.error.main, 0)}`,
+            },
+            '100%': {
+              boxShadow: `0 0 0 0 ${alpha(theme.palette.error.main, 0)}`,
+            },
+          },
         }}
       >
-        <Badge 
-          badgeContent={unreadCount} 
-          color="error" 
+        <Badge
+          badgeContent={unreadCount}
+          color="error"
           overlap="circular"
           max={99}
           sx={{
             '& .MuiBadge-badge': {
-              fontSize: '0.7rem',
-              fontWeight: 'bold',
-              animation: unreadCount > 0 ? 'pulse 2s infinite' : 'none',
-            }
+              fontSize: '0.65rem',
+              fontWeight: 700,
+              height: 18,
+              minWidth: 18,
+              animation: unreadCount > 0 ? 'bounce 1s infinite' : 'none',
+              '@keyframes bounce': {
+                '0%, 100%': {
+                  transform: 'scale(1)',
+                },
+                '50%': {
+                  transform: 'scale(1.1)',
+                },
+              },
+            },
           }}
         >
           <NotificationsIcon />

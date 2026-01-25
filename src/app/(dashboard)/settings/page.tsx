@@ -1,191 +1,108 @@
-// src/app/(dashboard)/settings/page.tsx
-"use client";
+/**
+ * Settings Page
+ * Clean, simple implementation
+ */
 
-import React, { useState } from "react";
-import { useDispatch } from "react-redux";
-import {
-  Box,
-  Container,
-  Snackbar,
-  Alert,
-  Tabs,
-  Tab,
-  Typography,
-} from "@mui/material";
+'use client';
 
-// Components
-import { ProfileTab } from "./features/components/ProfileTab";
-import { SecurityTab } from "./features/components/SecurityTab";
-import { NotificationsTab } from "./features/components/NotificationsTab";
-import { TeamsTab } from "./features/components/TeamsTab";
-import { IntegrationsTab } from "./features/components/IntegrationsTab";
-import { SettingsPageLoadingSkeleton } from "./features/components/SettingsPageLoadingSkeleton";
+import { useState, useCallback, memo, Suspense } from 'react';
+import { Tabs, Tab, Box } from '@mui/material';
+import Stack from '@mui/material/Stack';
+import toast from 'react-hot-toast';
+import { PageHeader } from '@/shared/components/PageHeader';
+import { designTokens } from '@/shared/styles/tokens';
+import { useAuth } from '@/features/auth';
+import withAuth from '@/hoc/with-auth';
+import dynamic from 'next/dynamic';
 
-// Hooks
-import { useSettings } from "./features/hooks/useSettings";
+// Lazy load tab components
+const ProfileTab = dynamic(() => import('./features/components/ProfileTab').then(mod => ({ default: mod.ProfileTab })), {
+  loading: () => <div>Loading...</div>,
+  ssr: false,
+});
 
-// Types
-import { TabComponentProps } from "./features/types";
+const SecurityTab = dynamic(() => import('./features/components/SecurityTab').then(mod => ({ default: mod.SecurityTab })), {
+  loading: () => <div>Loading...</div>,
+  ssr: false,
+});
 
-// Redux actions
-import {
-  clearProfileError,
-  clearPasswordError,
-  clearTeamError,
-  clearRolesError,
-  clearNotificationsError,
-  clearIntegrationsError,
-  clearPermissionsError,
-} from "./features/slices/settingsSlice";
-import withAuth from "@/hoc/withAuth";
+const NotificationsTab = dynamic(() => import('./features/components/NotificationsTab').then(mod => ({ default: mod.NotificationsTab })), {
+  loading: () => <div>Loading...</div>,
+  ssr: false,
+});
+
+const IntegrationsTab = dynamic(() => import('./features/components/IntegrationsTab').then(mod => ({ default: mod.IntegrationsTab })), {
+  loading: () => <div>Loading...</div>,
+  ssr: false,
+});
+
+const TeamsTab = dynamic(() => import('./features/components/TeamsTab').then(mod => ({ default: mod.TeamsTab })), {
+  loading: () => <div>Loading...</div>,
+  ssr: false,
+});
+
+type TabValue = 'profile' | 'security' | 'notifications' | 'integrations' | 'teams';
 
 function SettingsPage() {
-  const dispatch = useDispatch();
-  const [activeTab, setActiveTab] = useState(0);
-  const [notification, setNotification] = useState({
-    open: false,
-    message: "",
-    severity: "success" as "success" | "error" | "warning" | "info",
-  });
+  const { user } = useAuth();
+  const [activeTab, setActiveTab] = useState<TabValue>('profile');
 
-  const {
-    isProfileLoading,
-    isNotificationsLoading,
-    isTeamLoading,
-    isRolesLoading,
-    isIntegrationsLoading,
-    clearErrors,
-  } = useSettings();
+  const handleTabChange = useCallback((_: React.SyntheticEvent, newValue: TabValue) => {
+    setActiveTab(newValue);
+  }, []);
 
-  // Show notification helper function
-  const showNotification: TabComponentProps['showNotification'] = (message, severity = "success") => {
-    setNotification({ open: true, message, severity });
-  };
-
-  // Close notification handler
-  const handleNotificationClose = () => {
-    setNotification((prev) => ({ ...prev, open: false }));
-  };
-
-  // Handle tab changes and clear relevant errors
-  const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
-    // Clear errors when switching tabs to prevent stale errors
-    clearErrors();
-    
-    // Specific error clearing for each tab
-    switch (newValue) {
-      case 0:
-        dispatch(clearProfileError());
+  const showNotification = useCallback((message: string, severity: 'success' | 'error' | 'warning') => {
+    switch (severity) {
+      case 'success':
+        toast.success(message);
         break;
-      case 1:
-        dispatch(clearPasswordError());
+      case 'error':
+        toast.error(message);
         break;
-      case 2:
-        dispatch(clearNotificationsError());
-        break;
-      case 3:
-        dispatch(clearTeamError());
-        dispatch(clearRolesError());
-        break;
-      case 4:
-        dispatch(clearIntegrationsError());
-        dispatch(clearPermissionsError());
+      case 'warning':
+        toast(message, { icon: '⚠️' });
         break;
     }
-
-    setActiveTab(newValue);
-  };
-
-  // Check if any data is loading
-  const isLoading = isProfileLoading || isNotificationsLoading || isTeamLoading || 
-                   isRolesLoading || isIntegrationsLoading;
-
-  // Show loading skeleton for initial page load
-  if (isLoading) {
-    return (
-      <Container maxWidth="xl" sx={{ py: 4 }}>
-        <SettingsPageLoadingSkeleton />
-      </Container>
-    );
-  }
-
-  const tabLabels = ["Profile", "Security", "Notifications", "Team", "Integrations"];
+  }, []);
 
   return (
-    <Container maxWidth="xl" sx={{ py: 4 }}>
-      {/* Header */}
-      <Box sx={{ mb: 4 }}>
-        <Typography variant="h4" component="h1" fontWeight={600} gutterBottom>
-          Settings
-        </Typography>
-        <Typography variant="subtitle1" color="text.secondary">
-          Control your profile setup and integrations
-        </Typography>
-      </Box>
+    <Box
+      sx={{
+        // maxWidth: 1536, // 2xl breakpoint (96rem = 1536px)
+        width: '100%',
+        px: { xs: 2, sm: 3, md: 4 },
+        py: designTokens.spacing.xl,
+      }}
+    >
+      <Stack spacing={designTokens.spacing.sectionGap}>
+        <PageHeader
+          title="Settings"
+          defaultSubtitle="Welcome {firstName}! Manage your account settings."
+          user={user}
+        />
 
-      {/* Settings tabs navigation */}
-      <Tabs
-        value={activeTab}
-        onChange={handleTabChange}
-        sx={{ 
-          mb: 4,
-          borderBottom: 1,
-          borderColor: 'divider'
-        }}
-        variant="scrollable"
-        scrollButtons="auto"
-      >
-        {tabLabels.map((label, index) => (
-          <Tab 
-            key={label} 
-            label={label}
-            id={`settings-tab-${index}`}
-            aria-controls={`settings-tabpanel-${index}`}
-          />
-        ))}
-      </Tabs>
+        <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: designTokens.spacing.sectionGap }}>
+          <Tabs value={activeTab} onChange={handleTabChange}>
+            <Tab label="Profile" value="profile" />
+            <Tab label="Security" value="security" />
+            <Tab label="Notifications" value="notifications" />
+            <Tab label="Integrations" value="integrations" />
+            <Tab label="Teams" value="teams" />
+          </Tabs>
+        </Box>
 
-      {/* Tab content */}
-      <Box sx={{ width: "100%" }}>
-        {activeTab === 0 && (
-          <ProfileTab showNotification={showNotification} />
-        )}
-
-        {activeTab === 1 && (
-          <SecurityTab showNotification={showNotification} />
-        )}
-
-        {activeTab === 2 && (
-          <NotificationsTab showNotification={showNotification} />
-        )}
-
-        {activeTab === 3 && (
-          <TeamsTab showNotification={showNotification} />
-        )}
-
-        {activeTab === 4 && (
-          <IntegrationsTab showNotification={showNotification} />
-        )}
-      </Box>
-
-      {/* Global notification system */}
-      <Snackbar
-        open={notification.open}
-        autoHideDuration={6000}
-        onClose={handleNotificationClose}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-      >
-        <Alert
-          onClose={handleNotificationClose}
-          severity={notification.severity}
-          sx={{ width: "100%" }}
-        >
-          {notification.message}
-        </Alert>
-      </Snackbar>
-    </Container>
+        <Box>
+          <Suspense fallback={<div>Loading...</div>}>
+            {activeTab === 'profile' && <ProfileTab showNotification={showNotification} />}
+            {activeTab === 'security' && <SecurityTab showNotification={showNotification} />}
+            {activeTab === 'notifications' && <NotificationsTab showNotification={showNotification} />}
+            {activeTab === 'integrations' && <IntegrationsTab showNotification={showNotification} />}
+            {activeTab === 'teams' && <TeamsTab showNotification={showNotification} />}
+          </Suspense>
+        </Box>
+      </Stack>
+    </Box>
   );
 }
 
-// Wrap with authentication HOC
-export default withAuth(SettingsPage);
+export default withAuth(memo(SettingsPage));

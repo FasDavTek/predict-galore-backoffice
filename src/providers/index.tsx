@@ -1,6 +1,6 @@
 'use client';
 
-import { ReduxProvider } from './redux-provider';
+import { QueryProvider } from './query-provider';
 import { ThemeProvider } from './theme-provider';
 import { Toaster } from 'react-hot-toast';
 
@@ -10,7 +10,7 @@ interface ProvidersProps {
 
 export function Providers({ children }: ProvidersProps) {
   return (
-    <ReduxProvider>
+    <QueryProvider>
       <ThemeProvider>
         {children}
         {/* Global toast notifications */}
@@ -45,6 +45,6 @@ export function Providers({ children }: ProvidersProps) {
           }}
         />
       </ThemeProvider>
-    </ReduxProvider>
+    </QueryProvider>
   );
 }

@@ -1,150 +1,123 @@
 'use client';
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import Image from 'next/image';
-import { Box, Typography, Card, CardContent } from '@mui/material';
-import { Description, People, AccountBalanceWallet } from '@mui/icons-material';
-import { AuthFeature } from '@/app/(auth)/features/types/authTypes';
-
-const features: AuthFeature[] = [
-  {
-    icon: <Description sx={{ width: 32, height: 32, color: 'grey.50' }} />,
-    title: 'Share Predictions & Insights',
-    description: 'Create, edit, and remove match predictions for different leagues and sports.',
-  },
-  {
-    icon: <People sx={{ width: 32, height: 32, color: 'grey.50' }} />,
-    title: 'Track Analytics & User Engagement',
-    description: 'Compare consultation fees upfront to access quality care that fits your budget.',
-  },
-  {
-    icon: <AccountBalanceWallet sx={{ width: 32, height: 32, color: 'grey.50' }} />,
-    title: 'Manage Subscriptions & Access Control',
-    description: 'Control subscription tiers, pricing, and access limits',
-  },
-];
-
-const fallbackQuote = {
-  text: 'In football, the worst blindness is only seeing the ball.',
-  author: 'Nelson Rodrigues',
-};
+import { Box, Typography, Stack } from '@mui/material';
+import { 
+  ChatBubbleOutline, 
+  PeopleOutline, 
+  SettingsSuggestOutlined 
+} from '@mui/icons-material';
 
 interface AuthLayoutProps {
   children: React.ReactNode;
 }
 
-export default function AuthLayout({ children }: AuthLayoutProps) {
+export default React.memo(function AuthLayout({ children }: AuthLayoutProps) {
+  const features = useMemo(() => [
+    {
+      icon: <ChatBubbleOutline sx={{ color: 'white', fontSize: 24 }} />,
+      title: 'Share Predictions & Insights',
+      description: 'Create, edit, and remove match predictions for different leagues and sports.',
+    },
+    {
+      icon: <PeopleOutline sx={{ color: 'white', fontSize: 24 }} />,
+      title: 'Track Analytics & User Engagement',
+      description: 'Compare consultation fees upfront to access quality care that fits your budget.',
+    },
+    {
+      icon: <SettingsSuggestOutlined sx={{ color: 'white', fontSize: 24 }} />,
+      title: 'Manage Subscriptions & Access Control',
+      description: 'Control subscription tiers, pricing, and access limits',
+    },
+  ], []);
+
   return (
-    <Box
-      sx={{
-        display: 'flex',
-        width: '100vw',
-        height: '100vh',
-        overflow: 'auto',
-        scrollbarWidth: 'none',
-        '&::-webkit-scrollbar': {
-          display: 'none'
-        },
-        bgcolor: 'background.paper',
-      }}
-    >
-      {/* Left Sidebar - Hidden on mobile/tablet, visible on desktop (lg and up) */}
+    <Box sx={{ display: 'flex', width: '100vw', height: '100vh', overflow: 'hidden' }}>
+      {/* Sidebar Section */}
       <Box
         sx={{
-          width: { xs: '0%', lg: '40%' },
-          minHeight: '100vh',
-          height: 'auto',
-          bgcolor: '#162E08',
-          padding: 4,
+          width: { xs: '0%', lg: '42%' },
+          bgcolor: '#0B1A04', // Deep Forest Green
+          p: '60px',
           display: { xs: 'none', lg: 'flex' },
           flexDirection: 'column',
-          gap: 4,
-          overflow: 'hidden',
+          justifyContent: 'space-between',
         }}
       >
-        <Image
-          src="/predict-galore-logo.png"
-          alt="Predict galore logo"
-          width={208}
-          height={40}
-          priority
-          style={{
-            filter: "drop-shadow(0 25px 25px rgba(0, 0, 0, 0.15))",
-          }}
-        />
+        <Box>
+          <Box sx={{ mb: 6 }}>
+            <Image
+              src="/predict-galore-logo.png"
+              alt="Predict Galore"
+              width={160}
+              height={32}
+              priority
+            />
+          </Box>
 
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3, flex: 1 }}>
-          {features.map((feature, index) => (
-            <Box key={index} sx={{ display: 'flex', gap: 2, alignItems: 'flex-start' }}>
-              <Box sx={{ mt: 0.5 }}>{feature.icon}</Box>
-              <Box>
-                <Typography variant="h6" sx={{ color: 'grey.50', fontWeight: 600, mb: 0.5 }}>
-                  {feature.title}
-                </Typography>
-                <Typography variant="body2" sx={{ color: 'grey.50', lineHeight: 1.5 }}>
-                  {feature.description}
-                </Typography>
-              </Box>
-            </Box>
-          ))}
+          <Stack spacing={5}>
+            {features.map((feature, index) => (
+              <Stack key={index} direction="row" spacing={2.5} alignItems="flex-start">
+                <Box sx={{ mt: 0.5 }}>{feature.icon}</Box>
+                <Box>
+                  <Typography variant="subtitle1" sx={{ color: 'white', fontWeight: 700, mb: 0.5 }}>
+                    {feature.title}
+                  </Typography>
+                  <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.7)', lineHeight: 1.6 }}>
+                    {feature.description}
+                  </Typography>
+                </Box>
+              </Stack>
+            ))}
+          </Stack>
         </Box>
 
-        <Card
+        {/* Red Quote Card */}
+        <Box
           sx={{
-            bgcolor: '#ED1C24',
-            borderRadius: 2,
-            minHeight: 200,
-            display: 'flex',
-            flexDirection: 'column',
-            justifyContent: 'center',
+            bgcolor: '#E32626',
+            borderRadius: '16px',
+            p: '48px 40px',
           }}
         >
-          <CardContent sx={{ padding: 3, textAlign: 'center' }}>
-            <Box
-              component="img"
-              src="/opening-quote.svg"
-              alt="Quote mark"
-              sx={{ width: 18, height: 14, mb: 2 }}
-            />
-            <Typography
-              variant="h5"
-              sx={{
-                fontFamily: 'Ultra',
-                color: 'white',
-                lineHeight: 1.4,
-                mb: 2,
-                fontStyle: 'italic',
-              }}
-            >
-              {`"${fallbackQuote.text}"`}
-            </Typography>
-            <Box
-              component="img"
-              src="/closing-quote.svg"
-              alt="Quote mark"
-              sx={{ width: 18, height: 14, mb: 1 }}
-            />
-            <Typography variant="body1" sx={{ color: 'white', fontWeight: 600 }}>
-              {fallbackQuote.author}
-            </Typography>
-          </CardContent>
-        </Card>
+          <Typography sx={{ color: 'white', fontSize: '64px', fontFamily: 'serif', lineHeight: 0.2, mb: 2 }}>
+            “
+          </Typography>
+          <Typography
+            sx={{
+              color: 'white',
+              fontSize: '3.4rem',
+              lineHeight: 1.1,
+              fontFamily: 'var(--font-ultra)', // Heavy Slab-Serif
+              mb: 2,
+            }}
+          >
+            In football, the worst blindness is only seeing the ball.
+          </Typography>
+          <Typography sx={{ color: 'white', fontSize: '64px', fontFamily: 'serif', lineHeight: 0.2, mb: 4 }}>
+            ”
+          </Typography>
+          <Typography variant="h6" sx={{ color: 'white', fontWeight: 400, fontSize: '1.25rem' }}>
+            -Nelson Rodrigues
+          </Typography>
+        </Box>
       </Box>
 
-      {/* Main Content - Full width on mobile/tablet, 60% on desktop */}
+      {/* Auth Form Section */}
       <Box
         sx={{
-          width: { xs: '100%', lg: '60%' },
-          minHeight: '100vh',
-          height: 'auto',
+          flex: 1,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          padding: { xs: 2, sm: 4 },
+          bgcolor: '#FFFFFF',
         }}
       >
-        {children}
+        <Box sx={{ width: '100%', maxWidth: '440px', p: 4 }}>
+          {children}
+        </Box>
       </Box>
     </Box>
   );
-}
+});

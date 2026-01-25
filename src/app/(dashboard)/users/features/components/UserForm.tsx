@@ -1,13 +1,7 @@
 // features/components/UserForm.tsx
-import React, { useCallback, useState } from "react";
-import {
-  useForm,
-  FormProvider,
-  FieldErrors,
-  SubmitHandler,
-  useWatch,
-} from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
+import React, { useCallback, useState } from 'react';
+import { useForm, FormProvider, FieldErrors, SubmitHandler, useWatch } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
 import {
   Box,
   Typography,
@@ -33,7 +27,7 @@ import {
   FormGroup,
   FormControlLabel,
   Switch,
-} from "@mui/material";
+} from '@mui/material';
 import {
   Home as HomeIcon,
   Person as PersonIcon,
@@ -47,12 +41,12 @@ import {
   Phone as PhoneIcon,
   Security as SecurityIcon,
   WorkspacePremium as PlanIcon,
-} from "@mui/icons-material";
+} from '@mui/icons-material';
 
-import { userFormSchema, UserFormValues } from "../validations/userSchema";
-import { useCreateUserMutation, useUpdateUserMutation } from "../api/userApi";
-import { User, UserRole, SubscriptionPlan } from "../types/user.types";
-import { generateUserInitials } from "../utils/userTransformers";
+import Stack from '@mui/material/Stack';
+import { designTokens } from '@/shared/styles/tokens';
+import { useCreateUser, User, UserRole, SubscriptionPlan, generateUserInitials } from '@/features/users';
+import { userFormSchema, UserFormValues } from '@/features/users/validations/userSchema';
 
 interface UserFormProps {
   user?: User | null;
@@ -60,44 +54,41 @@ interface UserFormProps {
   onCancel?: () => void;
 }
 
-const STEPS = ["Profile Information", "Account Settings", "Review & Submit"];
+const STEPS = ['Profile Information', 'Account Settings', 'Review & Submit'];
 
-export const UserForm: React.FC<UserFormProps> = ({
-  user,
-  onSuccess,
-  onCancel,
-}) => {
+export const UserForm: React.FC<UserFormProps> = ({ user, onSuccess, onCancel }) => {
   const [activeStep, setActiveStep] = useState(0);
   const [snackbar, setSnackbar] = useState<{
     open: boolean;
     message: string;
-    severity: "success" | "error";
+    severity: 'success' | 'error';
   }>({
     open: false,
-    message: "",
-    severity: "success",
+    message: '',
+    severity: 'success',
   });
 
   const isEditing = Boolean(user?.id);
 
-  const [createUser, { isLoading: isCreating }] = useCreateUserMutation();
-  const [updateUser, { isLoading: isUpdating }] = useUpdateUserMutation();
+  const createUserMutation = useCreateUser();
+  const isCreating = createUserMutation.isPending;
+  const isUpdating = false; // Update functionality not available via API
 
   const isLoading = isCreating || isUpdating;
 
-  const methods = useForm<UserFormValues>({
+  const methods = useForm({
     resolver: zodResolver(userFormSchema),
     defaultValues: {
-      firstName: user?.firstName || "",
-      lastName: user?.lastName || "",
-      email: user?.email || "",
-      phone: user?.phone || "",
-      role: user?.role || "user",
-      plan: user?.plan || "free",
+      firstName: user?.firstName || '',
+      lastName: user?.lastName || '',
+      email: user?.email || '',
+      phone: user?.phone || '',
+      role: user?.role || 'user',
+      plan: user?.plan || 'free',
       isActive: user?.isActive ?? true,
       sendWelcomeEmail: false,
     },
-    mode: "onChange",
+    mode: 'onChange',
   });
 
   const {
@@ -109,14 +100,14 @@ export const UserForm: React.FC<UserFormProps> = ({
   } = methods;
 
   // Use useWatch instead of watch for React Compiler compatibility
-  const firstName = useWatch({ control, name: "firstName" });
-  const lastName = useWatch({ control, name: "lastName" });
-  const email = useWatch({ control, name: "email" });
-  const phone = useWatch({ control, name: "phone" });
-  const role = useWatch({ control, name: "role" });
-  const plan = useWatch({ control, name: "plan" });
-  const isActive = useWatch({ control, name: "isActive" });
-  const sendWelcomeEmail = useWatch({ control, name: "sendWelcomeEmail" });
+  const firstName = useWatch({ control, name: 'firstName' });
+  const lastName = useWatch({ control, name: 'lastName' });
+  const email = useWatch({ control, name: 'email' });
+  const phone = useWatch({ control, name: 'phone' });
+  const role = useWatch({ control, name: 'role' });
+  const plan = useWatch({ control, name: 'plan' });
+  const isActive = useWatch({ control, name: 'isActive' }) as boolean;
+  const sendWelcomeEmail = useWatch({ control, name: 'sendWelcomeEmail' }) as boolean;
 
   // Handlers
   const handleFieldChange = useCallback(
@@ -133,8 +124,8 @@ export const UserForm: React.FC<UserFormProps> = ({
 
   const handleNext = async () => {
     const stepFields = {
-      0: ["firstName", "lastName", "email", "phone"],
-      1: ["role", "plan"],
+      0: ['firstName', 'lastName', 'email', 'phone'],
+      1: ['role', 'plan'],
     };
 
     const currentStepFields = stepFields[activeStep as keyof typeof stepFields];
@@ -150,44 +141,50 @@ export const UserForm: React.FC<UserFormProps> = ({
     }
   };
 
-const onSubmit: SubmitHandler<UserFormValues> = async (data) => {
-  try {
-    if (isEditing && user) {
-      // Prepare update data - exclude sendWelcomeEmail for updates using IIFE pattern
-      const updateData = (({ ...rest }) => rest)(data);
-      await updateUser({
-        userId: user.id,
-        userData: updateData,
-      }).unwrap();
+  const onSubmit: SubmitHandler<UserFormValues> = async (data) => {
+    try {
+      if (isEditing && user) {
+        // Update functionality not available via API - only status updates are supported
+        setSnackbar({
+          open: true,
+          message: 'User update is not available. Please use the user detail page to update status.',
+          severity: 'error',
+        });
+        return;
+      } else {
+        // Map form data to CreateUserData format
+        const createData = {
+          firstName: data.firstName,
+          lastName: data.lastName,
+          email: data.email,
+          password: 'TempPassword123!', // TODO: Generate or require password
+          roleName: data.role,
+          phoneNumber: data.phone,
+          permissionIds: [],
+        };
+        await createUserMutation.mutateAsync(createData);
+        setSnackbar({
+          open: true,
+          message: 'User created successfully!',
+          severity: 'success',
+        });
+      }
+
+      setTimeout(() => {
+        onSuccess?.();
+        if (!isEditing) {
+          methods.reset();
+          setActiveStep(0);
+        }
+      }, 1500);
+    } catch {
       setSnackbar({
         open: true,
-        message: "User updated successfully!",
-        severity: "success",
-      });
-    } else {
-      await createUser(data).unwrap();
-      setSnackbar({
-        open: true,
-        message: "User created successfully!",
-        severity: "success",
+        message: isEditing ? 'Failed to update user' : 'Failed to create user',
+        severity: 'error',
       });
     }
-
-    setTimeout(() => {
-      onSuccess?.();
-      if (!isEditing) {
-        methods.reset();
-        setActiveStep(0);
-      }
-    }, 1500);
-  } catch {
-    setSnackbar({
-      open: true,
-      message: isEditing ? "Failed to update user" : "Failed to create user",
-      severity: "error",
-    });
-  }
-};
+  };
 
   const handleConfirmSubmit = handleSubmit(onSubmit);
 
@@ -218,7 +215,7 @@ const onSubmit: SubmitHandler<UserFormValues> = async (data) => {
             firstName={firstName}
             lastName={lastName}
             email={email}
-            phone={phone || ""}
+            phone={phone || ''}
             isEditing={isEditing}
             onFieldChange={handleFieldChange}
           />
@@ -230,8 +227,8 @@ const onSubmit: SubmitHandler<UserFormValues> = async (data) => {
             errors={errors}
             role={role}
             plan={plan}
-            isActive={isActive}
-            sendWelcomeEmail={sendWelcomeEmail}
+            isActive={isActive ?? true}
+            sendWelcomeEmail={sendWelcomeEmail ?? false}
             isEditing={isEditing}
             onFieldChange={handleFieldChange}
           />
@@ -243,11 +240,11 @@ const onSubmit: SubmitHandler<UserFormValues> = async (data) => {
             firstName={firstName}
             lastName={lastName}
             email={email}
-            phone={phone || ""}
+            phone={phone || ''}
             role={role}
             plan={plan}
-            isActive={isActive}
-            sendWelcomeEmail={sendWelcomeEmail}
+            isActive={isActive ?? true}
+            sendWelcomeEmail={sendWelcomeEmail ?? false}
             isEditing={isEditing}
             userInitials={userInitials}
           />
@@ -260,52 +257,47 @@ const onSubmit: SubmitHandler<UserFormValues> = async (data) => {
 
   return (
     <FormProvider {...methods}>
-      <Box
-        sx={{
-        }}
-      >
-        <Box sx={{ p: 4 }}>
+      <Box>
+        <Box sx={{ p: designTokens.spacing.xl }}>
           {/* Header */}
-          <Box sx={{ mb: 4 }}>
-            <Breadcrumbs sx={{ mb: 2 }}>
+          <Box sx={{ mb: designTokens.spacing.xl }}>
+            <Breadcrumbs sx={{ mb: designTokens.spacing.itemGap }}>
               <Link
                 color="inherit"
                 href="/users"
-                sx={{
-                  display: "flex",
-                  alignItems: "center",
-                  textDecoration: "none",
-                }}
-              >
-                <HomeIcon sx={{ mr: 0.5 }} fontSize="small" />
+              sx={{
+                display: 'flex',
+                alignItems: 'center',
+                textDecoration: 'none',
+              }}
+            >
+              <HomeIcon sx={{ mr: 0.5, color: 'text.secondary' }} fontSize="small" />
                 Users
               </Link>
               <Typography color="text.primary" sx={{ fontWeight: 500 }}>
-                {isEditing ? "Edit User" : "Create New User"}
+                {isEditing ? 'Edit User' : 'Create New User'}
               </Typography>
             </Breadcrumbs>
-
           </Box>
 
           {/* Progress Stepper */}
           <Paper
             sx={{
-              p: 3,
-              mb: 4,
-              background: "linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)",
-              border: "1px solid",
-              borderColor: "divider",
-              borderRadius: 2,
+              p: designTokens.spacing.sectionGap,
+              mb: designTokens.spacing.xl,
+              background: 'linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)',
+              border: '1px solid',
+              borderColor: 'divider',
             }}
           >
-            <Stepper activeStep={activeStep} sx={{ mb: 2 }}>
+            <Stepper activeStep={activeStep} sx={{ mb: designTokens.spacing.itemGap }}>
               {STEPS.map((label, index) => (
                 <Step key={label} completed={activeStep > index}>
                   <StepLabel
                     StepIconProps={{
                       sx: {
-                        "&.Mui-completed": { color: "success.main" },
-                        "&.Mui-active": { color: "primary.main" },
+                        '&.Mui-completed': { color: 'success.main' },
+                        '&.Mui-active': { color: 'primary.main' },
                       },
                     }}
                   >
@@ -317,9 +309,9 @@ const onSubmit: SubmitHandler<UserFormValues> = async (data) => {
 
             <Box
               sx={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
               }}
             >
               <Typography variant="body2" color="text.secondary">
@@ -335,17 +327,17 @@ const onSubmit: SubmitHandler<UserFormValues> = async (data) => {
                 />
               )}
             </Box>
-          </Paper>
+            </Paper>
 
           {/* Step Content */}
           <Paper
             sx={{
               p: 4,
               mb: 3,
-              border: "1px solid",
-              borderColor: "divider",
+              border: '1px solid',
+              borderColor: 'divider',
               borderRadius: 2,
-              boxShadow: "0 4px 20px 0 rgba(0,0,0,0.1)",
+              boxShadow: '0 4px 20px 0 rgba(0,0,0,0.1)',
             }}
           >
             {renderStepContent(activeStep)}
@@ -354,9 +346,9 @@ const onSubmit: SubmitHandler<UserFormValues> = async (data) => {
           {/* Navigation Buttons */}
           <Box
             sx={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
               mt: 4,
             }}
           >
@@ -370,14 +362,9 @@ const onSubmit: SubmitHandler<UserFormValues> = async (data) => {
               Back
             </Button>
 
-            <Box sx={{ display: "flex", gap: 2 }}>
+            <Box sx={{ display: 'flex', gap: 2 }}>
               {onCancel && (
-                <Button 
-                  onClick={onCancel} 
-                  variant="text" 
-                  size="large"
-                  startIcon={<CancelIcon />}
-                >
+                <Button onClick={onCancel} variant="text" size="large" startIcon={<CancelIcon />}>
                   Cancel
                 </Button>
               )}
@@ -399,19 +386,19 @@ const onSubmit: SubmitHandler<UserFormValues> = async (data) => {
                   minWidth: 140,
                   background:
                     activeStep === STEPS.length - 1
-                      ? "linear-gradient(45deg, #2E7D32 30%, #4CAF50 90%)"
+                      ? 'linear-gradient(45deg, #2E7D32 30%, #4CAF50 90%)'
                       : undefined,
                 }}
               >
                 {activeStep === STEPS.length - 1
                   ? isLoading
                     ? isEditing
-                      ? "Updating..."
-                      : "Creating..."
+                      ? 'Updating...'
+                      : 'Creating...'
                     : isEditing
-                    ? "Update User"
-                    : "Create User"
-                  : "Next"}
+                      ? 'Update User'
+                      : 'Create User'
+                  : 'Next'}
               </Button>
             </Box>
           </Box>
@@ -422,13 +409,9 @@ const onSubmit: SubmitHandler<UserFormValues> = async (data) => {
           open={snackbar.open}
           autoHideDuration={6000}
           onClose={handleCloseSnackbar}
-          anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+          anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
         >
-          <Alert
-            onClose={handleCloseSnackbar}
-            severity={snackbar.severity}
-            sx={{ width: "100%" }}
-          >
+          <Alert onClose={handleCloseSnackbar} severity={snackbar.severity} sx={{ width: '100%' }}>
             {snackbar.message}
           </Alert>
         </Snackbar>
@@ -459,28 +442,32 @@ const ProfileInformationStep: React.FC<ProfileInformationStepProps> = ({
 }) => {
   return (
     <Box>
-      <Typography
-        variant="h5"
-        gutterBottom
-        sx={{ display: "flex", alignItems: "center", gap: 1, mb: 3 }}
-      >
+      <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: designTokens.spacing.sectionGap }}>
         <PersonIcon color="primary" />
-        Profile Information
-      </Typography>
+        <Typography variant="h5" gutterBottom>
+          Profile Information
+        </Typography>
+      </Stack>
 
-      <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
+      <Stack spacing={designTokens.spacing.sectionGap}>
         {/* Name fields */}
-        <Box sx={{ display: "flex", flexDirection: { xs: "column", sm: "row" }, gap: 3 }}>
+        <Box
+          sx={{
+            display: 'grid',
+            gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)' },
+            gap: designTokens.spacing.sectionGap,
+          }}
+        >
           <TextField
             fullWidth
             label="First Name *"
             value={firstName}
-            onChange={(e) => onFieldChange("firstName", e.target.value)}
+            onChange={(e) => onFieldChange('firstName', e.target.value)}
             error={!!errors.firstName}
             helperText={errors.firstName?.message || "Enter the user's first name"}
             InputProps={{
               startAdornment: (
-                <PersonIcon sx={{ color: "text.secondary", mr: 1 }} fontSize="small" />
+                <PersonIcon sx={{ color: 'text.secondary', mr: 1 }} fontSize="small" />
               ),
             }}
           />
@@ -488,7 +475,7 @@ const ProfileInformationStep: React.FC<ProfileInformationStepProps> = ({
             fullWidth
             label="Last Name *"
             value={lastName}
-            onChange={(e) => onFieldChange("lastName", e.target.value)}
+            onChange={(e) => onFieldChange('lastName', e.target.value)}
             error={!!errors.lastName}
             helperText={errors.lastName?.message || "Enter the user's last name"}
           />
@@ -500,14 +487,12 @@ const ProfileInformationStep: React.FC<ProfileInformationStepProps> = ({
           label="Email Address *"
           type="email"
           value={email}
-          onChange={(e) => onFieldChange("email", e.target.value)}
+          onChange={(e) => onFieldChange('email', e.target.value)}
           error={!!errors.email}
-          helperText={errors.email?.message || "Enter a valid email address"}
+          helperText={errors.email?.message || 'Enter a valid email address'}
           disabled={isEditing}
           InputProps={{
-            startAdornment: (
-              <EmailIcon sx={{ color: "text.secondary", mr: 1 }} fontSize="small" />
-            ),
+            startAdornment: <EmailIcon sx={{ color: 'text.secondary', mr: 1 }} fontSize="small" />,
           }}
         />
 
@@ -516,18 +501,15 @@ const ProfileInformationStep: React.FC<ProfileInformationStepProps> = ({
           fullWidth
           label="Phone Number"
           value={phone}
-          onChange={(e) => onFieldChange("phone", e.target.value)}
+          onChange={(e) => onFieldChange('phone', e.target.value)}
           error={!!errors.phone}
-          helperText={errors.phone?.message || "Optional phone number"}
+          helperText={errors.phone?.message || 'Optional phone number'}
           InputProps={{
-            startAdornment: (
-              <PhoneIcon sx={{ color: "text.secondary", mr: 1 }} fontSize="small" />
-            ),
+            startAdornment: <PhoneIcon sx={{ color: 'text.secondary', mr: 1 }} fontSize="small" />,
           }}
           placeholder="+1 (555) 123-4567"
         />
-      </Box>
-
+      </Stack>
     </Box>
   );
 };
@@ -551,72 +533,88 @@ const AccountSettingsStep: React.FC<AccountSettingsStepProps> = ({
   isEditing,
   onFieldChange,
 }) => {
-  const roleOptions: { value: UserRole; label: string; color: "default" | "primary" | "secondary" }[] = [
-    { value: "user", label: "User", color: "default" },
-    { value: "admin", label: "Admin", color: "primary" },
-    { value: "moderator", label: "Moderator", color: "secondary" },
+  const roleOptions: {
+    value: UserRole;
+    label: string;
+    color: 'default' | 'primary' | 'secondary';
+  }[] = [
+    { value: 'user', label: 'User', color: 'default' },
+    { value: 'admin', label: 'Admin', color: 'primary' },
+    { value: 'moderator', label: 'Moderator', color: 'secondary' },
   ];
 
-  const planOptions: { value: SubscriptionPlan; label: string; color: "default" | "primary" | "info" | "warning" }[] = [
-    { value: "free", label: "Free", color: "default" },
-    { value: "basic", label: "Basic", color: "info" },
-    { value: "premium", label: "Premium", color: "warning" },
-    { value: "enterprise", label: "Enterprise", color: "primary" },
+  const planOptions: {
+    value: SubscriptionPlan;
+    label: string;
+    color: 'default' | 'primary' | 'info' | 'warning';
+  }[] = [
+    { value: 'free', label: 'Free', color: 'default' },
+    { value: 'basic', label: 'Basic', color: 'info' },
+    { value: 'premium', label: 'Premium', color: 'warning' },
+    { value: 'enterprise', label: 'Enterprise', color: 'primary' },
   ];
 
   return (
     <Box>
-      <Typography
-        variant="h5"
-        gutterBottom
-        sx={{ display: "flex", alignItems: "center", gap: 1, mb: 3 }}
-      >
+      <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: designTokens.spacing.sectionGap }}>
         <SecurityIcon color="primary" />
-        Account Settings
-      </Typography>
+        <Typography variant="h5" gutterBottom>
+          Account Settings
+        </Typography>
+      </Stack>
 
-      <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
+      <Stack spacing={designTokens.spacing.sectionGap}>
         {/* Role and Plan selection */}
-        <Box sx={{ display: "flex", flexDirection: { xs: "column", sm: "row" }, gap: 3 }}>
+        <Box
+          sx={{
+            display: 'grid',
+            gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)' },
+            gap: designTokens.spacing.sectionGap,
+          }}
+        >
           <FormControl fullWidth error={!!errors.role}>
             <InputLabel>Role *</InputLabel>
             <Select
               value={role}
-              onChange={(e) => onFieldChange("role", e.target.value)}
+              onChange={(e) => onFieldChange('role', e.target.value)}
               label="Role *"
             >
               {roleOptions.map((option) => (
                 <MenuItem key={option.value} value={option.value}>
-                  <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                  <Stack direction="row" spacing={1} alignItems="center">
                     <Chip label={option.label} color={option.color} size="small" />
-                  </Box>
+                  </Stack>
                 </MenuItem>
               ))}
             </Select>
             {errors.role && (
-              <Typography variant="caption" color="error" sx={{ mt: 1, display: "block" }}>
+              <Typography variant="caption" color="error" sx={{ mt: 1, display: 'block' }}>
                 {errors.role.message}
               </Typography>
             )}
           </FormControl>
-
           <FormControl fullWidth error={!!errors.plan}>
             <InputLabel>Subscription Plan *</InputLabel>
             <Select
               value={plan}
-              onChange={(e) => onFieldChange("plan", e.target.value)}
+              onChange={(e) => onFieldChange('plan', e.target.value)}
               label="Subscription Plan *"
             >
               {planOptions.map((option) => (
                 <MenuItem key={option.value} value={option.value}>
-                  <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                    <Chip label={option.label} color={option.color} size="small" variant="outlined" />
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Chip
+                      label={option.label}
+                      color={option.color}
+                      size="small"
+                      variant="outlined"
+                    />
                   </Box>
                 </MenuItem>
               ))}
             </Select>
             {errors.plan && (
-              <Typography variant="caption" color="error" sx={{ mt: 1, display: "block" }}>
+              <Typography variant="caption" color="error" sx={{ mt: 1, display: 'block' }}>
                 {errors.plan.message}
               </Typography>
             )}
@@ -631,19 +629,17 @@ const AccountSettingsStep: React.FC<AccountSettingsStepProps> = ({
                 control={
                   <Switch
                     checked={isActive}
-                    onChange={(e) => onFieldChange("isActive", e.target.checked)}
+                    onChange={(e) => onFieldChange('isActive', e.target.checked)}
                     color="primary"
                   />
                 }
                 label={
                   <Box>
-                    <Typography variant="subtitle1">
-                      Account Status
-                    </Typography>
+                    <Typography variant="subtitle1">Account Status</Typography>
                     <Typography variant="body2" color="text.secondary">
                       {isActive
-                        ? "User account is active and accessible"
-                        : "User account is disabled and cannot access the platform"}
+                        ? 'User account is active and accessible'
+                        : 'User account is disabled and cannot access the platform'}
                     </Typography>
                   </Box>
                 }
@@ -653,15 +649,13 @@ const AccountSettingsStep: React.FC<AccountSettingsStepProps> = ({
                   control={
                     <Switch
                       checked={sendWelcomeEmail}
-                      onChange={(e) => onFieldChange("sendWelcomeEmail", e.target.checked)}
+                      onChange={(e) => onFieldChange('sendWelcomeEmail', e.target.checked)}
                       color="secondary"
                     />
                   }
                   label={
                     <Box>
-                      <Typography variant="subtitle1">
-                        Send Welcome Email
-                      </Typography>
+                      <Typography variant="subtitle1">Send Welcome Email</Typography>
                       <Typography variant="body2" color="text.secondary">
                         Send account activation and welcome instructions to the user
                       </Typography>
@@ -672,35 +666,47 @@ const AccountSettingsStep: React.FC<AccountSettingsStepProps> = ({
             </FormGroup>
           </CardContent>
         </Card>
-      </Box>
+      </Stack>
 
       {/* Role & Plan Info Cards */}
-      <Box sx={{ display: "flex", flexDirection: "column", gap: 2, mt: 3 }}>
-        <Card sx={{ border: "1px solid", borderColor: "info.light", bgcolor: "info.50" }}>
+      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 3 }}>
+        <Card sx={{ border: '1px solid', borderColor: 'info.light', bgcolor: 'info.50' }}>
           <CardContent>
-            <Typography variant="subtitle2" gutterBottom sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+            <Typography
+              variant="subtitle2"
+              gutterBottom
+              sx={{ display: 'flex', alignItems: 'center', gap: 1 }}
+            >
               <SecurityIcon fontSize="small" />
               Role Information
             </Typography>
             <Typography variant="body2">
-              {role === "admin" && "Admins have full access to all system features and user management."}
-              {role === "moderator" && "Moderators can manage content and users but have limited administrative access."}
-              {role === "user" && "Users have standard access to platform features based on their subscription plan."}
+              {role === 'admin' &&
+                'Admins have full access to all system features and user management.'}
+              {role === 'moderator' &&
+                'Moderators can manage content and users but have limited administrative access.'}
+              {role === 'user' &&
+                'Users have standard access to platform features based on their subscription plan.'}
             </Typography>
           </CardContent>
         </Card>
 
-        <Card sx={{ border: "1px solid", borderColor: "warning.light", bgcolor: "warning.50" }}>
+        <Card sx={{ border: '1px solid', borderColor: 'warning.light', bgcolor: 'warning.50' }}>
           <CardContent>
-            <Typography variant="subtitle2" gutterBottom sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+            <Typography
+              variant="subtitle2"
+              gutterBottom
+              sx={{ display: 'flex', alignItems: 'center', gap: 1 }}
+            >
               <PlanIcon fontSize="small" />
               Plan Features
             </Typography>
             <Typography variant="body2">
-              {plan === "free" && "Free plan includes basic features with limited access."}
-              {plan === "basic" && "Basic plan includes enhanced features and standard support."}
-              {plan === "premium" && "Premium plan includes all features with priority support."}
-              {plan === "enterprise" && "Enterprise plan includes custom features and dedicated support."}
+              {plan === 'free' && 'Free plan includes basic features with limited access.'}
+              {plan === 'basic' && 'Basic plan includes enhanced features and standard support.'}
+              {plan === 'premium' && 'Premium plan includes all features with priority support.'}
+              {plan === 'enterprise' &&
+                'Enterprise plan includes custom features and dedicated support.'}
             </Typography>
           </CardContent>
         </Card>
@@ -735,16 +741,16 @@ const SubmissionPreviewStep: React.FC<SubmissionPreviewStepProps> = ({
   userInitials,
 }) => {
   const roleLabels = {
-    user: "User",
-    admin: "Admin",
-    moderator: "Moderator",
+    user: 'User',
+    admin: 'Admin',
+    moderator: 'Moderator',
   };
 
   const planLabels = {
-    free: "Free",
-    basic: "Basic",
-    premium: "Premium",
-    enterprise: "Enterprise",
+    free: 'Free',
+    basic: 'Basic',
+    premium: 'Premium',
+    enterprise: 'Enterprise',
   };
 
   return (
@@ -752,7 +758,7 @@ const SubmissionPreviewStep: React.FC<SubmissionPreviewStepProps> = ({
       <Typography
         variant="h5"
         gutterBottom
-        sx={{ display: "flex", alignItems: "center", gap: 1, mb: 3 }}
+        sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 3 }}
       >
         <GroupIcon color="primary" />
         Review & Submit
@@ -761,17 +767,21 @@ const SubmissionPreviewStep: React.FC<SubmissionPreviewStepProps> = ({
       {/* Profile Summary Card */}
       <Card sx={{ mb: 3 }}>
         <CardContent>
-          <Typography variant="subtitle1" gutterBottom sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+          <Typography
+            variant="subtitle1"
+            gutterBottom
+            sx={{ display: 'flex', alignItems: 'center', gap: 1 }}
+          >
             <PersonIcon fontSize="small" />
             Profile Summary
           </Typography>
-          <Box sx={{ display: "flex", alignItems: "center", gap: 3, mt: 2 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 3, mt: 2 }}>
             <Avatar
               sx={{
-                bgcolor: "primary.main",
+                bgcolor: 'primary.main',
                 width: 80,
                 height: 80,
-                fontSize: "1.5rem",
+                fontSize: '1.5rem',
               }}
             >
               {userInitials}
@@ -780,7 +790,7 @@ const SubmissionPreviewStep: React.FC<SubmissionPreviewStepProps> = ({
               <Typography variant="h6" gutterBottom>
                 {firstName} {lastName}
               </Typography>
-              <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
                 <Typography variant="body2" color="text.secondary">
                   <strong>Email:</strong> {email}
                 </Typography>
@@ -789,21 +799,31 @@ const SubmissionPreviewStep: React.FC<SubmissionPreviewStepProps> = ({
                     <strong>Phone:</strong> {phone}
                   </Typography>
                 )}
-                <Box sx={{ display: "flex", gap: 1, mt: 1 }}>
+                <Box sx={{ display: 'flex', gap: 1, mt: 1 }}>
                   <Chip
                     label={roleLabels[role]}
-                    color={role === "admin" ? "primary" : role === "moderator" ? "secondary" : "default"}
+                    color={
+                      role === 'admin' ? 'primary' : role === 'moderator' ? 'secondary' : 'default'
+                    }
                     size="small"
                   />
                   <Chip
                     label={planLabels[plan]}
-                    color={plan === "enterprise" ? "primary" : plan === "premium" ? "warning" : plan === "basic" ? "info" : "default"}
+                    color={
+                      plan === 'enterprise'
+                        ? 'primary'
+                        : plan === 'premium'
+                          ? 'warning'
+                          : plan === 'basic'
+                            ? 'info'
+                            : 'default'
+                    }
                     variant="outlined"
                     size="small"
                   />
                   <Chip
-                    label={isActive ? "Active" : "Inactive"}
-                    color={isActive ? "success" : "error"}
+                    label={isActive ? 'Active' : 'Inactive'}
+                    color={isActive ? 'success' : 'error'}
                     size="small"
                   />
                 </Box>
@@ -814,14 +834,25 @@ const SubmissionPreviewStep: React.FC<SubmissionPreviewStepProps> = ({
       </Card>
 
       {/* Account Details */}
-      <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
         <Card>
           <CardContent>
-            <Typography variant="subtitle1" gutterBottom sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+            <Typography
+              variant="subtitle1"
+              gutterBottom
+              sx={{ display: 'flex', alignItems: 'center', gap: 1 }}
+            >
               <SecurityIcon fontSize="small" />
               Account Details
             </Typography>
-            <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" }, gap: 2, mt: 2 }}>
+            <Box
+              sx={{
+                display: 'grid',
+                gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' },
+                gap: 2,
+                mt: 2,
+              }}
+            >
               <Box>
                 <Typography variant="body2" color="text.secondary">
                   Role
@@ -843,7 +874,7 @@ const SubmissionPreviewStep: React.FC<SubmissionPreviewStepProps> = ({
                   Account Status
                 </Typography>
                 <Typography variant="body1" fontWeight={500}>
-                  {isActive ? "Active" : "Inactive"}
+                  {isActive ? 'Active' : 'Inactive'}
                 </Typography>
               </Box>
               {!isEditing && (
@@ -852,7 +883,7 @@ const SubmissionPreviewStep: React.FC<SubmissionPreviewStepProps> = ({
                     Welcome Email
                   </Typography>
                   <Typography variant="body1" fontWeight={500}>
-                    {sendWelcomeEmail ? "Will be sent" : "Not sending"}
+                    {sendWelcomeEmail ? 'Will be sent' : 'Not sending'}
                   </Typography>
                 </Box>
               )}
@@ -862,10 +893,12 @@ const SubmissionPreviewStep: React.FC<SubmissionPreviewStepProps> = ({
       </Box>
 
       {/* Action Summary */}
-      <Card sx={{ mt: 3, bgcolor: "primary.50", border: "1px solid", borderColor: "primary.light" }}>
+      <Card
+        sx={{ mt: 3, bgcolor: 'primary.50', border: '1px solid', borderColor: 'primary.light' }}
+      >
         <CardContent>
           <Typography variant="subtitle2" gutterBottom color="primary.main">
-            Ready to {isEditing ? "Update" : "Create"} User Account
+            Ready to {isEditing ? 'Update' : 'Create'} User Account
           </Typography>
           <Typography variant="body2" color="text.secondary">
             {isEditing

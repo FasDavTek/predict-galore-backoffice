@@ -1,4 +1,8 @@
-import { User, UserStatus, SubscriptionPlan } from '../../app/(dashboard)/users/features/types/user.types';
+import {
+  User,
+  UserStatus,
+  SubscriptionPlan,
+} from '@/features/users';
 
 export const getUserStatusColor = (status: UserStatus): string => {
   const colorMap: Record<UserStatus, string> = {
@@ -33,15 +37,15 @@ export const formatUserCount = (count: number): string => {
 export const shouldShowWarning = (user: User): boolean => {
   const thirtyDaysAgo = new Date();
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-  
+
   if (user.status === 'inactive') {
     return true;
   }
-  
+
   if (user.lastActive) {
     return new Date(user.lastActive) < thirtyDaysAgo;
   }
-  
+
   return false;
 };
 
@@ -64,12 +68,12 @@ export const getUserInitials = (user: User): string => {
 
 export const formatLastActive = (lastActive?: string): string => {
   if (!lastActive) return 'Never';
-  
+
   const lastActiveDate = new Date(lastActive);
   const now = new Date();
   const diffTime = Math.abs(now.getTime() - lastActiveDate.getTime());
   const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-  
+
   if (diffDays === 1) return 'Today';
   if (diffDays === 2) return 'Yesterday';
   if (diffDays <= 7) return `${diffDays - 1} days ago`;
@@ -82,7 +86,9 @@ export const canUserBeDeleted = (user: User): boolean => {
   return user.plan === 'free' && user.role === 'user';
 };
 
-export const getUserStatusBadgeVariant = (status: UserStatus): 'success' | 'error' | 'warning' | 'default' => {
+export const getUserStatusBadgeVariant = (
+  status: UserStatus
+): 'success' | 'error' | 'warning' | 'default' => {
   const variantMap: Record<UserStatus, 'success' | 'error' | 'warning' | 'default'> = {
     active: 'success',
     inactive: 'error',
@@ -92,8 +98,13 @@ export const getUserStatusBadgeVariant = (status: UserStatus): 'success' | 'erro
   return variantMap[status];
 };
 
-export const getPlanBadgeVariant = (plan: SubscriptionPlan): 'primary' | 'secondary' | 'warning' | 'info' | 'default' => {
-  const variantMap: Record<SubscriptionPlan, 'primary' | 'secondary' | 'warning' | 'info' | 'default'> = {
+export const getPlanBadgeVariant = (
+  plan: SubscriptionPlan
+): 'primary' | 'secondary' | 'warning' | 'info' | 'default' => {
+  const variantMap: Record<
+    SubscriptionPlan,
+    'primary' | 'secondary' | 'warning' | 'info' | 'default'
+  > = {
     free: 'default',
     basic: 'info',
     premium: 'warning',
@@ -115,6 +126,73 @@ export const userUtils = {
   canUserBeDeleted,
   getUserStatusBadgeVariant,
   getPlanBadgeVariant,
+};
+
+// ====================
+// Time Range Utilities
+// ====================
+
+import type { TimeRange } from '@/shared/types/common.types';
+
+/**
+ * Convert TimeRange to date filter object with from/to dates
+ * Returns ISO date strings in format YYYY-MM-DD
+ */
+export const getTimeRangeDates = (timeRange: TimeRange): { from: string; to: string } | null => {
+  const now = new Date();
+  const to = now.toISOString().split('T')[0]; // YYYY-MM-DD format
+  let from: string;
+
+  switch (timeRange) {
+    case 'today':
+      from = to;
+      break;
+    case 'thisWeek':
+      const weekAgo = new Date(now);
+      weekAgo.setDate(weekAgo.getDate() - 7);
+      from = weekAgo.toISOString().split('T')[0];
+      break;
+    case 'thisMonth':
+      const monthAgo = new Date(now);
+      monthAgo.setMonth(monthAgo.getMonth() - 1);
+      from = monthAgo.toISOString().split('T')[0];
+      break;
+    case 'lastMonth':
+      const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      const lastMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0);
+      return {
+        from: lastMonthStart.toISOString().split('T')[0],
+        to: lastMonthEnd.toISOString().split('T')[0],
+      };
+    case 'thisYear':
+      const yearStart = new Date(now.getFullYear(), 0, 1);
+      from = yearStart.toISOString().split('T')[0];
+      break;
+    case 'default':
+    default:
+      // All time - return null to indicate no date filter
+      return null;
+  }
+
+  return { from, to };
+};
+
+/**
+ * Convert TimeRange to UTC date-time strings for API calls
+ * Returns ISO date-time strings in UTC format
+ */
+export const getTimeRangeUtcDates = (timeRange: TimeRange): { fromUtc?: string; toUtc?: string } | null => {
+  const dates = getTimeRangeDates(timeRange);
+  if (!dates) return null;
+
+  // Convert to UTC date-time strings (start of day for from, end of day for to)
+  const fromDate = new Date(`${dates.from}T00:00:00.000Z`);
+  const toDate = new Date(`${dates.to}T23:59:59.999Z`);
+
+  return {
+    fromUtc: fromDate.toISOString(),
+    toUtc: toDate.toISOString(),
+  };
 };
 
 export default userUtils;

@@ -1,20 +1,13 @@
-import React, { useState } from "react";
-import {
-  Box,
-  Typography,
-  Button,
-  Divider,
-  Switch,
-  Stack,
-  Alert,
-  Skeleton,
-} from "@mui/material";
+import React, { useState, useEffect } from 'react';
+import { Box, Typography, Button, Divider, Switch, Stack, Alert, Skeleton } from '@mui/material';
+import { useProfileSettings, useUpdateNotificationSettings } from '@/features/settings';
+import { UpdateNotificationSettingsData } from '@/features/settings';
 
-// Hooks
-import { useSettings } from "../hooks/useSettings";
+interface TabComponentProps {
+  showNotification: (message: string, severity: 'success' | 'error' | 'warning') => void;
+}
 
-// Types
-import { TabComponentProps, NotificationUpdatePayload } from "../types";
+type NotificationUpdatePayload = UpdateNotificationSettingsData;
 
 // Notification Switch Component
 interface NotificationSwitchProps {
@@ -24,26 +17,23 @@ interface NotificationSwitchProps {
   disabled?: boolean;
 }
 
-const NotificationSwitch: React.FC<NotificationSwitchProps> = ({ 
-  label, 
-  checked, 
-  onChange, 
-  disabled = false 
+const NotificationSwitch: React.FC<NotificationSwitchProps> = ({
+  label,
+  checked,
+  onChange,
+  disabled = false,
 }) => (
-  <Box sx={{ 
-    display: 'flex', 
-    justifyContent: 'space-between', 
-    alignItems: 'center',
-    width: '100%',
-    py: 1
-  }}>
+  <Box
+    sx={{
+      display: 'flex',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      width: '100%',
+      py: 1,
+    }}
+  >
     <Typography variant="body2">{label}</Typography>
-    <Switch
-      checked={checked}
-      onChange={onChange}
-      color="primary"
-      disabled={disabled}
-    />
+    <Switch checked={checked} onChange={onChange} color="primary" disabled={disabled} />
   </Box>
 );
 
@@ -74,114 +64,131 @@ const NotificationsSkeleton = () => (
   </Box>
 );
 
-/**
- * NotificationsTab - Handles notification preferences
- */
+// Default notification settings (all false when null from backend)
+const defaultNotificationSettings: NotificationUpdatePayload = {
+  enableInApp: false,
+  enableEmail: false,
+  enablePush: false,
+  enableInAppPred: false,
+  enablePushPred: false,
+  enableEmailPred: false,
+  payEnableInApp: false,
+  payEnablePush: false,
+  payEnableEmail: false,
+  secEnableInApp: false,
+  secEnablePush: false,
+  secEnableEmail: false,
+};
+
 export const NotificationsTab: React.FC<TabComponentProps> = ({ showNotification }) => {
-  const {
-    notificationSettings,
-    isNotificationsLoading,
-    notificationsError,
-    updateNotificationSettings,
-    isUpdatingNotifications,
-  } = useSettings();
+  // API hooks
+  const { data: profileData, isLoading, error, refetch } = useProfileSettings();
+  const updateSettingsMutation = useUpdateNotificationSettings();
+  const isUpdating = updateSettingsMutation.isPending;
 
-  // Initialize local state directly with notificationSettings or default values
-  const [localSettings, setLocalSettings] = useState<NotificationUpdatePayload>(() => {
-    // Use functional initialization to merge default values with fetched settings
-    const defaultSettings = {
-      enableInApp: true,
-      enableEmail: true,
-      enablePush: true,
-      enableSms: true,
-      enableEmailPred: true,
-      enableInAppPred: true,
-      enablePushPred: true,
-      payEnableEmail: true,
-      payEnableInApp: true,
-      payEnablePush: true,
-      secEnableEmail: true,
-      secEnableInApp: true,
-      secEnablePush: true,
-    };
-
-    // If we have notificationSettings from the API, use them, otherwise use defaults
-    return notificationSettings ? { ...defaultSettings, ...notificationSettings } : defaultSettings;
-  });
-
-  // Track changes for save button
+  // State
+  const [settings, setSettings] = useState<NotificationUpdatePayload>(defaultNotificationSettings);
   const [hasChanges, setHasChanges] = useState(false);
 
-  // Handle toggle changes for the new structure
-  const handleToggleChange = (field: keyof NotificationUpdatePayload) => 
-    (event: React.ChangeEvent<HTMLInputElement>) => {
-    const newSettings = {
-      ...localSettings,
-      [field]: event.target.checked
-    };
-    
-    setLocalSettings(newSettings);
-    setHasChanges(true);
-  };
+  // Initialize settings from API
+  useEffect(() => {
+    if (profileData?.notificationSettings) {
+      const notificationSettings = profileData.notificationSettings;
+      
+      // Convert null values to false for UI display (switches need boolean values)
+      // When all values are null, all switches should be unchecked (false)
+      const normalizedSettings: NotificationUpdatePayload = {
+        enableInApp: notificationSettings.enableInApp ?? false,
+        enableEmail: notificationSettings.enableEmail ?? false,
+        enablePush: notificationSettings.enablePush ?? false,
+        enableInAppPred: notificationSettings.enableInAppPred ?? false,
+        enablePushPred: notificationSettings.enablePushPred ?? false,
+        enableEmailPred: notificationSettings.enableEmailPred ?? false,
+        payEnableInApp: notificationSettings.payEnableInApp ?? false,
+        payEnablePush: notificationSettings.payEnablePush ?? false,
+        payEnableEmail: notificationSettings.payEnableEmail ?? false,
+        secEnableInApp: notificationSettings.secEnableInApp ?? false,
+        secEnablePush: notificationSettings.secEnablePush ?? false,
+        secEnableEmail: notificationSettings.secEnableEmail ?? false,
+      };
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- Initializing state from API data
+      setSettings(normalizedSettings);
+      setHasChanges(false);
+    } else if (profileData && !profileData.notificationSettings) {
+      // If notificationSettings is null/undefined, initialize with all false
+      setSettings(defaultNotificationSettings);
+      setHasChanges(false);
+    }
+  }, [profileData]);
 
-  // Save all changes
+  // Handle toggle changes
+  const handleToggleChange =
+    (field: keyof NotificationUpdatePayload) => (event: React.ChangeEvent<HTMLInputElement>) => {
+      setSettings((prev: NotificationUpdatePayload) => ({ 
+        ...prev, 
+        [field]: event.target.checked 
+      }));
+      setHasChanges(true);
+    };
+
+  // Save changes
   const handleSaveChanges = async () => {
     try {
-      const success = await updateNotificationSettings(localSettings);
-      if (success) {
-        showNotification('Notification settings updated!', 'success');
-        setHasChanges(false);
-      } else {
-        showNotification('Failed to update notifications', 'error');
-        // Revert to last saved settings on error
-        if (notificationSettings) {
-          setLocalSettings(notificationSettings);
-        }
-        setHasChanges(false);
+      // Send settings as-is (they're already normalized to booleans)
+      await updateSettingsMutation.mutateAsync(settings);
+
+      showNotification('Notification settings updated!', 'success');
+      setHasChanges(false);
+      refetch();
+    } catch (error: unknown) {
+      let errorMessage = 'Failed to update notifications';
+
+      if (error && typeof error === 'object' && 'data' in error) {
+        const apiError = error as { data?: { message?: string } };
+        errorMessage = apiError.data?.message || errorMessage;
       }
-    } catch {
-      showNotification('Failed to update notifications', 'error');
+
+      showNotification(errorMessage, 'error');
     }
   };
 
-  if (isNotificationsLoading) {
+  if (isLoading) {
     return <NotificationsSkeleton />;
-  }
-
-  if (notificationsError && !notificationSettings) {
-    return (
-      <Alert severity="error" sx={{ my: 2 }}>
-        {notificationsError}
-      </Alert>
-    );
   }
 
   return (
     <Box>
-      {/* Header Section */}
+      {error && (
+        <Alert severity="error" sx={{ my: 2 }}>
+          Failed to load notification settings. Please try again.
+          <Button size="small" onClick={() => refetch()} sx={{ ml: 2 }}>
+            Retry
+          </Button>
+        </Alert>
+      )}
+      
       <div className="grid grid-cols-1 md:grid-cols-12 gap-8">
-        {/* Left Column - Header and Description */}
+        {/* Left Column */}
         <Box className="md:col-span-4">
           <Typography variant="h6" sx={{ mb: 1 }}>
             Notifications
           </Typography>
           <Typography variant="body2" sx={{ mb: 3 }}>
-            Get notifications to find out what&apos;s going on when you&apos;re
-            not online. You can turn them off anytime.
+            Get notifications to find out what&apos;s going on when you&apos;re not online. You can
+            turn them off anytime.
           </Typography>
-          
-          {/* Save Changes Button */}
+
           <Button
             variant="contained"
             onClick={handleSaveChanges}
-            disabled={!hasChanges || isUpdatingNotifications}
+            disabled={!hasChanges || isUpdating || !!error}
             sx={{
               minWidth: 120,
               opacity: hasChanges ? 1 : 0,
-              transition: 'opacity 0.3s ease'
+              transition: 'opacity 0.3s ease',
             }}
           >
-            {isUpdatingNotifications ? 'Saving...' : 'Save Changes'}
+            {isUpdating ? 'Saving...' : 'Save Changes'}
           </Button>
         </Box>
 
@@ -189,7 +196,7 @@ export const NotificationsTab: React.FC<TabComponentProps> = ({ showNotification
         <Box className="md:col-span-8">
           {/* User Activity Section */}
           <Box sx={{ mb: 4 }}>
-            <Typography variant="subtitle1" sx={{ fontWeight: "medium", mb: 1 }}>
+            <Typography variant="subtitle1" sx={{ fontWeight: 'medium', mb: 1 }}>
               User Activity
             </Typography>
             <Typography variant="body2" sx={{ mb: 2 }}>
@@ -199,27 +206,21 @@ export const NotificationsTab: React.FC<TabComponentProps> = ({ showNotification
             <Stack spacing={2}>
               <NotificationSwitch
                 label="In-app notifications"
-                checked={localSettings.enableInApp}
-                onChange={handleToggleChange("enableInApp")}
-                disabled={isUpdatingNotifications}
+                checked={settings.enableInApp === true}
+                onChange={handleToggleChange('enableInApp')}
+                disabled={isUpdating}
               />
               <NotificationSwitch
                 label="Push notifications"
-                checked={localSettings.enablePush}
-                onChange={handleToggleChange("enablePush")}
-                disabled={isUpdatingNotifications}
+                checked={settings.enablePush === true}
+                onChange={handleToggleChange('enablePush')}
+                disabled={isUpdating}
               />
               <NotificationSwitch
                 label="Email notifications"
-                checked={localSettings.enableEmail}
-                onChange={handleToggleChange("enableEmail")}
-                disabled={isUpdatingNotifications}
-              />
-              <NotificationSwitch
-                label="SMS notifications"
-                checked={localSettings.enableSms}
-                onChange={handleToggleChange("enableSms")}
-                disabled={isUpdatingNotifications}
+                checked={settings.enableEmail === true}
+                onChange={handleToggleChange('enableEmail')}
+                disabled={isUpdating}
               />
             </Stack>
           </Box>
@@ -228,7 +229,7 @@ export const NotificationsTab: React.FC<TabComponentProps> = ({ showNotification
 
           {/* Predictions & Posts Section */}
           <Box sx={{ mb: 4 }}>
-            <Typography variant="subtitle1" sx={{ fontWeight: "medium", mb: 1 }}>
+            <Typography variant="subtitle1" sx={{ fontWeight: 'medium', mb: 1 }}>
               Predictions & Posts
             </Typography>
             <Typography variant="body2" sx={{ mb: 2 }}>
@@ -238,21 +239,21 @@ export const NotificationsTab: React.FC<TabComponentProps> = ({ showNotification
             <Stack spacing={2}>
               <NotificationSwitch
                 label="In-app prediction notifications"
-                checked={localSettings.enableInAppPred}
-                onChange={handleToggleChange("enableInAppPred")}
-                disabled={isUpdatingNotifications}
+                checked={settings.enableInAppPred === true}
+                onChange={handleToggleChange('enableInAppPred')}
+                disabled={isUpdating}
               />
               <NotificationSwitch
                 label="Push prediction notifications"
-                checked={localSettings.enablePushPred}
-                onChange={handleToggleChange("enablePushPred")}
-                disabled={isUpdatingNotifications}
+                checked={settings.enablePushPred === true}
+                onChange={handleToggleChange('enablePushPred')}
+                disabled={isUpdating}
               />
               <NotificationSwitch
                 label="Email prediction notifications"
-                checked={localSettings.enableEmailPred}
-                onChange={handleToggleChange("enableEmailPred")}
-                disabled={isUpdatingNotifications}
+                checked={settings.enableEmailPred === true}
+                onChange={handleToggleChange('enableEmailPred')}
+                disabled={isUpdating}
               />
             </Stack>
           </Box>
@@ -261,31 +262,31 @@ export const NotificationsTab: React.FC<TabComponentProps> = ({ showNotification
 
           {/* Payments & Transactions Section */}
           <Box sx={{ mb: 4 }}>
-            <Typography variant="subtitle1" sx={{ fontWeight: "medium", mb: 1 }}>
+            <Typography variant="subtitle1" sx={{ fontWeight: 'medium', mb: 1 }}>
               Payments & Transactions
             </Typography>
             <Typography variant="body2" sx={{ mb: 2 }}>
               Notifications for successful and failed subscriptions payments
             </Typography>
-            
+
             <Stack spacing={2}>
               <NotificationSwitch
                 label="In-app payment notifications"
-                checked={localSettings.payEnableInApp}
-                onChange={handleToggleChange("payEnableInApp")}
-                disabled={isUpdatingNotifications}
+                checked={settings.payEnableInApp === true}
+                onChange={handleToggleChange('payEnableInApp')}
+                disabled={isUpdating}
               />
               <NotificationSwitch
                 label="Push payment notifications"
-                checked={localSettings.payEnablePush}
-                onChange={handleToggleChange("payEnablePush")}
-                disabled={isUpdatingNotifications}
+                checked={settings.payEnablePush === true}
+                onChange={handleToggleChange('payEnablePush')}
+                disabled={isUpdating}
               />
               <NotificationSwitch
                 label="Email payment notifications"
-                checked={localSettings.payEnableEmail}
-                onChange={handleToggleChange("payEnableEmail")}
-                disabled={isUpdatingNotifications}
+                checked={settings.payEnableEmail === true}
+                onChange={handleToggleChange('payEnableEmail')}
+                disabled={isUpdating}
               />
             </Stack>
           </Box>
@@ -294,7 +295,7 @@ export const NotificationsTab: React.FC<TabComponentProps> = ({ showNotification
 
           {/* Security Alerts Section */}
           <Box sx={{ mb: 4 }}>
-            <Typography variant="subtitle1" sx={{ fontWeight: "medium", mb: 1 }}>
+            <Typography variant="subtitle1" sx={{ fontWeight: 'medium', mb: 1 }}>
               Security Alerts
             </Typography>
             <Typography variant="body2" sx={{ mb: 2 }}>
@@ -303,21 +304,21 @@ export const NotificationsTab: React.FC<TabComponentProps> = ({ showNotification
             <Stack spacing={2}>
               <NotificationSwitch
                 label="In-app security notifications"
-                checked={localSettings.secEnableInApp}
-                onChange={handleToggleChange("secEnableInApp")}
-                disabled={isUpdatingNotifications}
+                checked={settings.secEnableInApp === true}
+                onChange={handleToggleChange('secEnableInApp')}
+                disabled={isUpdating}
               />
               <NotificationSwitch
                 label="Push security notifications"
-                checked={localSettings.secEnablePush}
-                onChange={handleToggleChange("secEnablePush")}
-                disabled={isUpdatingNotifications}
+                checked={settings.secEnablePush === true}
+                onChange={handleToggleChange('secEnablePush')}
+                disabled={isUpdating}
               />
               <NotificationSwitch
                 label="Email security notifications"
-                checked={localSettings.secEnableEmail}
-                onChange={handleToggleChange("secEnableEmail")}
-                disabled={isUpdatingNotifications}
+                checked={settings.secEnableEmail === true}
+                onChange={handleToggleChange('secEnableEmail')}
+                disabled={isUpdating}
               />
             </Stack>
           </Box>

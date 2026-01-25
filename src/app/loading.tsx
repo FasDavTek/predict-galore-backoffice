@@ -1,61 +1,32 @@
 // src/app/loading.tsx
-"use client";
+'use client';
 
-import { Box, Typography } from "@mui/material";
-import { motion } from "framer-motion";
-import Image from "next/image";
-import { useState, useEffect } from "react";
+import { Box, Typography } from '@mui/material';
+import { motion } from 'framer-motion';
+import Image from 'next/image';
+import { useState } from 'react';
 
 export default function Loading() {
-  const [floatingShapes, setFloatingShapes] = useState<Array<{left: string; top: string}>>([]);
-  const [isClient, setIsClient] = useState(false);
+  // Generate random positions once using useState lazy initializer
+  const [floatingShapes] = useState<Array<{ left: string; top: string }>>(() => 
+    [...Array(8)].map(() => ({
+      left: `${Math.random() * 100}%`,
+      top: `${Math.random() * 100}%`,
+    }))
+  );
 
-  useEffect(() => {
-    setIsClient(true);
-    
-    // Generate random positions on client side only
-    const generateShapes = () => {
-      return [...Array(8)].map(() => ({
-        left: `${Math.random() * 100}%`,
-        top: `${Math.random() * 100}%`,
-      }));
-    };
-
-    const frameId = requestAnimationFrame(() => {
-      setFloatingShapes(generateShapes());
-    });
-
-    return () => {
-      cancelAnimationFrame(frameId);
-    };
-  }, []);
-
-  // Predefined positions for SSR/initial render
-  const predefinedShapes = [
-    { left: "20%", top: "30%" },
-    { left: "70%", top: "20%" },
-    { left: "40%", top: "70%" },
-    { left: "80%", top: "60%" },
-    { left: "25%", top: "50%" },
-    { left: "60%", top: "35%" },
-    { left: "35%", top: "15%" },
-    { left: "75%", top: "80%" },
-  ];
-
-  const shapes = isClient ? floatingShapes : predefinedShapes;
+  const shapes = floatingShapes;
 
   return (
-    <Box
-      className="flex flex-col items-center justify-center min-h-screen bg-linear-to-br from-green-50 via-white to-green-100 dark:from-gray-900 dark:via-gray-800 dark:to-green-900 text-center space-y-8"
-    >
+    <Box className="flex flex-col items-center justify-center min-h-screen bg-linear-to-br from-green-50 via-white to-green-100 dark:from-gray-900 dark:via-gray-800 dark:to-green-900 text-center space-y-8">
       {/* Main Logo Container */}
       <motion.div
         className="relative"
         initial={{ opacity: 0, scale: 0.5 }}
         animate={{ opacity: 1, scale: 1 }}
-        transition={{ 
-          duration: 0.8, 
-          ease: [0.25, 0.46, 0.45, 0.94] 
+        transition={{
+          duration: 0.8,
+          ease: [0.25, 0.46, 0.45, 0.94],
         }}
       >
         {/* Logo with multiple animation effects */}
@@ -69,13 +40,13 @@ export default function Loading() {
             y: {
               duration: 3,
               repeat: Infinity,
-              ease: "easeInOut"
+              ease: 'easeInOut',
             },
             rotate: {
               duration: 4,
               repeat: Infinity,
-              ease: "easeInOut"
-            }
+              ease: 'easeInOut',
+            },
           }}
         >
           <Image
@@ -96,7 +67,7 @@ export default function Loading() {
           transition={{
             duration: 2,
             repeat: Infinity,
-            ease: "easeOut"
+            ease: 'easeOut',
           }}
         />
 
@@ -121,7 +92,7 @@ export default function Loading() {
               duration: 2,
               repeat: Infinity,
               delay: i * 0.2,
-              ease: "easeInOut"
+              ease: 'easeInOut',
             }}
             style={{
               left: '50%',
@@ -150,7 +121,7 @@ export default function Loading() {
             animate={{ opacity: 1 }}
             transition={{ staggerChildren: 0.1 }}
           >
-            {"Predicting Excellence".split("").map((char, index) => (
+            {'Predicting Excellence'.split('').map((char, index) => (
               <motion.span
                 key={index}
                 initial={{ opacity: 0, y: 10 }}
@@ -177,18 +148,14 @@ export default function Loading() {
             transition={{
               duration: 2,
               repeat: Infinity,
-              ease: "easeInOut",
-              repeatType: "reverse"
+              ease: 'easeInOut',
+              repeatType: 'reverse',
             }}
           />
         </motion.div>
 
         {/* Subtle Loading Text */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 1.2 }}
-        >
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.2 }}>
           <Typography
             variant="body2"
             className="text-green-600 dark:text-green-400 font-medium tracking-wide"
@@ -220,7 +187,7 @@ export default function Loading() {
               duration: 4,
               repeat: Infinity,
               delay: i * 0.5,
-              ease: "easeInOut"
+              ease: 'easeInOut',
             }}
           />
         ))}

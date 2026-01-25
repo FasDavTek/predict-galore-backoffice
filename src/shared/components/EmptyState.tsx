@@ -1,10 +1,7 @@
 import React from 'react';
-import {
-  Box,
-  Typography,
-  Button,
-  Paper,
-} from '@mui/material';
+import { Box, Typography, Button, Paper } from '@mui/material';
+import Stack from '@mui/material/Stack';
+import { designTokens } from '../styles/tokens';
 import {
   SearchOff as SearchOffIcon,
   FolderOff as FolderOffIcon,
@@ -20,17 +17,17 @@ export interface EmptyStateProps {
    * - 'error': Error state (use ErrorState instead)
    */
   variant?: 'data' | 'search';
-  
+
   /**
    * Custom title for the empty state
    */
   title?: string;
-  
+
   /**
    * Custom description for the empty state
    */
   description?: string;
-  
+
   /**
    * Primary action button configuration
    */
@@ -39,7 +36,7 @@ export interface EmptyStateProps {
     onClick: () => void;
     icon?: React.ReactNode;
   };
-  
+
   /**
    * Secondary action button configuration
    */
@@ -48,12 +45,12 @@ export interface EmptyStateProps {
     onClick: () => void;
     icon?: React.ReactNode;
   };
-  
+
   /**
    * Height of the container
    */
   height?: number | string;
-  
+
   /**
    * Additional CSS classes
    */
@@ -80,14 +77,16 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
         return {
           icon: <SearchOffIcon sx={{ fontSize: 64, color: 'text.secondary' }} />,
           defaultTitle: 'No Results Found',
-          defaultDescription: 'Try adjusting your search criteria or filters to find what you\'re looking for.',
+          defaultDescription:
+            "Try adjusting your search criteria or filters to find what you're looking for.",
         };
       case 'data':
       default:
         return {
           icon: <FolderOffIcon sx={{ fontSize: 64, color: 'text.secondary' }} />,
           defaultTitle: 'No Data Available',
-          defaultDescription: 'There\'s no data to display at the moment. Get started by creating your first item.',
+          defaultDescription:
+            "There's no data to display at the moment. Get started by creating your first item.",
         };
     }
   };
@@ -95,7 +94,7 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
   const config = getDefaultConfig();
 
   return (
-    <Paper 
+    <Paper
       elevation={0}
       className={className}
       sx={{
@@ -105,43 +104,36 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
         alignItems: 'center',
         justifyContent: 'center',
         textAlign: 'center',
-        p: 4,
-        borderRadius: 2,
+        p: designTokens.spacing.xl,
+        borderRadius: designTokens.borderRadius.md,
         border: '1px dashed',
         borderColor: 'divider',
         backgroundColor: 'background.default',
       }}
     >
-      {/* Icon */}
-      <Box sx={{ mb: 3 }}>
-        {config.icon}
-      </Box>
+      <Stack spacing={designTokens.spacing.sectionGap} alignItems="center">
+        {/* Icon */}
+        <Box>{config.icon}</Box>
 
-      {/* Title */}
-      <Typography 
-        variant="h6" 
-        color="text.primary" 
-        gutterBottom
-        sx={{ fontWeight: 600, mb: 1 }}
-      >
-        {title || config.defaultTitle}
-      </Typography>
+        {/* Title */}
+        <Typography variant="h6" color="text.primary" gutterBottom sx={{ fontWeight: designTokens.typography.fontWeight.semibold }}>
+          {title || config.defaultTitle}
+        </Typography>
 
-      {/* Description */}
-      <Typography 
-        variant="body2" 
-        color="text.secondary"
-        sx={{ 
-          maxWidth: 400,
-          mb: 4,
-          lineHeight: 1.6 
-        }}
-      >
-        {description || config.defaultDescription}
-      </Typography>
+        {/* Description */}
+        <Typography
+          variant="body2"
+          color="text.secondary"
+          sx={{
+            maxWidth: 400,
+            lineHeight: designTokens.typography.lineHeight.relaxed,
+          }}
+        >
+          {description || config.defaultDescription}
+        </Typography>
 
-      {/* Actions */}
-      <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', justifyContent: 'center' }}>
+        {/* Actions */}
+        <Stack direction="row" spacing={designTokens.spacing.itemGap} justifyContent="center" flexWrap="wrap">
         {primaryAction && (
           <Button
             variant="contained"
@@ -152,7 +144,7 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
             {primaryAction.label}
           </Button>
         )}
-        
+
         {secondaryAction && (
           <Button
             variant="outlined"
@@ -163,7 +155,8 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
             {secondaryAction.label}
           </Button>
         )}
-      </Box>
+      </Stack>
+      </Stack>
     </Paper>
   );
 };

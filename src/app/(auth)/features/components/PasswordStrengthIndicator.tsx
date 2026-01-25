@@ -1,40 +1,38 @@
-import React from 'react';
+import React, { memo, useMemo } from 'react';
 import { Box, Typography, LinearProgress } from '@mui/material';
-import { PasswordStrengthProps } from '@/app/(auth)/features/types/authTypes';
+import { PasswordStrengthProps } from '@/features/auth';
 
-export const PasswordStrengthIndicator: React.FC<PasswordStrengthProps> = ({ password }) => {
-  const calculateStrength = (): number => {
-    let strength = 0;
-    if (password.length > 0) strength += 20;
-    if (password.length >= 8) strength += 20;
-    if (/[A-Z]/.test(password)) strength += 20;
-    if (/[a-z]/.test(password)) strength += 20;
-    if (/[0-9!@#$%^&*(),.?":{}|<>]/.test(password)) strength += 20;
-    return Math.min(strength, 100);
-  };
+export const PasswordStrengthIndicator = memo<PasswordStrengthProps>(({ password }) => {
+  const strength = useMemo(() => {
+    let value = 0;
+    if (password.length > 0) value += 20;
+    if (password.length >= 8) value += 20;
+    if (/[A-Z]/.test(password)) value += 20;
+    if (/[a-z]/.test(password)) value += 20;
+    if (/[0-9!@#$%^&*(),.?":{}|<>]/.test(password)) value += 20;
+    return Math.min(value, 100);
+  }, [password]);
 
-  const strength = calculateStrength();
-  
-  const strengthText = (): string => {
+  const strengthText = useMemo(() => {
     if (password.length === 0) return '';
     if (strength < 40) return 'Weak';
     if (strength < 80) return 'Medium';
     return 'Strong';
-  };
+  }, [password.length, strength]);
 
-  const getColor = (): string => {
+  const color = useMemo(() => {
     if (password.length === 0) return 'grey';
     if (strength < 40) return 'error.main';
     if (strength < 80) return 'warning.main';
     return 'success.main';
-  };
+  }, [password.length, strength]);
 
   return (
     <Box sx={{ width: '100%', mb: 2 }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
         <Typography variant="caption">Password strength</Typography>
-        <Typography variant="caption" sx={{ color: getColor() }}>
-          {strengthText()}
+        <Typography variant="caption" sx={{ color }}>
+          {strengthText}
         </Typography>
       </Box>
       <LinearProgress
@@ -44,9 +42,11 @@ export const PasswordStrengthIndicator: React.FC<PasswordStrengthProps> = ({ pas
           height: 6,
           borderRadius: 3,
           backgroundColor: 'grey.200',
-          '& .MuiLinearProgress-bar': { backgroundColor: getColor() },
+          '& .MuiLinearProgress-bar': { backgroundColor: color },
         }}
       />
     </Box>
   );
-};
+});
+
+PasswordStrengthIndicator.displayName = 'PasswordStrengthIndicator';

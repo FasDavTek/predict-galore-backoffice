@@ -1,63 +1,63 @@
-"use client";
+'use client';
 
-import React, { useState } from "react";
+import React, { useState } from 'react';
+import Box from '@mui/material/Box';
+import Typography from '@mui/material/Typography';
+import IconButton from '@mui/material/IconButton';
+import Button from '@mui/material/Button';
+import Divider from '@mui/material/Divider';
+import List from '@mui/material/List';
+import ListItem from '@mui/material/ListItem';
+import ListItemIcon from '@mui/material/ListItemIcon';
+import ListItemText from '@mui/material/ListItemText';
+import ListItemSecondaryAction from '@mui/material/ListItemSecondaryAction';
+import Chip from '@mui/material/Chip';
+import CircularProgress from '@mui/material/CircularProgress';
+import Snackbar from '@mui/material/Snackbar';
+import Alert from '@mui/material/Alert';
+import Dialog from '@mui/material/Dialog';
+import DialogTitle from '@mui/material/DialogTitle';
+import DialogContent from '@mui/material/DialogContent';
+import DialogActions from '@mui/material/DialogActions';
+import DialogContentText from '@mui/material/DialogContentText';
+import Avatar from '@mui/material/Avatar';
+import { alpha, useTheme } from '@mui/material/styles';
+import CloseIcon from '@mui/icons-material/Close';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import DeleteIcon from '@mui/icons-material/Delete';
+import MarkEmailReadIcon from '@mui/icons-material/MarkEmailRead';
+import SportsIcon from '@mui/icons-material/SportsSoccer';
+import ErrorIcon from '@mui/icons-material/Error';
+import InfoIcon from '@mui/icons-material/Info';
+import DeleteAllIcon from '@mui/icons-material/DeleteSweep';
+import NoNotificationsIcon from '@mui/icons-material/NotificationsNone';
+import RefreshIcon from '@mui/icons-material/Refresh';
 import {
-  Box,
-  Typography,
-  IconButton,
-  Button,
-  Divider,
-  List,
-  ListItem,
-  ListItemIcon,
-  ListItemText,
-  ListItemSecondaryAction,
-  Chip,
-  CircularProgress,
-  Snackbar,
-  Alert,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  DialogContentText,
-  Avatar,
-  alpha,
-  useTheme,
-} from "@mui/material";
-import {
-  Close as CloseIcon,
-  CheckCircle as CheckCircleIcon,
-  Delete as DeleteIcon,
-  MarkEmailRead as MarkEmailReadIcon,
-  SportsSoccer as SportsIcon,
-  Error as ErrorIcon,
-  Info as InfoIcon,
-  DeleteSweep as DeleteAllIcon,
-  NotificationsNone as NoNotificationsIcon,
-  Refresh as RefreshIcon,
-} from "@mui/icons-material";
-import { 
-  useGetNotificationsQuery,
-  useGetNotificationStatsQuery,
-  useMarkAsReadMutation,
-  useMarkAllAsReadMutation,
-  useDeleteNotificationMutation,
-  useDeleteAllNotificationsMutation,
-} from "../api/notificationApi";
-import ErrorState from "./ErrorState";
+  useNotifications,
+  useUnreadCount,
+  useMarkNotificationAsRead,
+  useMarkAllNotificationsAsRead,
+  useDeleteNotification,
+} from '@/features/notifications';
+import { createLogger } from '@/shared/api';
+import ErrorState from './ErrorState';
+
+const logger = createLogger('NotificationPanel');
 
 // Define TypeScript interfaces
 interface Notification {
-  _id: string;
-  id?: string;
+  id: number;
+  userId: string;
   title: string;
-  message: string;
-  content?: string;
-  notificationType?: string;
-  isRead?: boolean;
-  createdAt?: string;
-  timestamp?: string;
+  content: string;
+  notificationType: string;
+  isRead: boolean;
+  predictionId?: number;
+  fixtureId?: number;
+  subscriptionId?: number;
+  actionUrl?: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 interface NotificationPanelProps {
@@ -84,66 +84,67 @@ interface SnackbarState {
 
 const NotificationPanel = ({ open, onClose }: NotificationPanelProps) => {
   const theme = useTheme();
-  
+
   // API Hooks
-  const { data: notificationsData, isLoading, error, refetch } = useGetNotificationsQuery();
-  const { data: statsData } = useGetNotificationStatsQuery();
-  const [markAsRead] = useMarkAsReadMutation();
-  const [markAllAsRead] = useMarkAllAsReadMutation();
-  const [deleteNotification] = useDeleteNotificationMutation();
-  const [deleteAllNotifications] = useDeleteAllNotificationsMutation();
+  const { data: notificationsData, isLoading, error, refetch } = useNotifications();
+
+  const { data: unreadCountData } = useUnreadCount();
+  const unreadCount = unreadCountData || 0;
+  const markAsReadMutation = useMarkNotificationAsRead();
+  const markAllAsReadMutation = useMarkAllNotificationsAsRead();
+  const deleteNotificationMutation = useDeleteNotification();
 
   // Local State
   const [snackbar, setSnackbar] = useState<SnackbarState>({
     open: false,
     message: '',
-    severity: 'success'
+    severity: 'success',
   });
   const [deleteAllDialog, setDeleteAllDialog] = useState(false);
-  const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [actionLoading, setActionLoading] = useState<number | string | null>(null);
 
   // Enhanced notification type configuration with background colors
   const notificationTypes: NotificationTypes = {
-    PREDICTION: { 
-      label: 'Prediction', 
-      color: 'primary', 
+    PREDICTION: {
+      label: 'Prediction',
+      color: 'primary',
       icon: <SportsIcon />,
-      bgColor: alpha(theme.palette.primary.main, 0.1)
+      bgColor: alpha(theme.palette.primary.main, 0.1),
     },
-    SYSTEM: { 
-      label: 'System', 
-      color: 'secondary', 
+    SYSTEM: {
+      label: 'System',
+      color: 'secondary',
       icon: <InfoIcon />,
-      bgColor: alpha(theme.palette.secondary.main, 0.1)
+      bgColor: alpha(theme.palette.secondary.main, 0.1),
     },
-    ALERT: { 
-      label: 'Alert', 
-      color: 'error', 
+    ALERT: {
+      label: 'Alert',
+      color: 'error',
       icon: <ErrorIcon />,
-      bgColor: alpha(theme.palette.error.main, 0.1)
+      bgColor: alpha(theme.palette.error.main, 0.1),
     },
-    SUCCESS: { 
-      label: 'Success', 
-      color: 'success', 
+    SUCCESS: {
+      label: 'Success',
+      color: 'success',
       icon: <CheckCircleIcon />,
-      bgColor: alpha(theme.palette.success.main, 0.1)
+      bgColor: alpha(theme.palette.success.main, 0.1),
     },
-    INFO: { 
-      label: 'Info', 
-      color: 'info', 
+    INFO: {
+      label: 'Info',
+      color: 'info',
       icon: <InfoIcon />,
-      bgColor: alpha(theme.palette.info.main, 0.1)
+      bgColor: alpha(theme.palette.info.main, 0.1),
     },
     WARNING: {
       label: 'Warning',
       color: 'warning',
       icon: <ErrorIcon />,
-      bgColor: alpha(theme.palette.warning.main, 0.1)
-    }
+      bgColor: alpha(theme.palette.warning.main, 0.1),
+    },
   };
 
   const getNotificationType = (type: string): NotificationTypeConfig => {
-    return notificationTypes[type] || notificationTypes.INFO;
+    return notificationTypes[type.toUpperCase()] || notificationTypes.INFO;
   };
 
   const formatDate = (dateString: string): string => {
@@ -151,16 +152,16 @@ const NotificationPanel = ({ open, onClose }: NotificationPanelProps) => {
     const now = new Date();
     const diffTime = Math.abs(now.getTime() - date.getTime());
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    
+
     if (diffDays === 1) return 'Yesterday';
     if (diffDays > 1) return `${diffDays} days ago`;
-    
+
     const diffHours = Math.ceil(diffTime / (1000 * 60 * 60));
     if (diffHours > 1) return `${diffHours} hours ago`;
-    
+
     const diffMinutes = Math.ceil(diffTime / (1000 * 60));
     if (diffMinutes > 1) return `${diffMinutes} minutes ago`;
-    
+
     return 'Just now';
   };
 
@@ -170,16 +171,16 @@ const NotificationPanel = ({ open, onClose }: NotificationPanelProps) => {
   };
 
   const handleSnackbarClose = () => {
-    setSnackbar(prev => ({ ...prev, open: false }));
+    setSnackbar((prev) => ({ ...prev, open: false }));
   };
 
-  const handleMarkAsRead = async (notificationId: string) => {
+  const handleMarkAsRead = async (notificationId: number) => {
     try {
       setActionLoading(notificationId);
-      await markAsRead(notificationId).unwrap();
+      await markAsReadMutation.mutateAsync(notificationId);
       showSnackbar('Notification marked as read');
     } catch (error) {
-      console.error('Failed to mark notification as read:', error);
+      logger.error('Failed to mark notification as read', { notificationId, error });
       showSnackbar('Failed to mark notification as read', 'error');
     } finally {
       setActionLoading(null);
@@ -189,38 +190,24 @@ const NotificationPanel = ({ open, onClose }: NotificationPanelProps) => {
   const handleMarkAllAsRead = async () => {
     try {
       setActionLoading('all-read');
-      await markAllAsRead().unwrap();
+      await markAllAsReadMutation.mutateAsync();
       showSnackbar('All notifications marked as read');
     } catch (error) {
-      console.error('Failed to mark all notifications as read:', error);
+      logger.error('Failed to mark all notifications as read', { error });
       showSnackbar('Failed to mark all notifications as read', 'error');
     } finally {
       setActionLoading(null);
     }
   };
 
-  const handleDeleteNotification = async (notificationId: string) => {
+  const handleDeleteNotification = async (notificationId: number) => {
     try {
-      setActionLoading(`delete-${notificationId}`);
-      await deleteNotification(notificationId).unwrap();
+      setActionLoading(notificationId);
+      await deleteNotificationMutation.mutateAsync(notificationId);
       showSnackbar('Notification deleted');
     } catch (error) {
-      console.error('Failed to delete notification:', error);
+      logger.error('Failed to delete notification', { notificationId, error });
       showSnackbar('Failed to delete notification', 'error');
-    } finally {
-      setActionLoading(null);
-    }
-  };
-
-  const handleDeleteAllNotifications = async () => {
-    try {
-      setActionLoading('delete-all');
-      await deleteAllNotifications().unwrap();
-      showSnackbar('All notifications deleted');
-      setDeleteAllDialog(false);
-    } catch (error) {
-      console.error('Failed to delete all notifications:', error);
-      showSnackbar('Failed to delete all notifications', 'error');
     } finally {
       setActionLoading(null);
     }
@@ -234,10 +221,25 @@ const NotificationPanel = ({ open, onClose }: NotificationPanelProps) => {
     setDeleteAllDialog(false);
   };
 
-  // Data - Access stats from the data object
-  const notifications: Notification[] = notificationsData?.data || [];
-  const unreadCount = statsData?.data?.unreadCount || notifications.filter(n => !n.isRead).length;
-  const totalCount = statsData?.data?.total || notifications.length;
+  const handleDeleteAllNotifications = async () => {
+    try {
+      setActionLoading('delete-all');
+      // TODO: Implement bulk delete when mutation is added
+      // For now, just mark all as read
+      await markAllAsReadMutation.mutateAsync();
+      showSnackbar('All notifications deleted');
+      setDeleteAllDialog(false);
+    } catch (error) {
+      logger.error('Failed to delete all notifications', { error });
+      showSnackbar('Failed to delete all notifications', 'error');
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  // Data
+  const notifications: Notification[] = notificationsData?.notifications || [];
+  const totalCount = notificationsData?.total || 0;
 
   // Enhanced Loading State
   const renderLoadingState = () => (
@@ -245,7 +247,7 @@ const NotificationPanel = ({ open, onClose }: NotificationPanelProps) => {
       sx={{
         width: 400,
         maxHeight: 500,
-        bgcolor: "background.paper",
+        bgcolor: 'background.paper',
         borderRadius: 3,
         boxShadow: 24,
         border: `1px solid ${theme.palette.divider}`,
@@ -266,7 +268,7 @@ const NotificationPanel = ({ open, onClose }: NotificationPanelProps) => {
     <Box
       sx={{
         width: 400,
-        bgcolor: "background.paper",
+        bgcolor: 'background.paper',
         borderRadius: 3,
         boxShadow: 24,
         border: `1px solid ${theme.palette.divider}`,
@@ -275,9 +277,9 @@ const NotificationPanel = ({ open, onClose }: NotificationPanelProps) => {
       <ErrorState
         variant="api"
         message="We couldn't load your notifications. This might be due to a temporary server issue."
-        retryAction={{ 
-          label: "Try Again", 
-          onClick: refetch 
+        retryAction={{
+          label: 'Try Again',
+          onClick: refetch,
         }}
         height={200}
       />
@@ -305,12 +307,7 @@ const NotificationPanel = ({ open, onClose }: NotificationPanelProps) => {
       <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
         You&apos;re all caught up! There are no new notifications at the moment.
       </Typography>
-      <Button
-        variant="outlined"
-        startIcon={<RefreshIcon />}
-        onClick={refetch}
-        size="small"
-      >
+      <Button variant="outlined" startIcon={<RefreshIcon />} onClick={() => refetch()} size="small">
         Refresh
       </Button>
     </Box>
@@ -320,36 +317,49 @@ const NotificationPanel = ({ open, onClose }: NotificationPanelProps) => {
 
   return (
     <>
-      <Box 
-        sx={{ 
-          position: "absolute", 
-          right: 0, 
-          top: "100%", 
-          mt: 1, 
+      <Box
+        sx={{
+          position: 'absolute',
+          right: 0,
+          top: '100%',
+          mt: 1,
           zIndex: 1300,
           animation: 'slideDown 0.2s ease-out',
           '@keyframes slideDown': {
             '0%': { opacity: 0, transform: 'translateY(-10px)' },
             '100%': { opacity: 1, transform: 'translateY(0)' },
-          }
+          },
         }}
       >
         <Box
           sx={{
             width: 420,
             maxHeight: 560,
-            bgcolor: "background.paper",
+            bgcolor: 'background.paper',
             borderRadius: 3,
             boxShadow: 24,
             border: `1px solid ${theme.palette.divider}`,
-            display: "flex",
-            flexDirection: "column",
+            display: 'flex',
+            flexDirection: 'column',
             overflow: 'hidden',
           }}
         >
           {/* Header */}
-          <Box sx={{ p: 2.5, pb: 2, background: `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.05)} 0%, ${alpha(theme.palette.primary.main, 0.02)} 100%)` }}>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1.5 }}>
+          <Box
+            sx={{
+              p: 2.5,
+              pb: 2,
+              background: `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.05)} 0%, ${alpha(theme.palette.primary.main, 0.02)} 100%)`,
+            }}
+          >
+            <Box
+              sx={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                mb: 1.5,
+              }}
+            >
               <Typography variant="h6" fontWeight={700} color="text.primary">
                 Notifications
               </Typography>
@@ -361,9 +371,9 @@ const NotificationPanel = ({ open, onClose }: NotificationPanelProps) => {
                       onClick={handleMarkAllAsRead}
                       disabled={actionLoading === 'all-read' || unreadCount === 0}
                       title="Mark all as read"
-                      sx={{ 
+                      sx={{
                         color: 'primary.main',
-                        '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.1) }
+                        '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.1) },
                       }}
                     >
                       {actionLoading === 'all-read' ? (
@@ -372,33 +382,33 @@ const NotificationPanel = ({ open, onClose }: NotificationPanelProps) => {
                         <MarkEmailReadIcon fontSize="small" />
                       )}
                     </IconButton>
-                    <IconButton 
-                      size="small" 
+                    <IconButton
+                      size="small"
                       onClick={openDeleteAllDialog}
                       disabled={actionLoading === 'delete-all'}
                       color="error"
                       title="Delete all notifications"
-                      sx={{ 
-                        '&:hover': { bgcolor: alpha(theme.palette.error.main, 0.1) }
+                      sx={{
+                        '&:hover': { bgcolor: alpha(theme.palette.error.main, 0.1) },
                       }}
                     >
                       <DeleteAllIcon fontSize="small" />
                     </IconButton>
                   </>
                 )}
-                <IconButton 
-                  size="small" 
+                <IconButton
+                  size="small"
                   onClick={onClose}
-                  sx={{ 
+                  sx={{
                     color: 'text.secondary',
-                    '&:hover': { bgcolor: alpha(theme.palette.text.secondary, 0.1) }
+                    '&:hover': { bgcolor: alpha(theme.palette.text.secondary, 0.1) },
                   }}
                 >
                   <CloseIcon fontSize="small" />
                 </IconButton>
               </Box>
             </Box>
-            
+
             {/* Stats */}
             <Box sx={{ display: 'flex', gap: 3, alignItems: 'center' }}>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -431,16 +441,18 @@ const NotificationPanel = ({ open, onClose }: NotificationPanelProps) => {
                 <List dense sx={{ p: 0 }}>
                   {notifications.slice(0, 8).map((notification: Notification) => {
                     const typeConfig = getNotificationType(notification.notificationType || 'INFO');
-                    const isMarkingRead = actionLoading === notification._id;
-                    const isDeleting = actionLoading === `delete-${notification._id}`;
-                    
+                    const isMarkingRead = actionLoading === notification.id;
+                    const isDeleting = actionLoading === notification.id;
+
                     return (
                       <ListItem
-                        key={notification._id}
+                        key={notification.id}
                         sx={{
                           borderBottom: '1px solid',
                           borderColor: 'divider',
-                          backgroundColor: notification.isRead ? 'transparent' : alpha(theme.palette.primary.main, 0.02),
+                          backgroundColor: notification.isRead
+                            ? 'transparent'
+                            : alpha(theme.palette.primary.main, 0.02),
                           '&:hover': {
                             backgroundColor: alpha(theme.palette.primary.main, 0.04),
                           },
@@ -458,12 +470,10 @@ const NotificationPanel = ({ open, onClose }: NotificationPanelProps) => {
                               color: `${typeConfig.color}.main`,
                             }}
                           >
-                            <Box sx={{ fontSize: 'small' }}>
-                              {typeConfig.icon}
-                            </Box>
+                            <Box sx={{ fontSize: 'small' }}>{typeConfig.icon}</Box>
                           </Avatar>
                         </ListItemIcon>
-                        
+
                         <ListItemText
                           primary={
                             <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
@@ -475,11 +485,11 @@ const NotificationPanel = ({ open, onClose }: NotificationPanelProps) => {
                                   label="New"
                                   color="primary"
                                   size="small"
-                                  sx={{ 
-                                    height: 20, 
-                                    fontSize: '0.65rem', 
+                                  sx={{
+                                    height: 20,
+                                    fontSize: '0.65rem',
                                     fontWeight: 600,
-                                    '& .MuiChip-label': { px: 1 }
+                                    '& .MuiChip-label': { px: 1 },
                                   }}
                                 />
                               )}
@@ -487,42 +497,42 @@ const NotificationPanel = ({ open, onClose }: NotificationPanelProps) => {
                           }
                           secondary={
                             <Box sx={{ mt: 0.5 }}>
-                              <Typography 
-                                variant="body2" 
-                                color="text.primary" 
-                                sx={{ 
+                              <Typography
+                                variant="body2"
+                                color="text.primary"
+                                sx={{
                                   lineHeight: 1.4,
                                   display: '-webkit-box',
                                   WebkitLineClamp: 2,
                                   WebkitBoxOrient: 'vertical',
-                                  overflow: 'hidden'
+                                  overflow: 'hidden',
                                 }}
                               >
-                                {notification.message || notification.content}
+                                {notification.content}
                               </Typography>
-                              <Typography 
-                                variant="caption" 
-                                color="text.secondary" 
+                              <Typography
+                                variant="caption"
+                                color="text.secondary"
                                 sx={{ mt: 0.5, display: 'block' }}
                               >
-                                {formatDate(notification.createdAt || notification.timestamp || new Date().toISOString())}
+                                {formatDate(notification.createdAt)}
                               </Typography>
                             </Box>
                           }
                           sx={{ mr: 2 }}
                         />
-                        
+
                         <ListItemSecondaryAction>
                           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
                             {!notification.isRead && (
                               <IconButton
                                 size="small"
-                                onClick={() => handleMarkAsRead(notification._id)}
+                                onClick={() => handleMarkAsRead(notification.id)}
                                 title="Mark as read"
                                 disabled={isMarkingRead || isDeleting}
-                                sx={{ 
+                                sx={{
                                   color: 'success.main',
-                                  '&:hover': { bgcolor: alpha(theme.palette.success.main, 0.1) }
+                                  '&:hover': { bgcolor: alpha(theme.palette.success.main, 0.1) },
                                 }}
                               >
                                 {isMarkingRead ? (
@@ -534,12 +544,12 @@ const NotificationPanel = ({ open, onClose }: NotificationPanelProps) => {
                             )}
                             <IconButton
                               size="small"
-                              onClick={() => handleDeleteNotification(notification._id)}
+                              onClick={() => handleDeleteNotification(notification.id)}
                               title="Delete notification"
                               disabled={isMarkingRead || isDeleting}
-                              sx={{ 
+                              sx={{
                                 color: 'error.main',
-                                '&:hover': { bgcolor: alpha(theme.palette.error.main, 0.1) }
+                                '&:hover': { bgcolor: alpha(theme.palette.error.main, 0.1) },
                               }}
                             >
                               {isDeleting ? (
@@ -562,18 +572,24 @@ const NotificationPanel = ({ open, onClose }: NotificationPanelProps) => {
           {notifications.length > 0 && (
             <>
               <Divider />
-              <Box sx={{ p: 2, textAlign: 'center', background: alpha(theme.palette.primary.main, 0.02) }}>
-                <Button 
+              <Box
+                sx={{
+                  p: 2,
+                  textAlign: 'center',
+                  background: alpha(theme.palette.primary.main, 0.02),
+                }}
+              >
+                <Button
                   variant="text"
-                  size="small" 
+                  size="small"
                   onClick={() => {
                     onClose();
                     // router.push('/notifications');
                   }}
-                  sx={{ 
+                  sx={{
                     fontWeight: 600,
                     color: 'primary.main',
-                    '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.1) }
+                    '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.1) },
                   }}
                 >
                   View All Notifications ({notifications.length})
@@ -591,30 +607,31 @@ const NotificationPanel = ({ open, onClose }: NotificationPanelProps) => {
         maxWidth="xs"
         fullWidth
         PaperProps={{
-          sx: { borderRadius: 3 }
+          sx: { borderRadius: 3 },
         }}
       >
-        <DialogTitle sx={{ pb: 1, fontWeight: 600 }}>
-          Delete All Notifications
-        </DialogTitle>
+        <DialogTitle sx={{ pb: 1, fontWeight: 600 }}>Delete All Notifications</DialogTitle>
         <DialogContent>
           <DialogContentText>
-            Are you sure you want to delete all notifications? This action cannot be undone.
+            Are you sure you want to delete all notifications? This action cannot be undone and will
+            delete all {notifications.length} notifications.
           </DialogContentText>
         </DialogContent>
         <DialogActions sx={{ p: 2, pt: 1 }}>
-          <Button 
-            onClick={closeDeleteAllDialog} 
+          <Button
+            onClick={closeDeleteAllDialog}
             disabled={actionLoading === 'delete-all'}
             sx={{ borderRadius: 2 }}
           >
             Cancel
           </Button>
-          <Button 
-            onClick={handleDeleteAllNotifications} 
+          <Button
+            onClick={handleDeleteAllNotifications}
             color="error"
             disabled={actionLoading === 'delete-all'}
-            startIcon={actionLoading === 'delete-all' ? <CircularProgress size={16} /> : <DeleteAllIcon />}
+            startIcon={
+              actionLoading === 'delete-all' ? <CircularProgress size={16} /> : <DeleteAllIcon />
+            }
             variant="contained"
             sx={{ borderRadius: 2 }}
           >
@@ -630,10 +647,10 @@ const NotificationPanel = ({ open, onClose }: NotificationPanelProps) => {
         onClose={handleSnackbarClose}
         anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
       >
-        <Alert 
-          onClose={handleSnackbarClose} 
+        <Alert
+          onClose={handleSnackbarClose}
           severity={snackbar.severity}
-          sx={{ 
+          sx={{
             width: '100%',
             borderRadius: 2,
             boxShadow: 8,

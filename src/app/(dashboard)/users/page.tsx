@@ -1,292 +1,136 @@
-// src/app/(dashboard)/users/page.tsx
-"use client";
+/**
+ * Users Page
+ * Clean, simple implementation
+ */
 
-import React, { useState, useMemo } from "react";
-import {
-  Box,
-  Container,
-  Dialog,
-  Snackbar,
-  Alert,
-  Skeleton,
-} from "@mui/material";
+'use client';
 
-// Components
-import { UsersTable } from "./features/components/UsersTable";
-import { UserAnalytics } from "./features/components/UserAnalytics";
-import { UserForm } from "./features/components/UserForm";
-import UsersPageHeader, { TimeRange } from "./features/components/UsersPageHeader";
-import { UsersPageLoadingSkeleton } from "./features/components/UsersPageLoadingSkeleton";
-
-// Global State Components
-import { ErrorState } from "@/shared/components/ErrorState";
-
-// Hooks
-import { useUsers } from "./features/hooks/useUsers";
-
-// Types - Only import from your types file
-import { User } from "./features/types/user.types";
-
-// Auth
-import { RootState } from "@/store/store";
-import { useSelector } from "react-redux";
-import withAuth from "@/hoc/withAuth";
+import { useState, useCallback, useMemo, memo } from 'react';
+import { useRouter } from 'next/navigation';
+import { Box } from '@mui/material';
+import { PageHeader, TimeRange } from '@/shared/components/PageHeader';
+import { designTokens } from '@/shared/styles/tokens';
+import { UsersTable } from './features/components/UsersTable';
+import { UserAnalytics } from './features/components/UserAnalytics';
+import { UsersPageLoadingSkeleton } from './features/components/UsersPageLoadingSkeleton';
+import { useUsers, useUsersStore, UsersFilter, User } from '@/features/users';
+import { useAuth } from '@/features/auth';
+import { getTimeRangeUtcDates } from '@/shared/lib/helpers';
+import { useQueryClient } from '@tanstack/react-query';
+import withAuth from '@/hoc/with-auth';
 
 function UsersPage() {
-  const [isUserFormOpen, setIsUserFormOpen] = useState(false);
-  const [selectedUser, setSelectedUser] = useState<User | null>(null);
-  const [selectedUsers, setSelectedUsers] = useState<User[]>([]);
-  const [snackbar, setSnackbar] = useState<{
-    open: boolean;
-    message: string;
-    severity: "success" | "error";
-  }>({
-    open: false,
-    message: "",
-    severity: "success",
-  });
-
-  // Global time range state for users page
-  const [globalTimeRange, setGlobalTimeRange] = useState<TimeRange>('default');
-  
-  // Refresh trigger state
-  const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const router = useRouter();
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+  const { filters, setFilters, clearFilters } = useUsersStore();
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [timeRange, setTimeRange] = useState<TimeRange>('default');
 
-  // Redux auth state
-  const user = useSelector((state: RootState) => state.auth.user);
+  // Get UTC date range from time range filter
+  const dateRange = useMemo(() => getTimeRangeUtcDates(timeRange), [timeRange]);
 
-  const {
-    users,
-    pagination,
-    isLoading,
-    error,
-    currentFilters,
-    localSearch,
-    handleSearchChange,
-    handleFilterChange,
-    handleClearFilters,
-    handlePageChange,
-    handleDeleteUser,
-    handleExportUsers,
-    refetchUsers,
-  } = useUsers();
+  // Convert store filters to API filters
+  const apiFilters: UsersFilter = useMemo(() => ({
+    page: filters.page,
+    limit: filters.limit,
+    search: filters.search,
+    status: filters.status,
+    plan: filters.plan,
+    role: filters.role,
+    ...(dateRange ? { FromUtc: dateRange.fromUtc, ToUtc: dateRange.toUtc } : {}),
+  }), [filters, dateRange]);
+  
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
 
-  // Memoize selected user IDs for performance
-  const selectedUserIds = useMemo(
-    () => selectedUsers.map((user) => user.id),
-    [selectedUsers]
-  );
+  const { data, isLoading, error, refetch } = useUsers(apiFilters);
 
-  // Handle refresh button click
-  const handleRefresh = () => {
+  const users = useMemo(() => data?.users || [], [data?.users]);
+  const pagination = useMemo(() => {
+    if (!data?.pagination) return null;
+    return {
+      page: data.pagination.page,
+      limit: data.pagination.limit,
+      total: data.pagination.total,
+      totalPages: data.pagination.totalPages,
+    };
+  }, [data]);
+
+  const handleRefresh = useCallback(async () => {
     setIsRefreshing(true);
-    // Clear selections when refreshing
-    setSelectedUsers([]);
-    setSelectedUser(null);
-    // Increment refresh trigger to force all components to refetch
-    setRefreshTrigger(prev => prev + 1);
-    
-    // Refetch users data
-    refetchUsers();
-    
-    // Set a timeout to hide the loading skeleton after a minimum duration
-    setTimeout(() => {
+    try {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['users'] }),
+        queryClient.invalidateQueries({ queryKey: ['users-analytics'] }),
+        refetch(),
+      ]);
+    } finally {
       setIsRefreshing(false);
-    }, 1000);
-  };
-
-  const showSnackbar = (message: string, severity: "success" | "error") => {
-    setSnackbar({ open: true, message, severity });
-  };
-
-  const handleUserSelect = (user: User) => {
-    setSelectedUser(user);
-  };
-
-  const handleUserEdit = (user: User) => {
-    setSelectedUser(user);
-    setIsUserFormOpen(true);
-  };
-
-  const handleUserDelete = async (user: User): Promise<void> => {
-    const confirmed = window.confirm(
-      `Are you sure you want to delete ${user.fullName}?`
-    );
-    if (!confirmed) return;
-
-    const success = await handleDeleteUser(user.id);
-    if (success) {
-      showSnackbar("User deleted successfully", "success");
-      // Remove from selected users if it was selected
-      setSelectedUsers((prev) => prev.filter((u) => u.id !== user.id));
-      // Trigger refresh after successful deletion
-      handleRefresh();
-    } else {
-      showSnackbar("Failed to delete user", "error");
     }
-  };
+  }, [refetch, queryClient]);
 
-  const handleAddUser = () => {
-    setSelectedUser(null);
-    setIsUserFormOpen(true);
-  };
+  const handleAddUser = useCallback(() => {
+    router.push('/users/new');
+  }, [router]);
 
-  const handleCloseUserForm = () => {
-    setIsUserFormOpen(false);
-    setSelectedUser(null);
-  };
 
-  const handleCloseSnackbar = () => {
-    setSnackbar((prev) => ({ ...prev, open: false }));
-  };
+  const handleUserSelect = useCallback((user: User | null) => {
+    setSelectedUser(user);
+  }, []);
 
-  // Selection handlers
-  const handleToggleSelection = (userId: string) => {
-    const user = users.find((u) => u.id === userId);
-    if (user) {
-      setSelectedUsers((prev) => {
-        const isSelected = prev.some((u) => u.id === userId);
-        if (isSelected) {
-          return prev.filter((u) => u.id !== userId);
-        } else {
-          return [...prev, user];
-        }
-      });
-    }
-  };
+  const handleFilterChange = useCallback((newFilters: Partial<UsersFilter>) => {
+    setFilters(newFilters);
+  }, [setFilters]);
 
-  const handleSelectAll = (usersToSelect: User[]) => {
-    setSelectedUsers(usersToSelect);
-  };
+  const handleTimeRangeChange = useCallback((range: TimeRange) => {
+    setTimeRange(range);
+    // Invalidate queries when time range changes to trigger refetch with new dates
+    queryClient.invalidateQueries({ queryKey: ['users'] });
+    queryClient.invalidateQueries({ queryKey: ['users-analytics'] });
+  }, [queryClient]);
 
-  const handleClearAllSelection = () => {
-    setSelectedUsers([]);
-  };
-
-  const handleRemoveUserFromSelection = (userId: string) => {
-    setSelectedUsers((prev) => prev.filter((user) => user.id !== userId));
-  };
-
-  // Show loading skeleton for initial page load or during refresh
-  if ((isLoading && users.length === 0) || isRefreshing) {
-    return (
-      <Container maxWidth="xl" sx={{ py: 4 }}>
-        {/* Header Skeleton */}
-        <Box sx={{ mb: 4 }}>
-          <Skeleton variant="text" width={250} height={48} sx={{ mb: 1 }} />
-          <Skeleton variant="text" width={350} height={24} />
-        </Box>
-        
-        <UsersPageLoadingSkeleton />
-      </Container>
-    );
-  }
-
-  // Show error state if there's an API error
-  if (error) {
-    return (
-      <Container maxWidth="xl" sx={{ py: 4 }}>
-        <ErrorState
-          variant="api"
-          title="Failed to Load Users"
-          message="We encountered an error while loading user data. Please try again."
-          retryAction={{
-            onClick: handleRefresh,
-            label: "Retry Loading",
-          }}
-          height={400}
-        />
-      </Container>
-    );
-  }
 
   return (
-    <Container maxWidth="xl" sx={{ py: 4 }}>
-      {/* Header */}
-      <UsersPageHeader 
+    <Box
+      sx={{
+        // maxWidth: 1536, // 2xl breakpoint (96rem = 1536px)
+        width: '100%',
+        px: { xs: 2, sm: 3, md: 4 },
+        py: designTokens.spacing.xl,
+      }}
+    >
+      <PageHeader
         title="User Management"
-        timeRange={globalTimeRange}
-        onTimeRangeChange={setGlobalTimeRange}
+        defaultSubtitle="Welcome {firstName}! Manage your platform users."
+        timeRange={timeRange}
+        onTimeRangeChange={handleTimeRangeChange}
         onRefresh={handleRefresh}
         user={user}
       />
 
-      {/* Analytics */}
-      <UserAnalytics refreshTrigger={refreshTrigger} />
+      {(isLoading || isRefreshing) ? (
+        <UsersPageLoadingSkeleton />
+      ) : (
+        <>
+          <UserAnalytics />
 
-      {/* Consolidated UsersTable Component */}
-      <UsersTable
-        // Data
+          <UsersTable
         users={users}
         pagination={pagination}
         isLoading={isLoading}
-        hasError={!!error}
-        
-        // Filters
-        currentFilters={currentFilters}
-        localSearch={localSearch}
-        
-        // Selection
-        selectedUsers={selectedUsers}
-        selectedUserIds={selectedUserIds}
-        
-        // Handlers
-        onUserSelect={handleUserSelect}
-        onUserEdit={handleUserEdit}
-        onUserDelete={handleUserDelete}
-        onAddUser={handleAddUser}
-        onExportUsers={() => handleExportUsers()}
-        onRefresh={handleRefresh}
-        onSearchChange={handleSearchChange}
+        error={error}
+        filters={apiFilters}
         onFilterChange={handleFilterChange}
-        onClearFilters={handleClearFilters}
-        onPageChange={handlePageChange}
-        onToggleSelection={handleToggleSelection}
-        onSelectAll={handleSelectAll}
-        onClearAllSelection={handleClearAllSelection}
-        onRemoveFromSelection={handleRemoveUserFromSelection}
-        
-        // States
-        isExporting={false} // Add actual export state if needed
-        isRefreshing={isRefreshing}
-      />
-
-      {/* Add/Edit User Dialog */}
-      <Dialog
-        open={isUserFormOpen}
-        onClose={handleCloseUserForm}
-        maxWidth="md"
-        fullWidth
-      >
-        <UserForm
-          user={selectedUser || undefined}
-          onSuccess={() => {
-            setIsUserFormOpen(false);
-            setSelectedUser(null);
-            showSnackbar("User saved successfully", "success");
-            handleRefresh();
-          }}
-          onCancel={handleCloseUserForm}
-        />
-      </Dialog>
-
-      {/* Snackbar */}
-      <Snackbar
-        open={snackbar.open}
-        autoHideDuration={6000}
-        onClose={handleCloseSnackbar}
-      >
-        <Alert
-          onClose={handleCloseSnackbar}
-          severity={snackbar.severity}
-          sx={{ width: "100%" }}
-        >
-          {snackbar.message}
-        </Alert>
-      </Snackbar>
-    </Container>
+        onClearFilters={clearFilters}
+        onAddUser={handleAddUser}
+        onRefresh={handleRefresh}
+        selectedUser={selectedUser}
+        onUserSelect={handleUserSelect}
+          />
+        </>
+      )}
+    </Box>
   );
 }
 
-export default withAuth(UsersPage);
+export default withAuth(memo(UsersPage));

@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { memo } from 'react';
 import { Box, Typography, Card, CardContent, CardProps } from '@mui/material';
 
 interface AuthCardProps extends CardProps {
@@ -9,12 +9,7 @@ interface AuthCardProps extends CardProps {
   children: React.ReactNode;
 }
 
-export const AuthCard: React.FC<AuthCardProps> = ({ 
-  title, 
-  subtitle, 
-  children, 
-  ...props 
-}) => {
+export const AuthCard = memo<AuthCardProps>(({ title, subtitle, children, ...props }) => {
   return (
     <Card
       sx={{
@@ -23,7 +18,6 @@ export const AuthCard: React.FC<AuthCardProps> = ({
         borderRadius: 2,
         border: '1px solid',
         borderColor: 'divider',
-        
         ...props.sx,
       }}
       {...props}
@@ -43,4 +37,6 @@ export const AuthCard: React.FC<AuthCardProps> = ({
       </CardContent>
     </Card>
   );
-};
+});
+
+AuthCard.displayName = 'AuthCard';

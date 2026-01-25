@@ -1,12 +1,12 @@
-"use client";
+'use client';
 
-import { Box, Button, Typography } from "@mui/material";
-import HomeIcon from "@mui/icons-material/Home";
-import ArrowBackIcon from "@mui/icons-material/ArrowBack";
-import SportsScoreIcon from "@mui/icons-material/SportsScore";
-import Link from "next/link";
-import { motion } from "framer-motion";
-import { useState, useEffect } from "react";
+import { Box, Button, Typography } from '@mui/material';
+import HomeIcon from '@mui/icons-material/Home';
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import SportsScoreIcon from '@mui/icons-material/SportsScore';
+import Link from 'next/link';
+import { motion } from 'framer-motion';
+import { useState } from 'react';
 
 interface Position {
   left: string;
@@ -14,53 +14,19 @@ interface Position {
 }
 
 export default function NotFound() {
-  const [shapePositions, setShapePositions] = useState<Position[]>([]);
-  const [isClient, setIsClient] = useState(false);
+  // Generate random positions once using useState lazy initializer
+  const [shapePositions] = useState<Position[]>(() => 
+    [...Array(12)].map(() => ({
+      left: `${Math.random() * 100}%`,
+      top: `${Math.random() * 100}%`,
+    }))
+  );
 
-  useEffect(() => {
-    // Mark that we're on the client
-    setIsClient(true);
-    
-    // Generate positions only on client side
-    const generatePositions = () => {
-      return [...Array(12)].map(() => ({
-        left: `${Math.random() * 100}%`,
-        top: `${Math.random() * 100}%`,
-      }));
-    };
-
-    // Use requestAnimationFrame to avoid synchronous state updates in effect
-    const frameId = requestAnimationFrame(() => {
-      setShapePositions(generatePositions());
-    });
-
-    return () => {
-      cancelAnimationFrame(frameId);
-    };
-  }, []);
-
-  // Predefined positions for SSR/initial render to avoid layout shift
-  const predefinedPositions = [
-    { left: "10%", top: "20%" },
-    { left: "80%", top: "30%" },
-    { left: "30%", top: "70%" },
-    { left: "60%", top: "10%" },
-    { left: "20%", top: "50%" },
-    { left: "70%", top: "80%" },
-    { left: "40%", top: "25%" },
-    { left: "90%", top: "60%" },
-    { left: "15%", top: "85%" },
-    { left: "75%", top: "40%" },
-    { left: "50%", top: "90%" },
-    { left: "25%", top: "15%" },
-  ];
-
-  // Use client-generated positions or fallback to predefined ones
-  const positions = isClient ? shapePositions : predefinedPositions;
+  // Use client-generated positions
+  const positions = shapePositions;
 
   return (
     <Box className="flex flex-col items-center justify-center min-h-screen bg-linear-to-br from-green-50 via-white to-blue-50 dark:from-gray-900 dark:via-gray-800 dark:to-green-900 px-4 text-center space-y-8 relative overflow-hidden">
-      
       {/* Background Decorative Elements */}
       <motion.div
         className="absolute inset-0 pointer-events-none"
@@ -83,7 +49,7 @@ export default function NotFound() {
               duration: 5,
               repeat: Infinity,
               delay: i * 0.4,
-              ease: "easeInOut"
+              ease: 'easeInOut',
             }}
           />
         ))}
@@ -93,10 +59,9 @@ export default function NotFound() {
       <motion.div
         initial={{ opacity: 0, y: 30 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6, ease: "easeOut" }}
+        transition={{ duration: 0.6, ease: 'easeOut' }}
         className="flex flex-col items-center space-y-6 relative z-10"
       >
-        
         {/* Animated Number 404 */}
         <motion.div
           className="relative"
@@ -110,18 +75,18 @@ export default function NotFound() {
           >
             404
           </Typography>
-          
+
           {/* Glow Effect */}
           <motion.div
             className="absolute inset-0 bg-linear-to-r from-green-500 to-blue-500 blur-xl opacity-20 -z-10"
-            animate={{ 
+            animate={{
               scale: [1, 1.1, 1],
-              opacity: [0.2, 0.3, 0.2]
+              opacity: [0.2, 0.3, 0.2],
             }}
             transition={{
               duration: 3,
               repeat: Infinity,
-              ease: "easeInOut"
+              ease: 'easeInOut',
             }}
           />
         </motion.div>
@@ -134,24 +99,24 @@ export default function NotFound() {
           className="flex items-center justify-center space-x-4"
         >
           <motion.div
-            animate={{ 
+            animate={{
               rotate: [0, 15, 0, -15, 0],
-              y: [0, -10, 0]
+              y: [0, -10, 0],
             }}
             transition={{
               duration: 4,
               repeat: Infinity,
-              ease: "easeInOut"
+              ease: 'easeInOut',
             }}
           >
-            <SportsScoreIcon 
-              sx={{ 
+            <SportsScoreIcon
+              sx={{
                 fontSize: 60,
-                color: 'primary.main'
-              }} 
+                color: 'primary.main',
+              }}
             />
           </motion.div>
-          
+
           <Typography
             variant="h4"
             className="font-bold text-gray-700 dark:text-gray-200 font-['Ultra']"
@@ -160,22 +125,22 @@ export default function NotFound() {
           </Typography>
 
           <motion.div
-            animate={{ 
+            animate={{
               rotate: [0, -15, 0, 15, 0],
-              y: [0, -10, 0]
+              y: [0, -10, 0],
             }}
             transition={{
               duration: 4,
               repeat: Infinity,
-              ease: "easeInOut",
-              delay: 0.5
+              ease: 'easeInOut',
+              delay: 0.5,
             }}
           >
-            <SportsScoreIcon 
-              sx={{ 
+            <SportsScoreIcon
+              sx={{
                 fontSize: 60,
-                color: 'secondary.main'
-              }} 
+                color: 'secondary.main',
+              }}
             />
           </motion.div>
         </motion.div>
@@ -187,13 +152,9 @@ export default function NotFound() {
           transition={{ delay: 0.6, duration: 0.5 }}
           className="space-y-4 max-w-md"
         >
-          <Typography
-            variant="body1"
-            className="text-gray-500 dark:text-gray-400 leading-relaxed"
-          >
-            It looks like this page took an unexpected detour. 
-            The content you&apos;re looking for might have been moved, 
-            or you entered the wrong URL.
+          <Typography variant="body1" className="text-gray-500 dark:text-gray-400 leading-relaxed">
+            It looks like this page took an unexpected detour. The content you&apos;re looking for
+            might have been moved, or you entered the wrong URL.
           </Typography>
         </motion.div>
 
@@ -221,7 +182,7 @@ export default function NotFound() {
                   transform: 'translateY(-2px)',
                   boxShadow: '0 6px 20px rgba(22, 163, 74, 0.4)',
                 },
-                transition: 'all 0.3s ease'
+                transition: 'all 0.3s ease',
               }}
             >
               Back to Home
@@ -245,7 +206,7 @@ export default function NotFound() {
                 transform: 'translateY(-2px)',
                 borderWidth: 2,
               },
-              transition: 'all 0.3s ease'
+              transition: 'all 0.3s ease',
             }}
           >
             Go Back
@@ -259,13 +220,10 @@ export default function NotFound() {
           transition={{ delay: 1, duration: 0.5 }}
           className="pt-6"
         >
-          <Typography
-            variant="body2"
-            className="text-gray-400 dark:text-gray-500"
-          >
-            Need help?{" "}
-            <Link 
-              href="/contact" 
+          <Typography variant="body2" className="text-gray-400 dark:text-gray-500">
+            Need help?{' '}
+            <Link
+              href="/contact"
               className="text-green-600 dark:text-green-400 hover:underline font-medium"
             >
               Contact our support team
@@ -302,10 +260,10 @@ export default function NotFound() {
         transition={{
           duration: 6,
           repeat: Infinity,
-          ease: "easeInOut"
+          ease: 'easeInOut',
         }}
       />
-      
+
       <motion.div
         className="absolute bottom-1/4 -right-20 w-40 h-40 bg-blue-200 dark:bg-blue-800 rounded-full blur-3xl opacity-30"
         animate={{
@@ -315,8 +273,8 @@ export default function NotFound() {
         transition={{
           duration: 6,
           repeat: Infinity,
-          ease: "easeInOut",
-          delay: 3
+          ease: 'easeInOut',
+          delay: 3,
         }}
       />
     </Box>

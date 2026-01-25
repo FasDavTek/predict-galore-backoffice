@@ -1,120 +1,116 @@
-"use client";
+'use client';
 
-import { createTheme } from "@mui/material/styles";
-
-const colors = {
-  green: {
-    100: "#e0f8e7",
-    200: "#c2f0d0",
-    400: "#5ccc80",
-    500: "#42A605",
-    600: "#28914b",
-    700: "#22733d",
-  },
-  red: {
-    100: "#fee8e5",
-    400: "#f5777e",
-    500: "#ec4251",
-    600: "#e72838",
-    700: "#b61a2e",
-  },
-};
+import { createTheme } from '@mui/material/styles';
+import { designTokens } from './tokens';
 
 const theme = createTheme({
   palette: {
     primary: {
-      main: '#42A605',
-      light: '#5bbd1a',
-      dark: colors.green[700],
+      main: designTokens.colors.primary[500],
+      light: designTokens.colors.primary[400],
+      dark: designTokens.colors.primary[700],
       contrastText: '#ffffff',
     },
     secondary: {
-      main: '#41414B',
-      light: colors.red[500],
-      dark: colors.red[700],
+      main: designTokens.colors.secondary[500],
+      light: designTokens.colors.secondary[400],
+      dark: designTokens.colors.secondary[700],
     },
     error: {
-      main: colors.red[600],
-      light: colors.red[400],
-      dark: colors.red[700],
+      main: designTokens.colors.error[600],
+      light: designTokens.colors.error[400],
+      dark: designTokens.colors.error[700],
     },
     success: {
-      main: colors.green[600],
-      light: colors.green[400],
-      dark: colors.green[700],
+      main: designTokens.colors.success[600],
+      light: designTokens.colors.success[400],
+      dark: designTokens.colors.success[700],
+    },
+    warning: {
+      main: designTokens.colors.warning[500],
+      light: designTokens.colors.warning[400],
+      dark: designTokens.colors.warning[700],
+    },
+    info: {
+      main: designTokens.colors.info[500],
+      light: designTokens.colors.info[400],
+      dark: designTokens.colors.info[700],
     },
     background: {
-      default: "#fff",
-      paper: "#fff",
+      default: designTokens.colors.semantic.background,
+      paper: designTokens.colors.semantic.background,
     },
     text: {
-      primary: "#101012",
-      secondary: "#5D5E6C",
-      disabled: "#CBD5E1",
+      primary: designTokens.colors.semantic.textPrimary,
+      secondary: designTokens.colors.semantic.textSecondary,
+      disabled: designTokens.colors.semantic.textDisabled,
     },
   },
   typography: {
-    fontFamily: 'Inter, sans-serif',
+    fontFamily: designTokens.typography.fontFamily.primary,
     h1: {
-      fontSize: '32px',
-      lineHeight: '40px',
-      fontWeight: 600,
-      color: '#737584',
+      fontSize: designTokens.typography.fontSize['3xl'],
+      lineHeight: designTokens.typography.lineHeight.tight,
+      fontWeight: designTokens.typography.fontWeight.semibold,
+      color: designTokens.colors.neutral[500],
     },
     h2: {
-      fontSize: '24px',
-      lineHeight: '32px',
-      fontWeight: 600,
-      color: '#737584',
+      fontSize: designTokens.typography.fontSize['2xl'],
+      lineHeight: designTokens.typography.lineHeight.tight,
+      fontWeight: designTokens.typography.fontWeight.semibold,
+      color: designTokens.colors.neutral[500],
     },
     h3: {
-      fontSize: '20px',
-      lineHeight: '28px',
-      fontWeight: 600,
-      color: '#737584',
+      fontSize: designTokens.typography.fontSize.xl,
+      lineHeight: designTokens.typography.lineHeight.normal,
+      fontWeight: designTokens.typography.fontWeight.semibold,
+      color: designTokens.colors.neutral[500],
     },
     h4: {
-      fontFamily: 'Inter, serif',
-      fontWeight: 400,
-      fontSize: "20px",
-      lineHeight: 1.4,
+      fontFamily: designTokens.typography.fontFamily.secondary,
+      fontWeight: designTokens.typography.fontWeight.normal,
+      fontSize: designTokens.typography.fontSize.xl,
+      lineHeight: designTokens.typography.lineHeight.normal,
     },
     h5: {
-      fontFamily: 'Inter, serif',
-      fontWeight: 400,
-      fontSize: "16px",
-      lineHeight: 1.5,
+      fontFamily: designTokens.typography.fontFamily.secondary,
+      fontWeight: designTokens.typography.fontWeight.normal,
+      fontSize: designTokens.typography.fontSize.base,
+      lineHeight: designTokens.typography.lineHeight.normal,
     },
     body1: {
-      fontSize: '16px',
-      lineHeight: '24px',
-      color: '#737584',
+      fontSize: designTokens.typography.fontSize.base,
+      lineHeight: designTokens.typography.lineHeight.normal,
+      color: designTokens.colors.neutral[500],
     },
     body2: {
-      fontSize: '14px',
-      lineHeight: '20px',
-      color: '#737584',
+      fontSize: designTokens.typography.fontSize.sm,
+      lineHeight: designTokens.typography.lineHeight.normal,
+      color: designTokens.colors.neutral[500],
     },
     caption: {
-      fontSize: '12px',
-      lineHeight: '16px',
-      color: '#737584',
+      fontSize: designTokens.typography.fontSize.xs,
+      lineHeight: designTokens.typography.lineHeight.normal,
+      color: designTokens.colors.neutral[500],
     },
   },
   shape: {
-    borderRadius: 12,
+    borderRadius: designTokens.borderRadius.lg,
+  },
+  breakpoints: {
+    values: designTokens.breakpoints,
   },
   components: {
     MuiButton: {
       styleOverrides: {
         root: {
           textTransform: 'none',
-          borderRadius: '8px',
-          padding: '8px 16px',
-          fontWeight: 600,
-          transition: "all 0.2s ease-in-out",
+          borderRadius: designTokens.borderRadius.md,
+          padding: `${designTokens.spacing.sm * designTokens.spacing.base}px ${designTokens.spacing.lg * designTokens.spacing.base}px`,
+          fontWeight: designTokens.typography.fontWeight.semibold,
+          transition: `all ${designTokens.transitions.duration.normal} ${designTokens.transitions.easing.easeInOut}`,
           '&:hover': {
-            boxShadow: 'none',
+            boxShadow: designTokens.shadows.none,
           },
         },
         outlined: {
@@ -128,21 +124,21 @@ const theme = createTheme({
           },
         },
         contained: {
-          backgroundColor: '#42A605',
-          boxShadow: "none",
-          "&:hover": {
-            boxShadow: "0 4px 12px rgba(0, 0, 0, 0.15)",
+          backgroundColor: designTokens.colors.primary[500],
+          boxShadow: designTokens.shadows.none,
+          '&:hover': {
+            boxShadow: designTokens.shadows.lg,
           },
         },
         containedPrimary: {
-          backgroundColor: '#42A605',
-          color: "#fff",
-          "&:hover": {
-            backgroundColor: colors.green[100],
+          backgroundColor: designTokens.colors.primary[500],
+          color: '#fff',
+          '&:hover': {
+            backgroundColor: designTokens.colors.primary[100],
           },
-          "&:disabled": {
-            backgroundColor: colors.green[200],
-            color: colors.green[400],
+          '&:disabled': {
+            backgroundColor: designTokens.colors.primary[200],
+            color: designTokens.colors.primary[400],
           },
         },
       },
@@ -153,15 +149,15 @@ const theme = createTheme({
     MuiIconButton: {
       styleOverrides: {
         root: {
-          fontFamily: 'Inter, sans-serif',
-          color: '#41414B',
+          fontFamily: designTokens.typography.fontFamily.primary,
+          color: designTokens.colors.secondary[500],
           '&:hover': {
-            backgroundColor: 'rgba(66, 166, 5, 0.08)',
-            color: '#42A605',
+            backgroundColor: `${designTokens.colors.primary[500]}14`, // 8% opacity
+            color: designTokens.colors.primary[500],
           },
           '&.Mui-selected, &.Mui-active': {
-            color: '#42A605',
-            backgroundColor: 'rgba(66, 166, 5, 0.12)',
+            color: designTokens.colors.primary[500],
+            backgroundColor: `${designTokens.colors.primary[500]}1F`, // 12% opacity
           },
         },
       },
@@ -169,39 +165,39 @@ const theme = createTheme({
     MuiTextField: {
       styleOverrides: {
         root: {
-          fontFamily: 'Inter, sans-serif',
-          borderRadius: '8px',
+          fontFamily: designTokens.typography.fontFamily.primary,
+          borderRadius: designTokens.borderRadius.md,
           '& .MuiInputBase-root': {
-            fontFamily: 'Inter, sans-serif',
-            borderRadius: '8px',
+            fontFamily: designTokens.typography.fontFamily.primary,
+            borderRadius: designTokens.borderRadius.md,
           },
-          "& .MuiOutlinedInput-root": {
-            borderRadius: 8,
-            transition: "all 0.2s ease-in-out",
-            "& fieldset": {
-              borderColor: "#E2E8F0",
-              borderWidth: "1px",
+          '& .MuiOutlinedInput-root': {
+            borderRadius: designTokens.borderRadius.md,
+            transition: `all ${designTokens.transitions.duration.normal} ${designTokens.transitions.easing.easeInOut}`,
+            '& fieldset': {
+              borderColor: designTokens.colors.semantic.border,
+              borderWidth: '1px',
             },
-            "&:hover fieldset": {
-              borderColor: "#CBD5E1",
+            '&:hover fieldset': {
+              borderColor: designTokens.colors.semantic.borderHover,
             },
-            "&.Mui-focused fieldset": {
-              borderColor: colors.green[500],
-              borderWidth: "2px",
-              boxShadow: `0 0 0 3px ${colors.green[100]}`,
+            '&.Mui-focused fieldset': {
+              borderColor: designTokens.colors.primary[500],
+              borderWidth: '2px',
+              boxShadow: `0 0 0 3px ${designTokens.colors.primary[100]}`,
             },
-            "&.Mui-disabled": {
-              backgroundColor: "#F8FAFC",
-              "& fieldset": {
-                borderColor: "#E2E8F0",
+            '&.Mui-disabled': {
+              backgroundColor: designTokens.colors.semantic.backgroundSecondary,
+              '& fieldset': {
+                borderColor: designTokens.colors.semantic.border,
               },
             },
-            "&.Mui-error fieldset": {
-              borderColor: colors.red[500],
+            '&.Mui-error fieldset': {
+              borderColor: designTokens.colors.error[500],
             },
-            "&.Mui-error.Mui-focused fieldset": {
-              borderColor: colors.red[500],
-              boxShadow: `0 0 0 3px ${colors.red[100]}`,
+            '&.Mui-error.Mui-focused fieldset': {
+              borderColor: designTokens.colors.error[500],
+              boxShadow: `0 0 0 3px ${designTokens.colors.error[100]}`,
             },
           },
         },
@@ -214,13 +210,13 @@ const theme = createTheme({
     MuiInputLabel: {
       styleOverrides: {
         root: {
-          color: "#64748B",
-          fontWeight: 500,
-          "&.Mui-focused": {
-            color: colors.green[600],
+          color: designTokens.colors.neutral[500],
+          fontWeight: designTokens.typography.fontWeight.medium,
+          '&.Mui-focused': {
+            color: designTokens.colors.primary[600],
           },
-          "&.Mui-error": {
-            color: colors.red[600],
+          '&.Mui-error': {
+            color: designTokens.colors.error[600],
           },
         },
       },
@@ -228,8 +224,8 @@ const theme = createTheme({
     MuiPaper: {
       styleOverrides: {
         root: {
-          borderRadius: '12px',
-          boxShadow: '0px 2px 8px rgba(0, 0, 0, 0.1)',
+          borderRadius: designTokens.borderRadius.lg,
+          boxShadow: designTokens.shadows.md,
         },
       },
     },

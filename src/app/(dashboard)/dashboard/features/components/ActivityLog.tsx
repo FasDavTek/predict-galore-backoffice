@@ -1,4 +1,11 @@
-import React, { useState } from "react";
+/**
+ * Activity Log Component
+ * Clean, simple implementation
+ */
+
+'use client';
+
+import { useState, memo, useCallback, useMemo } from 'react';
 import {
   Box,
   Card,
@@ -9,343 +16,179 @@ import {
   ListItemText,
   Avatar,
   Divider,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
-  SelectChangeEvent,
   Button,
   ButtonGroup,
-} from "@mui/material";
-import { 
-  Warning as WarningIcon,
+  CircularProgress,
+} from '@mui/material';
+import Stack from '@mui/material/Stack';
+import { designTokens } from '@/shared/styles/tokens';
+import {
   ChevronLeft as ChevronLeftIcon,
   ChevronRight as ChevronRightIcon,
-} from "@mui/icons-material";
-import { useGetActivityQuery } from "../api/dashboardApi";
-import LoadingState from "../../../../../shared/components/LoadingState";
-
-type ActivityLimit = "default" | 5 | 10 | 25 | 50 | 100 | "all";
+  Warning as WarningIcon,
+} from '@mui/icons-material';
+import { useDashboardActivity } from '@/features/dashboard';
 
 interface ActivityLogProps {
-  refreshTrigger?: number;
+  refreshKey?: number;
 }
 
-// Types for the actual API response structure
-interface ActivityApiItem {
-  id: number;
-  createdAtUtc: string;
-  title: string;
-  description: string;
-  actorDisplayName: string;
-  actorRole: string | null;
-  category: string;
-}
+const ITEMS_PER_PAGE = 10;
 
-interface ActivityApiResponse {
-  totalItems: number;
-  success: boolean;
-  currentPage: number;
-  pageSize: number;
-  resultItems: ActivityApiItem[];
-  totalPages: number;
-  message: string | null;
-}
+// Helper function to format timestamps relative to now
+const formatTimestamp = (timestamp: string): string => {
+  const now = new Date();
+  const activityTime = new Date(timestamp);
+  const diffInMinutes = Math.floor((now.getTime() - activityTime.getTime()) / (1000 * 60));
 
-export default function ActivityLog({ refreshTrigger }: ActivityLogProps) {
-  const [itemLimit, setItemLimit] = useState<ActivityLimit>(5); // Default to 5 items
-  const [currentPage, setCurrentPage] = useState(1);
+  if (diffInMinutes < 1) return 'Just now';
+  if (diffInMinutes < 60) return `${diffInMinutes}m ago`;
 
-  // Convert limit to pageSize and page parameters for the API
-  const queryParams = {
-    pageSize: itemLimit === "all" ? 1000 : (itemLimit === "default" ? 5 : itemLimit),
-    page: currentPage
-  };
+  const diffInHours = Math.floor(diffInMinutes / 60);
+  if (diffInHours < 24) return `${diffInHours}h ago`;
 
-  const { data, isLoading, error, refetch } = useGetActivityQuery(queryParams);
+  const diffInDays = Math.floor(diffInHours / 24);
+  if (diffInDays < 7) return `${diffInDays}d ago`;
 
-  // Type assertion to handle the actual API response structure
-  const activityData = data?.data as unknown as ActivityApiResponse;
-  
-  const hasError = !!error;
-  const isEmpty = !activityData?.resultItems || activityData.resultItems.length === 0;
+  return activityTime.toLocaleDateString();
+};
 
-  // Refetch when refreshTrigger changes or when pagination changes
-  React.useEffect(() => {
-    refetch();
-  }, [refreshTrigger, currentPage, itemLimit, refetch]);
+const ActivityLog = memo(function ActivityLog({ 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  refreshKey: _refreshKey 
+}: ActivityLogProps) {
+  const [offset, setOffset] = useState(0);
+  const { data, isLoading, error } = useDashboardActivity();
 
-  const handleLimitChange = (event: SelectChangeEvent<ActivityLimit>) => {
-    const value = event.target.value;
-    
-    if (value === "default") {
-      setItemLimit("default");
-    } else if (value === "all") {
-      setItemLimit("all");
-    } else {
-      setItemLimit(Number(value) as ActivityLimit);
+  const activities = useMemo(() => data?.activities || [], [data?.activities]);
+  const totalItems = useMemo(() => data?.total || 0, [data?.total]);
+  const totalPages = useMemo(() => Math.ceil(totalItems / ITEMS_PER_PAGE), [totalItems]);
+  const currentPage = useMemo(() => Math.floor(offset / ITEMS_PER_PAGE) + 1, [offset]);
+
+  const handlePrevious = useCallback(() => {
+    setOffset((prev) => Math.max(0, prev - ITEMS_PER_PAGE));
+  }, []);
+
+  const handleNext = useCallback(() => {
+    if (currentPage < totalPages) {
+      setOffset((prev) => prev + ITEMS_PER_PAGE);
     }
-    
-    // Reset to first page when changing limit
-    setCurrentPage(1);
-  };
-
-  const handlePageChange = (newPage: number) => {
-    setCurrentPage(newPage);
-  };
-
-  // const handleShowAll = () => {
-  //   setItemLimit("all");
-  //   setCurrentPage(1);
-  // };
-
-  // Format date for display
-  const formatDate = (dateString: string): string => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  };
-
-  // Get avatar color based on category
-  const getAvatarColor = (category: string): string => {
-    const colors: Record<string, string> = {
-      'Audit': '#1976d2',
-      'User': '#2e7d32',
-      'System': '#ed6c02',
-      'Payment': '#9c27b0',
-      'Security': '#d32f2f'
-    };
-    return colors[category] || '#757575';
-  };
-
-  // Calculate pagination information
-  const totalPages = activityData?.totalPages || 1;
-  const totalItems = activityData?.totalItems || 0;
-  const currentItems = activityData?.resultItems?.length || 0;
-  const isShowAll = itemLimit === "all";
-  const showPagination = !isShowAll && totalPages > 1;
-
-  // Calculate start and end index for display
-  const getDisplayRange = () => {
-    if (isShowAll) {
-      return `1-${currentItems} of ${totalItems}`;
-    }
-    
-    const pageSize = itemLimit === "default" ? 5 : itemLimit;
-    const startIndex = ((currentPage - 1) * pageSize) + 1;
-    const endIndex = Math.min(startIndex + currentItems - 1, totalItems);
-    
-    return `${startIndex}-${endIndex} of ${totalItems}`;
-  };
+  }, [currentPage, totalPages]);
 
   if (isLoading) {
     return (
-      <Card sx={{ height: "100%", display: "flex", flexDirection: "column" }}>
-        <CardContent sx={{ flex: 1, display: "flex", flexDirection: "column" }}>
-          <Box
-            display="flex"
-            justifyContent="space-between"
-            alignItems="center"
-            mb={2}
-          >
-            <Typography variant="h6" fontWeight={600}>
-              Activity Log
+      <Card>
+        <CardContent>
+          <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', py: 4 }}>
+            <CircularProgress sx={{ mb: 2 }} />
+            <Typography variant="body2" color="text.secondary">
+              Loading activity...
             </Typography>
-            <FormControl size="small" sx={{ minWidth: 120 }}>
-              <InputLabel>Show</InputLabel>
-              <Select
-                value={itemLimit}
-                label="Show"
-                onChange={handleLimitChange}
-              >
-                <MenuItem value={5}>5 items</MenuItem>
-                <MenuItem value={10}>10 items</MenuItem>
-                <MenuItem value={25}>25 items</MenuItem>
-                <MenuItem value={50}>50 items</MenuItem>
-                <MenuItem value={100}>100 items</MenuItem>
-                <MenuItem value="all">Show All</MenuItem>
-              </Select>
-            </FormControl>
           </Box>
-          <LoadingState
-            variant="text"
-            message="Loading activities..."
-            height={200}
-          />
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (error) {
+    return (
+      <Card>
+        <CardContent>
+          <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', py: 4 }}>
+            <WarningIcon sx={{ fontSize: 48, color: 'error.main', mb: 2 }} />
+            <Typography variant="h6" color="error.main" gutterBottom>
+              Unable to Load Activity
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              Failed to load activity
+            </Typography>
+          </Box>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (activities.length === 0) {
+    return (
+      <Card>
+        <CardContent>
+          <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', py: 4 }}>
+            <WarningIcon sx={{ fontSize: 48, color: 'grey.400', mb: 2 }} />
+            <Typography variant="h6" color="text.secondary" gutterBottom>
+              No Activity Found
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              No activity found
+            </Typography>
+          </Box>
         </CardContent>
       </Card>
     );
   }
 
   return (
-    <Card>
+    <Card sx={{ height: '100%' }}>
       <CardContent>
-        <Box
-          display="flex"
-          justifyContent="space-between"
-          alignItems="center"
-          mb={2}
-        >
-          <Typography variant="h6" fontWeight={600}>
-            Activity Log
-          </Typography>
-
-          <FormControl size="small" sx={{ minWidth: 120 }}>
-            <InputLabel>Show</InputLabel>
-            <Select value={itemLimit} label="Show" onChange={handleLimitChange}>
-              <MenuItem value={5}>5 items</MenuItem>
-              <MenuItem value={10}>10 items</MenuItem>
-              <MenuItem value={25}>25 items</MenuItem>
-              <MenuItem value={50}>50 items</MenuItem>
-              <MenuItem value={100}>100 items</MenuItem>
-              <MenuItem value="all">Show All</MenuItem>
-            </Select>
-          </FormControl>
-        </Box>
+        <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: designTokens.spacing.itemGap }}>
+          <Typography variant="h6">Recent Activity</Typography>
+          <ButtonGroup size="small">
+            <Button
+              onClick={handlePrevious}
+              disabled={currentPage === 1}
+              startIcon={<ChevronLeftIcon />}
+            >
+              Prev
+            </Button>
+            <Button
+              onClick={handleNext}
+              disabled={currentPage >= totalPages}
+              endIcon={<ChevronRightIcon />}
+            >
+              Next
+            </Button>
+          </ButtonGroup>
+        </Stack>
 
         <List>
-          {hasError ? (
-            <ListItem alignItems="flex-start" sx={{ backgroundColor: '#FEF2F2', py: 8 }}>
-              <Avatar
-                sx={{
-                  mr: 2,
-                  bgcolor: 'error.main'
-                }}
-              >
-                <WarningIcon />
-              </Avatar>
-              <ListItemText
-                primary={
-                  <Typography variant="h6" color="error.main" gutterBottom component="div">
-                    Unable to Load Activity Data
-                  </Typography>
-                }
-                secondary={
-                  <Typography variant="body2" color="text.secondary" component="div">
-                    There was an error loading the activity data
-                  </Typography>
-                }
-              />
-            </ListItem>
-          ) : isEmpty ? (
-            <ListItem alignItems="flex-start" sx={{ py: 8 }}>
-              <Avatar sx={{ mr: 2, bgcolor: "grey.400" }}>
-                <WarningIcon />
-              </Avatar>
-              <ListItemText
-                primary={
-                  <Typography variant="h6" color="text.secondary" gutterBottom component="div">
-                    No Recent Activity
-                  </Typography>
-                }
-                secondary={
-                  <Typography variant="body2" color="text.secondary" component="div">
-                    Activity will appear here once users start using the platform
-                  </Typography>
-                }
-              />
-            </ListItem>
-          ) : (
-            activityData?.resultItems.map((activity: ActivityApiItem) => (
-              <React.Fragment key={activity.id}>
-                <ListItem alignItems="flex-start">
-                  <Avatar 
-                    sx={{ 
-                      mr: 2, 
-                      bgcolor: getAvatarColor(activity.category),
-                      fontSize: '0.875rem'
-                    }}
-                  >
-                    {activity.category?.[0]?.toUpperCase() || "A"}
-                  </Avatar>
-                  <Box sx={{ flex: 1 }}>
-                    {/* Primary content */}
-                    <Box sx={{ mb: 1 }}>
-                      <Typography component="div" variant="subtitle1" fontWeight={500}>
-                        {activity.title}
-                      </Typography>
-                      <Typography variant="caption" color="text.secondary" component="div">
-                        by {activity.actorDisplayName}
-                        {activity.category && ` • ${activity.category}`}
-                      </Typography>
-                    </Box>
-                    
-                    {/* Secondary content */}
-                    <Box sx={{ mt: 0.5 }}>
-                      <Typography
-                        variant="body2"
-                        color="text.secondary"
-                        component="div"
-                        sx={{ mb: 0.5 }}
-                      >
+          {activities.map((activity, index) => (
+            <Box key={activity.id}>
+              <ListItem alignItems="flex-start" sx={{ px: 0 }}>
+                <Avatar sx={{ mr: 2, bgcolor: 'primary.main' }}>
+                  {activity.actorDisplayName?.[0]?.toUpperCase() || activity.title?.[0]?.toUpperCase() || activity.category?.[0]?.toUpperCase() || 'A'}
+                </Avatar>
+                <ListItemText
+                  primary={activity.title}
+                  secondary={
+                    <>
+                      <Typography component="span" variant="body2" color="text.primary">
                         {activity.description}
                       </Typography>
-                      <Typography
-                        variant="caption"
-                        color="text.disabled"
-                        component="div"
-                      >
-                        {formatDate(activity.createdAtUtc)}
+                      {activity.actorDisplayName && (
+                        <>
+                          <br />
+                          <Typography component="span" variant="caption" color="text.secondary">
+                            {activity.actorDisplayName}
+                            {activity.actorRole && ` • ${activity.actorRole}`}
+                          </Typography>
+                        </>
+                      )}
+                      <br />
+                      <Typography component="span" variant="caption" color="text.secondary">
+                        {formatTimestamp(activity.createdAtUtc)}
                       </Typography>
-                    </Box>
-                  </Box>
-                </ListItem>
-                <Divider />
-              </React.Fragment>
-            ))
-          )}
-        </List>
-
-        {!hasError && !isEmpty && activityData && (
-          <Box sx={{ mt: 2, display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 1 }}>
-            {/* Pagination Info */}
-            <Typography variant="caption" color="text.secondary">
-              {getDisplayRange()}
-              {!isShowAll && ` • Page ${currentPage} of ${totalPages}`}
-            </Typography>
-
-            {/* Pagination Controls */}
-            <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-              {/* Show All Button - only show when not already showing all */}
-              {/* {!isShowAll && totalItems > (itemLimit === "default" ? 5 : itemLimit) && (
-                <Button
-                  size="small"
-                  variant="text"
-                  onClick={handleShowAll}
-                  sx={{ mr: 1 }}
-                >
-                  Show All
-                </Button>
-              )} */}
-
-              {/* Pagination Buttons - only show when not showing all and multiple pages exist */}
-              {showPagination && (
-                <ButtonGroup size="small" variant="outlined">
-                  <Button
-                    onClick={() => handlePageChange(currentPage - 1)}
-                    disabled={currentPage === 1}
-                    startIcon={<ChevronLeftIcon />}
-                  >
-                    Prev
-                  </Button>
-                  <Button
-                    onClick={() => handlePageChange(currentPage + 1)}
-                    disabled={currentPage === totalPages}
-                    endIcon={<ChevronRightIcon />}
-                  >
-                    Next
-                  </Button>
-                </ButtonGroup>
-              )}
+                    </>
+                  }
+                />
+              </ListItem>
+              {index < activities.length - 1 && <Divider variant="inset" component="li" />}
             </Box>
-          </Box>
-        )}
+          ))}
+        </List>
       </CardContent>
     </Card>
   );
-}
+});
+
+ActivityLog.displayName = 'ActivityLog';
+
+export default ActivityLog;

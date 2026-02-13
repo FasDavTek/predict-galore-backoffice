@@ -208,7 +208,7 @@ async function testParameterizedEndpoints(): Promise<void> {
         description: `Get leagues filtered by sportId: ${firstSportId}`
       });
     }
-  } catch (error) {
+  } catch {
     console.log('❌ Could not test parameterized leagues endpoint');
   }
 
@@ -231,7 +231,7 @@ async function testParameterizedEndpoints(): Promise<void> {
         description: `Get fixtures for leagueId: ${firstLeagueId}`
       });
     }
-  } catch (error) {
+  } catch {
     console.log('❌ Could not test parameterized fixtures endpoint');
   }
 
@@ -250,7 +250,7 @@ async function testParameterizedEndpoints(): Promise<void> {
         description: `Get selections for marketId: ${firstMarketId}`
       });
     }
-  } catch (error) {
+  } catch {
     console.log('❌ Could not test market selections endpoint');
   }
 }

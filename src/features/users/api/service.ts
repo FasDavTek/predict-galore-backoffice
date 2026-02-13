@@ -5,13 +5,10 @@
 
 import { api } from '@/shared/api';
 import { API_CONFIG } from '@/shared/api';
-import { transformApiUserToAppUser } from '../lib/transformers';
+import { mapRoleToApi, transformApiUserToAppUser } from '../lib/transformers';
 import type {
   UsersFilter,
   CreateUserData,
-  UpdateUserData,
-  UpdateUserStatusData,
-  AssignPermissionsData,
   UsersResponse,
   UsersAnalyticsResponse,
   UserDetailResponse,
@@ -86,7 +83,10 @@ export class UsersService {
    * Create user
    */
   static async createUser(data: CreateUserData): Promise<User> {
-    const response = await api.post<User>(API_CONFIG.endpoints.users.create, data);
+    const response = await api.post<User>(API_CONFIG.endpoints.users.create, {
+      ...data,
+      roleName: mapRoleToApi(data.roleName),
+    });
     return response;
   }
 

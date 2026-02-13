@@ -1,7 +1,7 @@
 // components/dashboard/Sidebar.tsx
 'use client';
 
-import React, { memo, useCallback } from 'react';
+import React, { memo, useCallback, useState } from 'react';
 import Box from '@mui/material/Box';
 import List from '@mui/material/List';
 import ListItem from '@mui/material/ListItem';
@@ -11,6 +11,7 @@ import ListItemText from '@mui/material/ListItemText';
 import Drawer from '@mui/material/Drawer';
 import IconButton from '@mui/material/IconButton';
 import Tooltip from '@mui/material/Tooltip';
+import Collapse from '@mui/material/Collapse';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import { useTheme } from '@mui/material/styles';
 import DashboardIcon from '@mui/icons-material/Dashboard';
@@ -22,6 +23,9 @@ import LogoutIcon from '@mui/icons-material/Logout';
 import ChevronLeft from '@mui/icons-material/ChevronLeft';
 import ChevronRight from '@mui/icons-material/ChevronRight';
 import CloseIcon from '@mui/icons-material/Close';
+import ExpandLess from '@mui/icons-material/ExpandLess';
+import ExpandMore from '@mui/icons-material/ExpandMore';
+import StorefrontIcon from '@mui/icons-material/Storefront';
 import Image from 'next/image';
 import { useRouter, usePathname } from 'next/navigation';
 import { useAuth } from '@/features/auth';
@@ -31,16 +35,31 @@ const DRAWER_WIDTH = 260; // Expanded width
 const COLLAPSED_WIDTH = 72; // Collapsed width
 
 // Navigation items configuration
+interface NavigationSubItem {
+  label: string;
+  path: string;
+  icon?: React.ReactElement;
+}
+
 interface NavigationItem {
   icon: React.ReactElement;
   label: string;
   path: string;
+  subItems?: NavigationSubItem[];
 }
 
 // Memoize navigation items to prevent recreation
 const navigationItems: NavigationItem[] = [
   { icon: <DashboardIcon />, label: 'Dashboard', path: '/dashboard' },
-  { icon: <DescriptionIcon />, label: 'Predictions', path: '/predictions' },
+  { 
+    icon: <DescriptionIcon />, 
+    label: 'Predictions', 
+    path: '/predictions',
+    subItems: [
+      { label: 'All Predictions', path: '/predictions' },
+      { label: 'Markets', path: '/predictions/markets', icon: <StorefrontIcon /> },
+    ],
+  },
   { icon: <PeopleIcon />, label: 'Users', path: '/users' },
   { icon: <WalletIcon />, label: 'Transactions', path: '/transactions' },
   { icon: <SettingsIcon />, label: 'Settings', path: '/settings' },
@@ -59,6 +78,7 @@ const Sidebar = ({ collapsed, setCollapsed, mobileOpen, setMobileOpen }: Sidebar
   const theme = useTheme();
   const { logout } = useAuth();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+  const [expandedItems, setExpandedItems] = useState<string[]>(['Predictions']); // Default expand Predictions
 
   // Toggle sidebar between expanded/collapsed states (desktop only)
   const toggleSidebar = useCallback(() => {
@@ -76,12 +96,31 @@ const Sidebar = ({ collapsed, setCollapsed, mobileOpen, setMobileOpen }: Sidebar
 
   // Check if current route matches item path
   const isActive = useCallback((path: string) => pathname === path, [pathname]);
+  
+  // Check if any submenu item is active
+  const hasActiveSubItem = useCallback((subItems?: NavigationSubItem[]) => {
+    if (!subItems) return false;
+    return subItems.some(subItem => pathname === subItem.path);
+  }, [pathname]);
+
+  // Toggle submenu expansion
+  const toggleExpand = useCallback((label: string) => {
+    setExpandedItems(prev => 
+      prev.includes(label) 
+        ? prev.filter(item => item !== label)
+        : [...prev, label]
+    );
+  }, []);
 
   // Handle navigation
-  const handleNavigation = useCallback((path: string) => {
-    router.push(path);
-    if (isMobile) setMobileOpen(false);
-  }, [router, isMobile, setMobileOpen]);
+  const handleNavigation = useCallback((path: string, hasSubItems?: boolean, label?: string) => {
+    if (hasSubItems && label) {
+      toggleExpand(label);
+    } else {
+      router.push(path);
+      if (isMobile) setMobileOpen(false);
+    }
+  }, [router, isMobile, setMobileOpen, toggleExpand]);
 
   // Handle logout
   const handleLogout = useCallback(() => {
@@ -152,18 +191,20 @@ const Sidebar = ({ collapsed, setCollapsed, mobileOpen, setMobileOpen }: Sidebar
         <List>
           {navigationItems.map((item, index) => {
             const active = isActive(item.path);
+            const hasSubItems = Boolean(item.subItems && item.subItems.length > 0);
+            const isExpanded = expandedItems.includes(item.label);
+            const hasActiveSub = hasActiveSubItem(item.subItems);
 
             // Reusable button component for each menu item
             const menuButton = (
               <ListItemButton
-                selected={active}
-                onClick={() => handleNavigation(item.path)}
+                selected={active || hasActiveSub}
+                onClick={() => handleNavigation(item.path, hasSubItems, item.label)}
                 sx={{
-                  borderRadius: isMobile ? 0 : 1, // Remove border radius on mobile
+                  borderRadius: isMobile ? 0 : 1,
                   mx: collapsed && !isMobile ? 0.5 : 0,
-                  my: isMobile ? 0 : 0.5, // Remove vertical margin on mobile
+                  my: isMobile ? 0 : 0.5,
                   justifyContent: collapsed && !isMobile ? 'center' : 'flex-start',
-                  // Active state styling
                   '&.Mui-selected': {
                     backgroundColor: 'rgba(66, 166, 5, 0.12)',
                     '& .MuiListItemIcon-root': { color: 'primary.main' },
@@ -172,7 +213,6 @@ const Sidebar = ({ collapsed, setCollapsed, mobileOpen, setMobileOpen }: Sidebar
                       fontWeight: 600,
                     },
                   },
-                  // Hover state styling
                   '&:hover': {
                     backgroundColor: 'rgba(66, 166, 5, 0.08)',
                     '& .MuiListItemIcon-root': { color: 'primary.main' },
@@ -186,37 +226,103 @@ const Sidebar = ({ collapsed, setCollapsed, mobileOpen, setMobileOpen }: Sidebar
                   sx={{
                     minWidth: collapsed && !isMobile ? 'auto' : 36,
                     justifyContent: 'center',
-                    color: active ? 'primary.main' : 'text.secondary',
+                    color: active || hasActiveSub ? 'primary.main' : 'text.secondary',
                   }}
                 >
                   <Box sx={{ fontSize: 'small' }}>{item.icon}</Box>
                 </ListItemIcon>
-                {/* Hide text when collapsed on desktop */}
                 {!(collapsed && !isMobile) && (
-                  <ListItemText
-                    primary={item.label}
-                    primaryTypographyProps={{
-                      fontSize: 14,
-                      color: active ? 'primary.main' : 'text.secondary',
-                      fontWeight: active ? 600 : 'normal',
-                    }}
-                    sx={{ ml: 1 }}
-                  />
+                  <>
+                    <ListItemText
+                      primary={item.label}
+                      primaryTypographyProps={{
+                        fontSize: 14,
+                        color: active || hasActiveSub ? 'primary.main' : 'text.secondary',
+                        fontWeight: active || hasActiveSub ? 600 : 'normal',
+                      }}
+                      sx={{ ml: 1 }}
+                    />
+                    {hasSubItems && (isExpanded ? <ExpandLess /> : <ExpandMore />)}
+                  </>
                 )}
               </ListItemButton>
             );
 
             return (
-              <ListItem key={index} disablePadding sx={{ display: 'block' }}>
-                {/* Show tooltip only when collapsed on desktop */}
-                {collapsed && !isMobile ? (
-                  <Tooltip title={item.label} placement="right">
-                    {menuButton}
-                  </Tooltip>
-                ) : (
-                  menuButton
+              <React.Fragment key={index}>
+                <ListItem disablePadding sx={{ display: 'block' }}>
+                  {collapsed && !isMobile ? (
+                    <Tooltip title={item.label} placement="right">
+                      {menuButton}
+                    </Tooltip>
+                  ) : (
+                    menuButton
+                  )}
+                </ListItem>
+
+                {/* Submenu items */}
+                {hasSubItems && !(collapsed && !isMobile) && (
+                  <Collapse in={isExpanded} timeout="auto" unmountOnExit>
+                    <List component="div" disablePadding>
+                      {item.subItems?.map((subItem, subIndex) => {
+                        const subActive = isActive(subItem.path);
+                        return (
+                          <ListItem key={subIndex} disablePadding>
+                            <ListItemButton
+                              selected={subActive}
+                              onClick={() => {
+                                router.push(subItem.path);
+                                if (isMobile) setMobileOpen(false);
+                              }}
+                              sx={{
+                                pl: 4,
+                                borderRadius: 1,
+                                mx: 0,
+                                my: 0.5,
+                                '&.Mui-selected': {
+                                  backgroundColor: 'rgba(66, 166, 5, 0.12)',
+                                  '& .MuiListItemIcon-root': { color: 'primary.main' },
+                                  '& .MuiListItemText-primary': {
+                                    color: 'primary.main',
+                                    fontWeight: 600,
+                                  },
+                                },
+                                '&:hover': {
+                                  backgroundColor: 'rgba(66, 166, 5, 0.08)',
+                                  '& .MuiListItemIcon-root': { color: 'primary.main' },
+                                  '& .MuiListItemText-primary': {
+                                    color: 'primary.main',
+                                  },
+                                },
+                              }}
+                            >
+                              {subItem.icon && (
+                                <ListItemIcon
+                                  sx={{
+                                    minWidth: 36,
+                                    justifyContent: 'center',
+                                    color: subActive ? 'primary.main' : 'text.secondary',
+                                  }}
+                                >
+                                  <Box sx={{ fontSize: 'small' }}>{subItem.icon}</Box>
+                                </ListItemIcon>
+                              )}
+                              <ListItemText
+                                primary={subItem.label}
+                                primaryTypographyProps={{
+                                  fontSize: 13,
+                                  color: subActive ? 'primary.main' : 'text.secondary',
+                                  fontWeight: subActive ? 600 : 'normal',
+                                }}
+                              />
+                            </ListItemButton>
+                          </ListItem>
+                        );
+                      })}
+                    </List>
+                  </Collapse>
                 )}
-              </ListItem>
+              </React.Fragment>
             );
           })}
         </List>

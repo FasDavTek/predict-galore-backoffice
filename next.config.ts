@@ -24,8 +24,6 @@ const nextConfig: NextConfig = {
       skipDefaultConversion: true,
     },
   },
-  // Transpile packages for better optimization
-  transpilePackages: ['@mui/material', '@mui/system', '@mui/icons-material'],
   // Experimental optimizations for faster builds
   experimental: {
     optimizePackageImports: [

@@ -59,6 +59,96 @@ interface PredictionsTableProps {
   onPredictionSelect?: (prediction: Prediction | null) => void;
 }
 
+interface PredictionRowProps {
+  prediction: Prediction;
+  isSelected: boolean;
+  onSelect: (predictionId: number, prediction: Prediction) => void;
+  onViewDetails: (predictionId: number) => void;
+  onEdit: (prediction: Prediction) => void;
+  onDelete: (prediction: Prediction) => void;
+  formatDate: (dateString: string) => string;
+  getStatusColor: (status: string) => 'default' | 'primary' | 'success' | 'warning' | 'error';
+}
+
+const PredictionRow = memo(function PredictionRow({
+  prediction,
+  isSelected,
+  onSelect,
+  onViewDetails,
+  onEdit,
+  onDelete,
+  formatDate,
+  getStatusColor,
+}: PredictionRowProps) {
+  return (
+    <TableRow
+      hover
+      onClick={() => onSelect(prediction.id, prediction)}
+      sx={{
+        cursor: 'pointer',
+        bgcolor: isSelected ? 'action.selected' : 'transparent',
+        '&:hover': {
+          bgcolor: isSelected ? 'action.selected' : 'action.hover',
+        },
+      }}
+    >
+      <TableCell padding="checkbox" onClick={(e) => e.stopPropagation()}>
+        <Checkbox
+          checked={isSelected}
+          onChange={() => onSelect(prediction.id, prediction)}
+        />
+      </TableCell>
+      <TableCell>{prediction.id}</TableCell>
+      <TableCell>{prediction.match}</TableCell>
+      <TableCell>{prediction.picksCount}</TableCell>
+      <TableCell>{prediction.accuracy}%</TableCell>
+      <TableCell>{formatDate(prediction.datePostedUtc)}</TableCell>
+      <TableCell>
+        <Chip
+          label={prediction.status.charAt(0).toUpperCase() + prediction.status.slice(1)}
+          size="small"
+          color={getStatusColor(prediction.status)}
+        />
+      </TableCell>
+      <TableCell align="right" onClick={(e) => e.stopPropagation()}>
+        <Stack direction="row" spacing={1} justifyContent="flex-end">
+          <Button
+            size="small"
+            variant="outlined"
+            onClick={(e) => {
+              e.stopPropagation();
+              onViewDetails(prediction.id);
+            }}
+          >
+            View Details
+          </Button>
+          <Button
+            size="small"
+            variant="text"
+            onClick={(e) => {
+              e.stopPropagation();
+              onEdit(prediction);
+            }}
+          >
+            Edit
+          </Button>
+          <Button
+            size="small"
+            color="error"
+            variant="text"
+            onClick={(e) => {
+              e.stopPropagation();
+              onDelete(prediction);
+            }}
+          >
+            Delete
+          </Button>
+        </Stack>
+      </TableCell>
+    </TableRow>
+  );
+});
+
 export const PredictionsTable = memo(function PredictionsTable({
   predictions,
   pagination,
@@ -67,8 +157,8 @@ export const PredictionsTable = memo(function PredictionsTable({
   filters,
   onFilterChange,
   onAddPrediction,
-  onEditPrediction: _onEditPrediction,
-  onDeletePrediction: _onDeletePrediction,
+  onEditPrediction,
+  onDeletePrediction,
   onRefresh,
   selectedPrediction,
   onPredictionSelect,
@@ -114,6 +204,9 @@ export const PredictionsTable = memo(function PredictionsTable({
     }
   }, [selectedPrediction, onPredictionSelect]);
 
+  const handleViewDetails = useCallback((predictionId: number) => {
+    router.push(`/predictions/${predictionId}`);
+  }, [router]);
 
   const handlePageChange = useCallback((_: React.ChangeEvent<unknown>, page: number) => {
     onFilterChange({ page });
@@ -264,53 +357,19 @@ export const PredictionsTable = memo(function PredictionsTable({
                 title="No Predictions"
               />
             ) : (
-              predictions.map((prediction) => {
-                const isSelected = selectedIds.has(prediction.id);
-                return (
-                <TableRow
+              predictions.map((prediction) => (
+                <PredictionRow
                   key={prediction.id}
-                  hover
-                  onClick={() => handleSelectOne(prediction.id, prediction)}
-                  sx={{ 
-                    cursor: 'pointer',
-                    bgcolor: isSelected ? 'action.selected' : 'transparent',
-                    '&:hover': {
-                      bgcolor: isSelected ? 'action.selected' : 'action.hover',
-                    },
-                  }}
-                >
-                  <TableCell padding="checkbox" onClick={(e) => e.stopPropagation()}>
-                    <Checkbox
-                      checked={isSelected}
-                      onChange={() => handleSelectOne(prediction.id, prediction)}
-                    />
-                  </TableCell>
-                  <TableCell>{prediction.id}</TableCell>
-                  <TableCell>{prediction.match}</TableCell>
-                  <TableCell>{prediction.picksCount}</TableCell>
-                  <TableCell>{prediction.accuracy}%</TableCell>
-                  <TableCell>{formatDate(prediction.datePostedUtc)}</TableCell>
-                  <TableCell>
-                    <Chip
-                      label={prediction.status.charAt(0).toUpperCase() + prediction.status.slice(1)}
-                      size="small"
-                      color={getStatusColor(prediction.status)}
-                    />
-                  </TableCell>
-                  <TableCell align="right" onClick={(e) => e.stopPropagation()}>
-                    <Button
-                      size="small"
-                      variant="outlined"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        router.push(`/predictions/${prediction.id}`);
-                      }}
-                    >
-                      View Details
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              )})
+                  prediction={prediction}
+                  isSelected={selectedIds.has(prediction.id)}
+                  onSelect={handleSelectOne}
+                  onViewDetails={handleViewDetails}
+                  onEdit={onEditPrediction}
+                  onDelete={onDeletePrediction}
+                  formatDate={formatDate}
+                  getStatusColor={getStatusColor}
+                />
+              ))
             )}
           </TableBody>
         </Table>

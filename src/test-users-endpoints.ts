@@ -117,7 +117,7 @@ async function testEndpoint(test: EndpointTest): Promise<void> {
 
       // Analyze response structure
       if (typeof responseData !== 'string') {
-        analyzeResponseStructure(responseData as Record<string, unknown>, test.name);
+        analyzeResponseStructure(responseData as Record<string, unknown>);
       }
     } else {
       console.log('\n❌ ERROR RESPONSE:');
@@ -134,7 +134,7 @@ async function testEndpoint(test: EndpointTest): Promise<void> {
   }
 }
 
-function analyzeResponseStructure(response: Record<string, unknown>, _endpointName: string): void {
+function analyzeResponseStructure(response: Record<string, unknown>): void {
   console.log('\n🔍 Response Analysis:');
 
   if (typeof response !== 'object' || response === null) {

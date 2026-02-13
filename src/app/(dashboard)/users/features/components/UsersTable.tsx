@@ -5,7 +5,7 @@
 
 'use client';
 
-import { useState, useEffect, useCallback, memo } from 'react';
+import React, { useState, useEffect, useCallback, memo } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   Box,
@@ -60,6 +60,93 @@ interface UsersTableProps {
   selectedUser?: User | null;
   onUserSelect?: (user: User | null) => void;
 }
+
+interface UserRowProps {
+  user: User;
+  isSelected: boolean;
+  onSelect: (userId: string, user: User) => void;
+  onViewDetails: (userId: string) => void;
+  style?: React.CSSProperties;
+}
+
+const UserRow = memo(function UserRow({
+  user,
+  isSelected,
+  onSelect,
+  onViewDetails,
+  style,
+}: UserRowProps) {
+  const userInitials = generateUserInitials(user.firstName, user.lastName);
+
+  return (
+    <TableRow
+      hover
+      onClick={() => onSelect(user.id, user)}
+      sx={{
+        cursor: 'pointer',
+        bgcolor: isSelected ? 'action.selected' : 'transparent',
+        '&:hover': {
+          bgcolor: isSelected ? 'action.selected' : 'action.hover',
+        },
+      }}
+      style={style}
+    >
+      <TableCell padding="checkbox" onClick={(e) => e.stopPropagation()}>
+        <Checkbox
+          checked={isSelected}
+          onChange={() => onSelect(user.id, user)}
+        />
+      </TableCell>
+      <TableCell>
+        <Stack direction="row" spacing={1} alignItems="center">
+          <Avatar
+            sx={{
+              width: 32,
+              height: 32,
+              bgcolor: 'primary.main',
+              color: 'primary.contrastText',
+              fontSize: 12,
+              fontWeight: 600,
+            }}
+          >
+            {userInitials}
+          </Avatar>
+          <Typography variant="body2">
+            {`${user.firstName} ${user.lastName}`}
+          </Typography>
+        </Stack>
+      </TableCell>
+      <TableCell>{user.email}</TableCell>
+      <TableCell>
+        <Chip 
+          label={user.plan ? user.plan.charAt(0).toUpperCase() + user.plan.slice(1) : 'Free'} 
+          size="small"
+          color={user.plan === 'premium' || user.plan === 'enterprise' ? 'success' : 'default'}
+        />
+      </TableCell>
+      <TableCell>
+        <Chip
+          label={user.isActive ? 'Active' : 'Inactive'}
+          size="small"
+          color={user.isActive ? 'success' : 'default'}
+        />
+      </TableCell>
+      <TableCell>{new Date(user.createdAt).toLocaleDateString()}</TableCell>
+      <TableCell align="right" onClick={(e) => e.stopPropagation()}>
+        <Button
+          size="small"
+          variant="outlined"
+          onClick={(e) => {
+            e.stopPropagation();
+            onViewDetails(user.id);
+          }}
+        >
+          View Details
+        </Button>
+      </TableCell>
+    </TableRow>
+  );
+});
 
 export const UsersTable = memo(function UsersTable({
   users,
@@ -148,6 +235,10 @@ export const UsersTable = memo(function UsersTable({
 
   const statusOptions: UserStatus[] = ['active', 'inactive', 'suspended', 'pending'];
   const planOptions: SubscriptionPlan[] = ['free', 'basic', 'premium', 'enterprise'];
+
+  const handleViewDetails = useCallback((userId: string) => {
+    router.push(`/users/${userId}`);
+  }, [router]);
 
   return (
     <Box>
@@ -242,96 +333,39 @@ export const UsersTable = memo(function UsersTable({
                     <TableCell align="right">Action</TableCell>
             </TableRow>
           </TableHead>
-          <TableBody>
-            {isLoading ? (
+          {isLoading ? (
+            <TableBody>
               <TableRow>
                 <TableCell colSpan={8} sx={{ textAlign: 'center', py: 4 }}>
                   <TableLoadingState message="Loading users..." />
                 </TableCell>
               </TableRow>
-            ) : error ? (
+            </TableBody>
+          ) : error ? (
+            <TableBody>
               <TableErrorState colSpan={8} message="Failed to load users. Please try again." onRetry={onRefresh} />
-            ) : users.length === 0 ? (
+            </TableBody>
+          ) : users.length === 0 ? (
+            <TableBody>
               <TableEmptyState
                 colSpan={8}
                 message="No users found"
                 title="No Users"
               />
-            ) : (
-              users.map((user) => {
-                const userInitials = generateUserInitials(user.firstName, user.lastName);
-                const isSelected = selectedIds.has(user.id);
-                return (
-                  <TableRow 
-                    key={user.id} 
-                    hover 
-                    onClick={() => handleSelectOne(user.id, user)}
-                    sx={{ 
-                      cursor: 'pointer',
-                      bgcolor: isSelected ? 'action.selected' : 'transparent',
-                      '&:hover': {
-                        bgcolor: isSelected ? 'action.selected' : 'action.hover',
-                      },
-                    }}
-                  >
-                    <TableCell padding="checkbox" onClick={(e) => e.stopPropagation()}>
-                      <Checkbox 
-                        checked={isSelected}
-                        onChange={() => handleSelectOne(user.id, user)}
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <Stack direction="row" spacing={1} alignItems="center">
-                        <Avatar
-                          sx={{
-                            width: 32,
-                            height: 32,
-                            bgcolor: 'primary.main',
-                            color: 'primary.contrastText',
-                            fontSize: 12,
-                            fontWeight: 600,
-                          }}
-                        >
-                          {userInitials}
-                        </Avatar>
-                        <Typography variant="body2">
-                          {`${user.firstName} ${user.lastName}`}
-                        </Typography>
-                      </Stack>
-                    </TableCell>
-                    <TableCell>{user.email}</TableCell>
-                    <TableCell>
-                      <Chip 
-                        label={user.plan ? user.plan.charAt(0).toUpperCase() + user.plan.slice(1) : 'Free'} 
-                        size="small"
-                        color={user.plan === 'premium' || user.plan === 'enterprise' ? 'success' : 'default'}
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <Chip
-                        label={user.isActive ? 'Active' : 'Inactive'}
-                        size="small"
-                        color={user.isActive ? 'success' : 'default'}
-                      />
-                    </TableCell>
-                    <TableCell>{new Date(user.createdAt).toLocaleDateString()}</TableCell>
-                    <TableCell align="right" onClick={(e) => e.stopPropagation()}>
-                      <Button
-                        size="small"
-                        variant="outlined"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          router.push(`/users/${user.id}`);
-                        }}
-                      >
-                        View Details
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                );
-              })
-            )}
-          </TableBody>
+            </TableBody>
+          ) : (
+            <TableBody>
+              {users.map((user) => (
+                <UserRow
+                  key={user.id}
+                  user={user}
+                  isSelected={selectedIds.has(user.id)}
+                  onSelect={handleSelectOne}
+                  onViewDetails={handleViewDetails}
+                />
+              ))}
+            </TableBody>
+          )}
         </Table>
       </TableContainer>
 

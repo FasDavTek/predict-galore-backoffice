@@ -47,7 +47,7 @@ const theme = createTheme({
     },
   },
   typography: {
-    fontFamily: designTokens.typography.fontFamily.primary,
+    fontFamily: 'var(--font-inter)',
     h1: {
       fontSize: designTokens.typography.fontSize['3xl'],
       lineHeight: designTokens.typography.lineHeight.tight,
@@ -67,13 +67,13 @@ const theme = createTheme({
       color: designTokens.colors.neutral[500],
     },
     h4: {
-      fontFamily: designTokens.typography.fontFamily.secondary,
+      fontFamily: 'var(--font-ultra)',
       fontWeight: designTokens.typography.fontWeight.normal,
       fontSize: designTokens.typography.fontSize.xl,
       lineHeight: designTokens.typography.lineHeight.normal,
     },
     h5: {
-      fontFamily: designTokens.typography.fontFamily.secondary,
+      fontFamily: 'var(--font-ultra)',
       fontWeight: designTokens.typography.fontWeight.normal,
       fontSize: designTokens.typography.fontSize.base,
       lineHeight: designTokens.typography.lineHeight.normal,

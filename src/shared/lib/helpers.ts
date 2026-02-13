@@ -83,7 +83,7 @@ export const formatLastActive = (lastActive?: string): string => {
 
 export const canUserBeDeleted = (user: User): boolean => {
   // Users with active subscriptions or admin roles might have restrictions
-  return user.plan === 'free' && user.role === 'user';
+  return user.plan === 'free' && user.role === 'viewer';
 };
 
 export const getUserStatusBadgeVariant = (

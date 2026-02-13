@@ -5,6 +5,7 @@
 
 import { createLogger } from './logger';
 import { API_CONFIG } from './config';
+import { useAuth } from '@/features/auth/model/store';
 
 const logger = createLogger('API');
 
@@ -25,8 +26,7 @@ class ApiClient {
   }
 
   private getToken(): string | null {
-    if (typeof window === 'undefined') return null;
-    return sessionStorage.getItem('authToken');
+    return useAuth.getState().token;
   }
 
   private buildUrl(path: string, params?: Record<string, unknown>): string {

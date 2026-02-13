@@ -217,7 +217,7 @@ async function main(): Promise<void> {
     } else if (Array.isArray(notificationsResponse.data)) {
       await testMutationEndpoints(notificationsResponse.data);
     }
-  } catch (error) {
+  } catch {
     console.log('❌ Could not fetch notifications for mutation testing');
   }
 

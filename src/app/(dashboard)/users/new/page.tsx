@@ -9,7 +9,6 @@ import { useCallback, memo, Suspense } from 'react';
 import { useRouter } from 'next/navigation';
 import { Box } from '@mui/material';
 import { designTokens } from '@/shared/styles/tokens';
-import withAuth from '@/hoc/with-auth';
 import dynamic from 'next/dynamic';
 
 // Lazy load heavy form component
@@ -49,4 +48,4 @@ function NewUserPage() {
   );
 }
 
-export default withAuth(memo(NewUserPage));
+export default memo(NewUserPage);

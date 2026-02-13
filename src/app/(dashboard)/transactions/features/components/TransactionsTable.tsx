@@ -44,9 +44,14 @@ import { Transaction, TransactionsFilter, TransactionStatus, formatCurrency, for
 import { PaginationMeta } from '@/shared/types/common.types';
 import { useDebounce } from '@/shared/hooks/useDebounce';
 import { SelectedTransactionProfile } from './SelectedTransactionProfile';
-import { TransactionFilterDialog } from './TransactionFilterDialog';
 import { generateUserInitials } from '@/features/users/lib/transformers';
 import { useTableExport } from '@/shared/hooks/useTableExport';
+import dynamic from 'next/dynamic';
+
+const TransactionFilterDialog = dynamic(
+  () => import('./TransactionFilterDialog').then((mod) => mod.TransactionFilterDialog),
+  { ssr: false }
+);
 
 interface TransactionsTableProps {
   transactions: Transaction[];
@@ -60,6 +65,120 @@ interface TransactionsTableProps {
   onTransactionSelect?: (transaction: Transaction | null) => void;
   onViewDetails?: (transaction: Transaction) => void;
 }
+
+interface TransactionRowProps {
+  transaction: Transaction;
+  isSelected: boolean;
+  onSelect: (transactionId: string | number, transaction: Transaction) => void;
+  onMenuOpen: (event: React.MouseEvent<HTMLElement>, transaction: Transaction) => void;
+  extractNameFromEmail: (email: string) => { firstName: string; lastName: string };
+  formatDate: (dateString: string) => string;
+  getStatusColor: (status: TransactionStatus) => 'default' | 'primary' | 'secondary' | 'error' | 'info' | 'success' | 'warning';
+}
+
+const TransactionRow = memo(function TransactionRow({
+  transaction,
+  isSelected,
+  onSelect,
+  onMenuOpen,
+  extractNameFromEmail,
+  formatDate,
+  getStatusColor,
+}: TransactionRowProps) {
+  const name = extractNameFromEmail(transaction.email);
+  const userInitials = generateUserInitials(name.firstName, name.lastName);
+  const fullName = name.lastName ? `${name.firstName} ${name.lastName}` : name.firstName;
+  const plan = transaction.paymentType === 'Subscription' ? 'Monthly' : transaction.paymentType;
+
+  return (
+    <TableRow
+      hover
+      onClick={() => onSelect(String(transaction.id), transaction)}
+      sx={{
+        cursor: 'pointer',
+        bgcolor: isSelected ? 'action.selected' : 'transparent',
+        '&:hover': {
+          bgcolor: isSelected ? 'action.selected' : 'action.hover',
+        },
+      }}
+    >
+      <TableCell padding="checkbox" onClick={(e) => e.stopPropagation()}>
+        <Checkbox
+          checked={isSelected}
+          onChange={() => onSelect(transaction.id, transaction)}
+        />
+      </TableCell>
+      <TableCell>
+        <Typography variant="body2" fontWeight={500}>
+          #{transaction.reference}
+        </Typography>
+      </TableCell>
+      <TableCell>
+        <Stack direction="row" spacing={1} alignItems="center">
+          <Avatar
+            sx={{
+              width: 32,
+              height: 32,
+              bgcolor: transaction.status === 'Successful' ? 'success.main' : 'error.main',
+              color: 'white',
+              fontSize: 12,
+              fontWeight: 600,
+            }}
+          >
+            {userInitials}
+          </Avatar>
+          <Typography variant="body2">
+            {fullName}
+          </Typography>
+        </Stack>
+      </TableCell>
+      <TableCell>
+        <Chip
+          label={plan}
+          size="small"
+          variant="outlined"
+        />
+      </TableCell>
+      <TableCell>
+        <Typography variant="body2" fontWeight={600}>
+          {formatCurrency(transaction.amount)}
+        </Typography>
+      </TableCell>
+      <TableCell>
+        <Typography variant="body2">
+          {formatDate(transaction.dateCreated)}
+        </Typography>
+      </TableCell>
+      <TableCell>
+        <Chip
+          label={formatTransactionStatus(transaction.status)}
+          size="small"
+          color={getStatusColor(transaction.status)}
+          sx={{
+            bgcolor: transaction.status === 'Successful' 
+              ? 'success.light' 
+              : transaction.status === 'Failed'
+              ? 'error.light'
+              : undefined,
+            color: transaction.status === 'Successful'
+              ? 'success.main'
+              : transaction.status === 'Failed'
+              ? 'error.main'
+              : undefined,
+          }}
+        />
+      </TableCell>
+      <TableCell align="right" onClick={(e) => e.stopPropagation()}>
+        <IconButton
+          size="small"
+          onClick={(e) => onMenuOpen(e, transaction)}
+        >
+          <MoreVertIcon />
+        </IconButton>
+      </TableCell>
+    </TableRow>
+  );
+});
 
 export const TransactionsTable = memo(function TransactionsTable({
   transactions,
@@ -92,24 +211,13 @@ export const TransactionsTable = memo(function TransactionsTable({
     filename: `transactions-${new Date().toISOString().split('T')[0]}`,
   });
   const [search, setSearch] = useState(filters.search || '');
-  const [selectedIds, setSelectedIds] = useState<Set<string | number>>(new Set());
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [menuTransaction, setMenuTransaction] = useState<Transaction | null>(null);
   const [filterDialogOpen, setFilterDialogOpen] = useState(false);
+  const selectedId = selectedTransaction ? String(selectedTransaction.id) : null;
   
   // Debounce search input
   const debouncedSearch = useDebounce(search, 300);
-  
-  // Sync selectedIds with selectedTransaction (single-select)
-  useEffect(() => {
-    if (selectedTransaction) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- Syncing derived state from props
-      setSelectedIds(new Set([String(selectedTransaction.id)]));
-    } else {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- Syncing derived state from props
-      setSelectedIds(new Set());
-    }
-  }, [selectedTransaction]);
   
   // Update filters when debounced search changes
   useEffect(() => {
@@ -166,16 +274,14 @@ export const TransactionsTable = memo(function TransactionsTable({
   const handleSelectOne = useCallback((transactionId: string | number, transaction: Transaction) => {
     const idStr = String(transactionId);
     // Single-select: if clicking the same item, deselect it; otherwise select the new one
-    if (String(selectedTransaction?.id) === idStr) {
+    if (selectedId === idStr) {
       // Deselect if clicking the already selected item
-      setSelectedIds(new Set());
       setTimeout(() => onTransactionSelect?.(null), 0);
     } else {
       // Select the new item (only one at a time)
-      setSelectedIds(new Set([transactionId]));
       setTimeout(() => onTransactionSelect?.(transaction), 0);
     }
-  }, [selectedTransaction, onTransactionSelect]);
+  }, [selectedId, onTransactionSelect]);
 
   const getStatusColor = useCallback((status: TransactionStatus): 'default' | 'primary' | 'secondary' | 'error' | 'info' | 'success' | 'warning' => {
     switch (status) {
@@ -298,103 +404,18 @@ export const TransactionsTable = memo(function TransactionsTable({
                 title="No Transactions"
               />
             ) : (
-              transactions.map((transaction) => {
-                const name = extractNameFromEmail(transaction.email);
-                const userInitials = generateUserInitials(name.firstName, name.lastName);
-                const fullName = name.lastName ? `${name.firstName} ${name.lastName}` : name.firstName;
-                const isSelected = selectedIds.has(String(transaction.id));
-                const plan = transaction.paymentType === 'Subscription' ? 'Monthly' : transaction.paymentType;
-
-                return (
-                  <TableRow
-                    key={transaction.id}
-                    hover
-                    onClick={() => handleSelectOne(String(transaction.id), transaction)}
-                    sx={{
-                      cursor: 'pointer',
-                      bgcolor: isSelected ? 'action.selected' : 'transparent',
-                      '&:hover': {
-                        bgcolor: isSelected ? 'action.selected' : 'action.hover',
-                      },
-                    }}
-                  >
-                    <TableCell padding="checkbox" onClick={(e) => e.stopPropagation()}>
-                      <Checkbox 
-                        checked={isSelected}
-                        onChange={() => handleSelectOne(transaction.id, transaction)}
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <Typography variant="body2" fontWeight={500}>
-                        #{transaction.reference}
-                      </Typography>
-                    </TableCell>
-                    <TableCell>
-                      <Stack direction="row" spacing={1} alignItems="center">
-                        <Avatar
-                          sx={{
-                            width: 32,
-                            height: 32,
-                            bgcolor: transaction.status === 'Successful' ? 'success.main' : 'error.main',
-                            color: 'white',
-                            fontSize: 12,
-                            fontWeight: 600,
-                          }}
-                        >
-                          {userInitials}
-                        </Avatar>
-                        <Typography variant="body2">
-                          {fullName}
-                        </Typography>
-                      </Stack>
-                    </TableCell>
-                    <TableCell>
-                      <Chip
-                        label={plan}
-                        size="small"
-                        variant="outlined"
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <Typography variant="body2" fontWeight={600}>
-                        {formatCurrency(transaction.amount)}
-                      </Typography>
-                    </TableCell>
-                    <TableCell>
-                      <Typography variant="body2">
-                        {formatDate(transaction.dateCreated)}
-                      </Typography>
-                    </TableCell>
-                    <TableCell>
-                      <Chip
-                        label={formatTransactionStatus(transaction.status)}
-                        size="small"
-                        color={getStatusColor(transaction.status)}
-                        sx={{
-                          bgcolor: transaction.status === 'Successful' 
-                            ? 'success.light' 
-                            : transaction.status === 'Failed'
-                            ? 'error.light'
-                            : undefined,
-                          color: transaction.status === 'Successful'
-                            ? 'success.main'
-                            : transaction.status === 'Failed'
-                            ? 'error.main'
-                            : undefined,
-                        }}
-                      />
-                    </TableCell>
-                    <TableCell align="right" onClick={(e) => e.stopPropagation()}>
-                      <IconButton
-                        size="small"
-                        onClick={(e) => handleMenuOpen(e, transaction)}
-                      >
-                        <MoreVertIcon />
-                      </IconButton>
-                    </TableCell>
-                  </TableRow>
-                );
-              })
+              transactions.map((transaction) => (
+                <TransactionRow
+                  key={transaction.id}
+                  transaction={transaction}
+                  isSelected={selectedId === String(transaction.id)}
+                  onSelect={handleSelectOne}
+                  onMenuOpen={handleMenuOpen}
+                  extractNameFromEmail={extractNameFromEmail}
+                  formatDate={formatDate}
+                  getStatusColor={getStatusColor}
+                />
+              ))
             )}
           </TableBody>
         </Table>

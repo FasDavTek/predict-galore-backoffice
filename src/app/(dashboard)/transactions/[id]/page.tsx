@@ -26,7 +26,6 @@ import {
   ArrowBack as ArrowBackIcon,
 } from '@mui/icons-material';
 import { designTokens } from '@/shared/styles/tokens';
-import withAuth from '@/hoc/with-auth';
 import { useTransaction, formatCurrency, formatPaymentMethod, formatTransactionStatus } from '@/features/transactions';
 import { generateUserInitials } from '@/features/users/lib/transformers';
 
@@ -427,4 +426,4 @@ function TransactionDetailsPage() {
   );
 }
 
-export default withAuth(memo(TransactionDetailsPage));
+export default memo(TransactionDetailsPage);

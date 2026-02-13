@@ -13,9 +13,9 @@ export const SUBSCRIPTION_PLANS = [
 ] as const;
 
 export const USER_ROLES = [
-  { value: 'user', label: 'User' },
+  { value: 'viewer', label: 'Viewer' },
   { value: 'admin', label: 'Admin' },
-  { value: 'moderator', label: 'Moderator' },
+  { value: 'editor', label: 'Editor' },
 ] as const;
 
 export const DEFAULT_PAGE_SIZE = 10;

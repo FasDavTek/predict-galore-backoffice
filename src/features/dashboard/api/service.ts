@@ -7,9 +7,6 @@ import { API_CONFIG } from '@/shared/api';
 import type {
   DashboardSummaryResponse,
   DashboardAnalyticsResponse,
-  DashboardActivityResponse,
-  DashboardTrafficResponse,
-  DashboardEngagementResponse,
   DashboardSummary,
   DashboardAnalytics,
   DashboardActivity,

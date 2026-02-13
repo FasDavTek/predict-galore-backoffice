@@ -5,7 +5,7 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { UsersService } from './service';
-import type { UsersFilter, CreateUserData, UpdateUserData, UpdateUserStatusData, AssignPermissionsData } from './types';
+import type { UsersFilter, CreateUserData, AssignPermissionsData } from './types';
 
 export function useUsers(filters?: UsersFilter) {
   return useQuery({

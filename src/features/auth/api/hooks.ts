@@ -64,12 +64,13 @@ export function useRegister() {
 
 // Profile hook
 export function useProfile() {
+  const { token } = useAuth();
   return useQuery({
     queryKey: ['profile'],
     queryFn: async () => {
       return await AuthService.getProfile();
     },
-    enabled: typeof window !== 'undefined' && !!sessionStorage.getItem('authToken'),
+    enabled: !!token,
   });
 }
 

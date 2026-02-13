@@ -34,8 +34,8 @@ export interface PageHeaderProps {
   timeRange?: TimeRange;
   onTimeRangeChange?: (range: TimeRange) => void;
   onRefresh?: () => void;
+  isRefreshing?: boolean;
   user?: AuthUser | null;
-  refreshTooltip?: string;
   showTimeRange?: boolean;
   actions?: React.ReactNode;
 }
@@ -52,7 +52,6 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
   onTimeRangeChange,
   onRefresh,
   user,
-  refreshTooltip = 'Refresh data',
   showTimeRange = true,
   actions,
 }) => {

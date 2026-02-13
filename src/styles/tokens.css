@@ -1,0 +1,30 @@
+/* Design tokens as CSS variables (single source of truth for Tailwind + MUI) */
+:root {
+  /* Colors */
+  --color-primary-500: #42A605;
+  --color-primary-400: #4ade80;
+  --color-primary-700: #22733d;
+  --color-secondary-500: #41414B;
+  --color-text-primary: #101012;
+  --color-text-secondary: #5D5E6C;
+  --color-background: #ffffff;
+  --color-background-secondary: #F8FAFC;
+  --color-border: #E2E8F0;
+
+  /* Typography */
+  --font-primary: var(--font-inter);
+  --font-secondary: var(--font-ultra);
+
+  /* Radius */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+
+  /* Spacing */
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 12px;
+  --space-lg: 16px;
+  --space-xl: 24px;
+}
+

@@ -10,7 +10,7 @@ export const userFormSchema = z.object({
   lastName: z.string().min(1, 'Last name is required'),
   email: z.string().email('Invalid email address'),
   phone: z.string().optional(),
-  role: z.enum(['user', 'admin', 'moderator'] as const),
+  role: z.enum(['admin', 'editor', 'viewer'] as const),
   plan: z.enum(['free', 'basic', 'premium', 'enterprise'] as const),
   isActive: z.boolean().default(true),
   sendWelcomeEmail: z.boolean().default(false),

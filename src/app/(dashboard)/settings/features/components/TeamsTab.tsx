@@ -73,7 +73,7 @@ const InviteDialog: React.FC<{
   onInvite: (emails: string[], role: UserRole) => Promise<void>;
 }> = ({ open, onClose, onInvite }) => {
   const [email, setEmail] = useState('');
-  const [role, setRole] = useState<UserRole>('user');
+  const [role, setRole] = useState<UserRole>('viewer');
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async () => {
@@ -110,9 +110,9 @@ const InviteDialog: React.FC<{
           onChange={(e) => setRole(e.target.value as UserRole)}
           SelectProps={{ native: true }}
         >
-          <option value="Editor">Editor</option>
-          <option value="Admin">Admin</option>
-          <option value="Viewer">Viewer</option>
+          <option value="admin">Admin</option>
+          <option value="editor">Editor</option>
+          <option value="viewer">Viewer</option>
         </TextField>
       </DialogContent>
       <DialogActions>
@@ -133,7 +133,7 @@ const EditRoleDialog: React.FC<{
   onClose: () => void;
   onSave: (role: UserRole) => Promise<void>;
 }> = ({ open, member, onClose, onSave }) => {
-  const [role, setRole] = useState<UserRole>((member?.role as UserRole) || 'user');
+  const [role, setRole] = useState<UserRole>((member?.role as UserRole) || 'viewer');
   const [loading, setLoading] = useState(false);
 
   const handleSave = async () => {
@@ -161,9 +161,9 @@ const EditRoleDialog: React.FC<{
           onChange={(e) => setRole(e.target.value as UserRole)}
           SelectProps={{ native: true }}
         >
-          <option value="Editor">Editor</option>
-          <option value="Admin">Admin</option>
-          <option value="Viewer">Viewer</option>
+          <option value="admin">Admin</option>
+          <option value="editor">Editor</option>
+          <option value="viewer">Viewer</option>
         </TextField>
       </DialogContent>
       <DialogActions>

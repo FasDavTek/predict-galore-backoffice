@@ -1,52 +1,5 @@
-/**
- * New Prediction Page
- * Full-page form for creating new predictions
- */
+import NewPredictionPageClient from './NewPredictionPageClient';
 
-'use client';
-
-import { useCallback, memo, Suspense } from 'react';
-import { useRouter } from 'next/navigation';
-import { Box } from '@mui/material';
-import { designTokens } from '@/shared/styles/tokens';
-import withAuth from '@/hoc/with-auth';
-import dynamic from 'next/dynamic';
-
-// Lazy load heavy form component
-const PredictionForm = dynamic(
-  () => import('../features/components/PredictionForm'),
-  {
-    loading: () => <div>Loading form...</div>,
-    ssr: false,
-  }
-);
-
-function NewPredictionPage() {
-  const router = useRouter();
-
-  const handleSuccess = useCallback(() => {
-    router.push('/predictions');
-  }, [router]);
-
-  const handleCancel = useCallback(() => {
-    router.push('/predictions');
-  }, [router]);
-
-  return (
-    <Box
-      sx={{
-        width: '100%',
-        minHeight: '100vh',
-        px: { xs: 2, sm: 3, md: 4 },
-        py: designTokens.spacing.xl,
-        position: 'relative',
-      }}
-    >
-      <Suspense fallback={<div>Loading form...</div>}>
-        <PredictionForm onSuccess={handleSuccess} onCancel={handleCancel} />
-      </Suspense>
-    </Box>
-  );
+export default function NewPredictionPage() {
+  return <NewPredictionPageClient />;
 }
-
-export default withAuth(memo(NewPredictionPage));

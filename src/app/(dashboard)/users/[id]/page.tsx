@@ -29,7 +29,6 @@ import {
   Save as SaveIcon,
 } from '@mui/icons-material';
 import { designTokens } from '@/shared/styles/tokens';
-import withAuth from '@/hoc/with-auth';
 import { useUser, useDeleteUser, useUpdateUserStatus, generateUserInitials } from '@/features/users';
 import { useQueryClient } from '@tanstack/react-query';
 import { DeleteConfirmationDialog } from '@/shared/components/DeleteConfirmationDialog';
@@ -474,4 +473,4 @@ function UserDetailPage() {
   );
 }
 
-export default withAuth(memo(UserDetailPage));
+export default memo(UserDetailPage);

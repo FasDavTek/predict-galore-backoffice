@@ -6,6 +6,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { User } from './types';
+import { setAuthCookie, clearAuthCookie } from '@/shared/auth/client';
 
 interface AuthState {
   token: string | null;
@@ -24,16 +25,12 @@ export const useAuth = create<AuthState>()(
       isAuthenticated: false,
 
       login: (token, user) => {
-        if (typeof window !== 'undefined') {
-          sessionStorage.setItem('authToken', token);
-        }
+        setAuthCookie(token);
         set({ token, user, isAuthenticated: true });
       },
 
       logout: () => {
-        if (typeof window !== 'undefined') {
-          sessionStorage.removeItem('authToken');
-        }
+        clearAuthCookie();
         set({ token: null, user: null, isAuthenticated: false });
       },
 
@@ -44,7 +41,11 @@ export const useAuth = create<AuthState>()(
     }),
     {
       name: 'auth-storage',
-      partialize: (state) => ({ user: state.user, isAuthenticated: state.isAuthenticated }),
+      partialize: (state) => ({
+        token: state.token,
+        user: state.user,
+        isAuthenticated: state.isAuthenticated,
+      }),
     }
   )
 );

@@ -1,7 +1,21 @@
 import type { Metadata } from 'next';
+import { Inter, Ultra } from 'next/font/google';
 
 import './globals.css';
 import { Providers } from '../providers';
+
+const inter = Inter({
+  subsets: ['latin'],
+  variable: '--font-inter',
+  display: 'swap',
+});
+
+const ultra = Ultra({
+  subsets: ['latin'],
+  weight: '400',
+  variable: '--font-ultra',
+  display: 'swap',
+});
 
 export const metadata: Metadata = {
   title: 'Predict Galore - Smart predictions. Smarter choices.',
@@ -19,7 +33,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className="antialiased">
+      <body className={`antialiased ${inter.variable} ${ultra.variable}`}>
         <Providers>{children}</Providers>
       </body>
     </html>

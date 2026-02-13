@@ -27,7 +27,6 @@ import {
   Save as SaveIcon,
 } from '@mui/icons-material';
 import { designTokens } from '@/shared/styles/tokens';
-import withAuth from '@/hoc/with-auth';
 import { usePrediction, useDeletePrediction, useUpdatePrediction, UpdatePredictionPayload, AudienceType } from '@/features/predictions';
 import { useQueryClient } from '@tanstack/react-query';
 import { DeleteConfirmationDialog } from '@/shared/components/DeleteConfirmationDialog';
@@ -758,4 +757,4 @@ function PredictionDetailPage() {
   );
 }
 
-export default withAuth(memo(PredictionDetailPage));
+export default memo(PredictionDetailPage);

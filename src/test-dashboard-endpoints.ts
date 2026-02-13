@@ -5,7 +5,6 @@
  * Run with: npx tsx src/test-dashboard-endpoints.ts
  */
 
-import { api } from './shared/api/client';
 import { API_CONFIG } from './shared/api/config';
 
 interface EndpointTest {

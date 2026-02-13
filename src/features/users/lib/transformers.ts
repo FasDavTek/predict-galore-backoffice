@@ -5,6 +5,8 @@
 
 import type { User, UserFormData, UserStatus, SubscriptionPlan, UserRole } from '../model/types';
 
+type ApiUserRole = 'admin' | 'moderator' | 'user' | 'editor' | 'viewer';
+
 interface ApiUser {
   id: string;
   email: string;
@@ -19,7 +21,7 @@ interface ApiUser {
   userPlanId?: number | null;
   statusId?: number;
   plan?: SubscriptionPlan;
-  role?: UserRole;
+  role?: ApiUserRole;
   emailVerified?: boolean;
   lastActive?: string;
   createdAt: string;
@@ -84,7 +86,7 @@ export const transformUserToFormData = (user: User): UserFormData => ({
   lastName: user.lastName,
   email: user.email,
   phone: user.phone || user.phoneNumber || '',
-  role: user.role || 'user',
+  role: user.role || 'viewer',
   plan: user.plan || 'free',
 });
 
@@ -98,7 +100,16 @@ export const transformApiUserToAppUser = (apiUser: ApiUser): User => {
   const formattedPhone = formatPhoneNumber(apiUser.phoneNumber, apiUser.countryCode);
   const mappedPlan = apiUser.plan || mapUserPlanIdToPlan(apiUser.userPlanId);
   const mappedStatus = mapStatusIdToStatus(apiUser.statusId, apiUser.isActive);
-  const mappedRole: UserRole = apiUser.isAdmin ? 'admin' : (apiUser.role || 'user');
+  const apiRole = apiUser.role;
+  const mappedRole: UserRole = apiUser.isAdmin
+    ? 'admin'
+    : apiRole === 'moderator'
+      ? 'editor'
+      : apiRole === 'user'
+        ? 'viewer'
+        : apiRole === 'admin' || apiRole === 'editor' || apiRole === 'viewer'
+          ? apiRole
+          : 'viewer';
   
   // Ensure isActive is properly set (use isActive from API, fallback to status mapping)
   const isActiveValue = apiUser.isActive !== undefined ? apiUser.isActive : (mappedStatus === 'active');
@@ -138,6 +149,18 @@ export const generateUserInitials = (firstName?: string | null, lastName?: strin
 
 export const formatUserStatus = (status: string): string => {
   return status.charAt(0).toUpperCase() + status.slice(1);
+};
+
+export const mapRoleToApi = (role: UserRole): string => {
+  switch (role) {
+    case 'admin':
+      return 'admin';
+    case 'editor':
+      return 'moderator';
+    case 'viewer':
+    default:
+      return 'user';
+  }
 };
 
 export const isUserActive = (user: User): boolean => {

@@ -35,7 +35,7 @@ export interface CreateUserData {
   lastName: string;
   email: string;
   password: string;
-  roleName: string;
+  roleName: UserRole;
   permissionIds?: number[];
   phoneNumber?: string;
 }

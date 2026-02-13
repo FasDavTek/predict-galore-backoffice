@@ -64,11 +64,25 @@ export const API_CONFIG = {
     fixtures: {
       upcoming: '/api/v1/fixtures/upcoming',
     },
-    // Markets Data
-    markets: {
+    // Markets Data (Prediction Markets - Read Only)
+    predictionMarkets: {
       list: '/api/v1/prediction/markets',
+      selections: (marketId: number) => `/api/v1/prediction/markets/${marketId}/selections`,
     },
-    // Selections Data
+    // Markets Management (Admin)
+    markets: {
+      list: '/api/v1/admin/markets',
+      detail: (id: number) => `/api/v1/admin/markets/${id}`,
+      create: '/api/v1/admin/markets',
+      update: (id: number) => `/api/v1/admin/markets/${id}`,
+      delete: (id: number) => `/api/v1/admin/markets/${id}`,
+      toggle: (id: number) => `/api/v1/admin/markets/${id}/toggle`,
+      categories: '/api/v1/admin/markets/categories',
+      addSelection: (marketId: number) => `/api/v1/admin/markets/${marketId}/selections`,
+      updateSelection: (selectionId: number) => `/api/v1/admin/markets/selections/${selectionId}`,
+      deleteSelection: (selectionId: number) => `/api/v1/admin/markets/selections/${selectionId}`,
+    },
+    // Selections endpoint (for predictions service)
     selections: {
       list: (marketId: number) => `/api/v1/prediction/markets/${marketId}/selections`,
     },

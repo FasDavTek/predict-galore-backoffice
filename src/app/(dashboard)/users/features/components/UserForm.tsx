@@ -83,7 +83,7 @@ export const UserForm: React.FC<UserFormProps> = ({ user, onSuccess, onCancel })
       lastName: user?.lastName || '',
       email: user?.email || '',
       phone: user?.phone || '',
-      role: user?.role || 'user',
+      role: user?.role || 'viewer',
       plan: user?.plan || 'free',
       isActive: user?.isActive ?? true,
       sendWelcomeEmail: false,
@@ -538,9 +538,9 @@ const AccountSettingsStep: React.FC<AccountSettingsStepProps> = ({
     label: string;
     color: 'default' | 'primary' | 'secondary';
   }[] = [
-    { value: 'user', label: 'User', color: 'default' },
+    { value: 'viewer', label: 'Viewer', color: 'default' },
     { value: 'admin', label: 'Admin', color: 'primary' },
-    { value: 'moderator', label: 'Moderator', color: 'secondary' },
+    { value: 'editor', label: 'Editor', color: 'secondary' },
   ];
 
   const planOptions: {
@@ -683,10 +683,10 @@ const AccountSettingsStep: React.FC<AccountSettingsStepProps> = ({
             <Typography variant="body2">
               {role === 'admin' &&
                 'Admins have full access to all system features and user management.'}
-              {role === 'moderator' &&
-                'Moderators can manage content and users but have limited administrative access.'}
-              {role === 'user' &&
-                'Users have standard access to platform features based on their subscription plan.'}
+              {role === 'editor' &&
+                'Editors can manage content and users but have limited administrative access.'}
+              {role === 'viewer' &&
+                'Viewers have read-only access based on their subscription plan.'}
             </Typography>
           </CardContent>
         </Card>
@@ -741,9 +741,9 @@ const SubmissionPreviewStep: React.FC<SubmissionPreviewStepProps> = ({
   userInitials,
 }) => {
   const roleLabels = {
-    user: 'User',
+    viewer: 'Viewer',
     admin: 'Admin',
-    moderator: 'Moderator',
+    editor: 'Editor',
   };
 
   const planLabels = {
@@ -803,7 +803,7 @@ const SubmissionPreviewStep: React.FC<SubmissionPreviewStepProps> = ({
                   <Chip
                     label={roleLabels[role]}
                     color={
-                      role === 'admin' ? 'primary' : role === 'moderator' ? 'secondary' : 'default'
+                      role === 'admin' ? 'primary' : role === 'editor' ? 'secondary' : 'default'
                     }
                     size="small"
                   />

@@ -25,7 +25,7 @@ export interface User {
 
 export type UserStatus = 'active' | 'inactive' | 'suspended' | 'pending';
 export type SubscriptionPlan = 'free' | 'basic' | 'premium' | 'enterprise';
-export type UserRole = 'user' | 'admin' | 'moderator';
+export type UserRole = 'admin' | 'editor' | 'viewer';
 
 export interface UsersFilter {
   search?: string;
